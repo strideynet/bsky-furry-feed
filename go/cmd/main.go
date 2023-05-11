@@ -48,6 +48,8 @@ func runE(log *slog.Logger) error {
 	return runGroup.Run()
 }
 
+const noahDid = "did:plc:dllwm3fafh66ktjofzxhylwk"
+
 func fireHose(ctx context.Context, log *slog.Logger) error {
 	subscribeUrl := "wss://bsky.social/xrpc/com.atproto.sync.subscribeRepos"
 
@@ -58,18 +60,22 @@ func fireHose(ctx context.Context, log *slog.Logger) error {
 
 	return events.HandleRepoStream(ctx, con, &events.RepoStreamCallbacks{
 		RepoCommit: func(evt *atproto.SyncSubscribeRepos_Commit) error {
-			log.Info("Event received", "repo", evt.Repo)
+			if evt.Repo != noahDid {
+				return nil
+			}
+			log := log.With("repo", evt.Repo)
+			log.Info("Commit event received", "ops_count", len(evt.Ops))
 			rr, err := repo.ReadRepoFromCar(ctx, bytes.NewReader(evt.Blocks))
 			if err != nil {
 				return fmt.Errorf("reading repo from car %w", err)
 			}
 			for _, op := range evt.Ops {
+				log := log.With("path", op.Path)
 				// Ignore anything that isn't a new record being added
 				if repomgr.EventKind(op.Action) != repomgr.EvtKindCreateRecord {
-					log.Debug("Ignoring op", "path", op.Path, "action", op.Action)
+					log.Debug("Ignoring op", "action", op.Action)
 					continue
 				}
-				log.Debug("Processing op", "path", op.Path, "action", op.Action)
 				recordCid, encodedRecord, err := rr.GetRecord(ctx, op.Path)
 				if err != nil {
 					if errors.Is(err, lexutil.ErrUnrecognizedType) {
@@ -85,7 +91,11 @@ func fireHose(ctx context.Context, log *slog.Logger) error {
 				case *bsky.FeedLike:
 					log.Info("Like", "data", data, "subject", data.Subject)
 				case *bsky.FeedPost:
-					log.Info("Post", "data", data)
+					postType := "Post"
+					if data.Reply != nil {
+						postType = "Reply"
+					}
+					log.Info(postType, "data", data)
 				default:
 					log.Info("Unhandled record type", "type", fmt.Sprintf("%T", data))
 				}
