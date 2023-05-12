@@ -16,7 +16,7 @@ func dbCmd() *cli.Command {
 		Usage: "Manage the database directly",
 		Subcommands: []*cli.Command{
 			{
-				Name:    "candidate_repositories",
+				Name:    "candidate-repositories",
 				Usage:   "Manage candidate repositories",
 				Aliases: []string{"cr"},
 				Subcommands: []*cli.Command{
@@ -121,6 +121,14 @@ var seedCandidateRepositories = map[string]struct {
 	},
 	"did:plc:q6j66z2z7hkwjssiq7zzz3ej": {
 		Comment:  "zenith (pawgge.rs)",
+		IsArtist: false,
+	},
+	"did:plc:inze6wrmsm7pjl7yta3oig77": {
+		Comment:  "videah (videah.net)",
+		IsArtist: false,
+	},
+	"did:plc:74vecggtrogqfv3fdmflhhtq": {
+		Comment:  "wuff (imjusta.dog)",
 		IsArtist: false,
 	},
 }
