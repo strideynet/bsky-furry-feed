@@ -50,5 +50,9 @@ func NewStaticCandidateUsers() StaticCandidateUsers {
 			comment:  "kio (kio.dev)",
 			IsArtist: false,
 		},
+		"did:plc:rgbf6ph3eki5lffvrs6syf4w": {
+			comment:  "cael (cael.tech)",
+			IsArtist: false,
+		},
 	}
 }
