@@ -15,7 +15,11 @@ import (
 	typegen "github.com/whyrusleeping/cbor-gen"
 	"golang.org/x/exp/slog"
 	"net/http"
+	"sync"
+	"time"
 )
+
+const noahDid = "did:plc:dllwm3fafh66ktjofzxhylwk"
 
 type FirehoseIngester struct {
 	stop chan struct{}
@@ -34,13 +38,23 @@ func (fi *FirehoseIngester) Start() error {
 	go func() {
 		<-fi.stop
 		fi.log.Info("closing websocket connection")
-		con.Close()
+		if err := con.Close(); err != nil {
+			fi.log.Error("error occurred closing websocket", "err", err)
+			return
+		}
+		fi.log.Info("closed websocket")
+
 	}()
 
-	return events.HandleRepoStream(ctx, con, &events.RepoStreamCallbacks{
+	workerWg := sync.WaitGroup{}
+	err = events.HandleRepoStream(ctx, con, &events.RepoStreamCallbacks{
 		RepoCommit: func(evt *atproto.SyncSubscribeRepos_Commit) error {
 			// TODO: Make this a worker pool limited by size.
+			workerWg.Add(1)
 			go func() {
+				defer workerWg.Done()
+				ctx, cancel := context.WithTimeout(ctx, time.Second*30)
+				defer cancel()
 				if err := fi.handleRepoCommit(ctx, evt); err != nil {
 					fi.log.Error("failed to handle repo commit")
 				}
@@ -49,10 +63,16 @@ func (fi *FirehoseIngester) Start() error {
 			return nil
 		},
 	})
+	fi.log.Info("waiting for workers to finish")
+	workerWg.Wait()
+	fi.log.Info("workers finished")
+
+	return err
 }
 
 func (fi *FirehoseIngester) Stop() {
-	fi.log.Info("Stopping WebSocket Firehose.")
+	fi.log.Info("stopping firehose ingester")
+	// TODO: Tidier shutdown of websocket/workers order
 	close(fi.stop)
 }
 
@@ -67,7 +87,7 @@ func (fi *FirehoseIngester) handleRepoCommit(rootCtx context.Context, evt *atpro
 		return fmt.Errorf("reading repo from car %w", err)
 	}
 	for _, op := range evt.Ops {
-		log := log.With("path", op.Path)
+		log := log.With("path", op.Path, "action", op.Action)
 		// Ignore anything that isn't a new record being added
 		if repomgr.EventKind(op.Action) != repomgr.EvtKindCreateRecord {
 			log.Debug("ignoring op", "action", op.Action)
@@ -80,10 +100,12 @@ func (fi *FirehoseIngester) handleRepoCommit(rootCtx context.Context, evt *atpro
 			}
 			return fmt.Errorf("getting record for op: %w", err)
 		}
+		// Ensure there isn't a mismatch between the reference and the found
+		// object.
 		if lexutil.LexLink(recordCid) != *op.Cid {
 			return fmt.Errorf("mismatch in record and op cid: %s != %s", recordCid, *op.Cid)
 		}
-		log.Debug("rcord fetched", "record", record, "type", fmt.Sprintf("%T", record))
+		log.Debug("record fetched", "record", record, "type", fmt.Sprintf("%T", record))
 		if err := fi.handleRecordCreate(ctx, log, evt.Repo, op.Path, record); err != nil {
 			return fmt.Errorf("handleRecordCreate: %w", err)
 		}
@@ -123,5 +145,3 @@ func (fi *FirehoseIngester) handleRecordCreate(
 
 	return nil
 }
-
-const noahDid = "did:plc:dllwm3fafh66ktjofzxhylwk"

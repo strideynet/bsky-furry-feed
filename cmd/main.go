@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/oklog/run"
 	"go.opentelemetry.io/otel"
@@ -37,6 +38,8 @@ func runE(log *slog.Logger) error {
 	}, func(err error) {
 		srv.Close()
 	})
+
+	runGroup.Add(run.SignalHandler(context.Background(), os.Interrupt))
 
 	return runGroup.Run()
 }
