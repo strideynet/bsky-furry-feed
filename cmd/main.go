@@ -23,17 +23,12 @@ func main() {
 func runE(log *slog.Logger) error {
 	runGroup := run.Group{}
 
-	recordHandler := &RecordHandler{
-		log: log.WithGroup("recordHandler"),
+	fi := &FirehoseIngester{
+		stop: make(chan struct{}),
+		log:  log.WithGroup("firehoseIngester"),
 	}
-
-	fh := &WebSocketFirehose{
-		stop:                make(chan struct{}),
-		log:                 log.WithGroup("firehose"),
-		RecordCreateHandler: recordHandler.HandleCreate,
-	}
-	runGroup.Add(fh.Start, func(_ error) {
-		fh.Stop()
+	runGroup.Add(fi.Start, func(_ error) {
+		fi.Stop()
 	})
 
 	srv := feedServer(log)
