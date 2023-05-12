@@ -1,4 +1,4 @@
-module github.com/strideynet/bsky-furry-feed/go
+module github.com/strideynet/bsky-furry-feed
 
 go 1.20
 
