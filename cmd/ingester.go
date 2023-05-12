@@ -19,15 +19,17 @@ import (
 	"time"
 )
 
-const noahDid = "did:plc:dllwm3fafh66ktjofzxhylwk"
+const workerCount = 3
 
 type FirehoseIngester struct {
-	stop chan struct{}
-	log  *slog.Logger
+	stop        chan struct{}
+	log         *slog.Logger
+	usersGetter StaticCandidateUsers
 }
 
 func (fi *FirehoseIngester) Start() error {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	subscribeUrl := "wss://bsky.social/xrpc/com.atproto.sync.subscribeRepos"
 
 	con, _, err := websocket.DefaultDialer.Dial(subscribeUrl, http.Header{})
@@ -42,24 +44,44 @@ func (fi *FirehoseIngester) Start() error {
 			fi.log.Error("error occurred closing websocket", "err", err)
 			return
 		}
+		cancel()
 		fi.log.Info("closed websocket")
-
 	}()
 
+	// Unbuffered channel so that the websocket will stop reading if the workers
+	// are not redy.
+	evtChan := make(chan *atproto.SyncSubscribeRepos_Commit)
 	workerWg := sync.WaitGroup{}
+	for workerN := 1; workerN < workerCount; workerN++ {
+		workerWg.Add(1)
+		go func() {
+			defer workerWg.Done()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case evt := <-evtChan:
+					// 30 seconds max to deal with any batch. This prevents a worker
+					// hanging.
+					ctx, cancel := context.WithTimeout(ctx, time.Second*30)
+					defer cancel()
+					if err := fi.handleRepoCommit(ctx, evt); err != nil {
+						fi.log.Error("failed to handle repo commit")
+					}
+				}
+			}
+		}()
+	}
+
 	err = events.HandleRepoStream(ctx, con, &events.RepoStreamCallbacks{
 		RepoCommit: func(evt *atproto.SyncSubscribeRepos_Commit) error {
-			// TODO: Make this a worker pool limited by size.
-			workerWg.Add(1)
-			go func() {
-				defer workerWg.Done()
-				ctx, cancel := context.WithTimeout(ctx, time.Second*30)
-				defer cancel()
-				if err := fi.handleRepoCommit(ctx, evt); err != nil {
-					fi.log.Error("failed to handle repo commit")
-				}
-			}()
-
+			select {
+			case <-ctx.Done():
+				// Ensure we don't get stuck waiting for a worker even if the
+				// server has shutdown.
+				return nil
+			case evtChan <- evt:
+			}
 			return nil
 		},
 	})
@@ -79,8 +101,15 @@ func (fi *FirehoseIngester) Stop() {
 func (fi *FirehoseIngester) handleRepoCommit(rootCtx context.Context, evt *atproto.SyncSubscribeRepos_Commit) error {
 	ctx, span := tracer.Start(rootCtx, "FirehoseIngester.handleRepoCommit")
 	defer span.End()
-
 	log := fi.log.With("repo", evt.Repo)
+
+	// Only track events from opted-in "furries"
+	candidateUser := fi.usersGetter.GetByDID(evt.Repo)
+	if candidateUser == nil {
+		return nil
+	}
+	log = fi.log.With("candidateUser", candidateUser.comment)
+
 	log.Debug("commit event received", "opsCount", len(evt.Ops))
 	rr, err := repo.ReadRepoFromCar(ctx, bytes.NewReader(evt.Blocks))
 	if err != nil {
@@ -123,24 +152,25 @@ func (fi *FirehoseIngester) handleRecordCreate(
 ) error {
 	ctx, span := tracer.Start(ctx, "FirehoseIngester.handleRecordCreate")
 	defer span.End()
-	if repoDID != noahDid {
-		return nil
-	}
-	log.Info("Handling record")
+	log.Info("handling record create")
 
 	// TODO: Manage goroutine worker pool for handling records
 
 	switch data := record.(type) {
 	case *bsky.FeedLike:
-		log.Info("Like", "data", data, "subject", data.Subject)
+		log.Info("like", "data", data, "subject", data.Subject)
 	case *bsky.FeedPost:
-		postType := "Post"
+		postType := "post"
 		if data.Reply != nil {
-			postType = "Reply"
+			postType = "reply"
 		}
 		log.Info(postType, "data", data)
+	case *bsky.FeedRepost:
+		log.Info("repost", "data", data)
+	case *bsky.GraphFollow:
+		log.Info("follow", "data", data)
 	default:
-		log.Info("Unhandled record type", "type", fmt.Sprintf("%T", data))
+		log.Info("unhandled record type", "type", fmt.Sprintf("%T", data))
 	}
 
 	return nil
