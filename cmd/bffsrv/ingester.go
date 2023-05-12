@@ -13,6 +13,7 @@ import (
 	"github.com/bluesky-social/indigo/repomgr"
 	"github.com/gorilla/websocket"
 	bff "github.com/strideynet/bsky-furry-feed"
+	"github.com/strideynet/bsky-furry-feed/store"
 	typegen "github.com/whyrusleeping/cbor-gen"
 	"golang.org/x/exp/slog"
 	"net/http"
@@ -20,12 +21,47 @@ import (
 	"time"
 )
 
+type candidateRepositoryCache struct {
+	store  *store.Queries
+	cached map[string]bff.CandidateRepository
+	mu     sync.RWMutex
+}
+
+func (crc *candidateRepositoryCache) GetByDID(
+	did string,
+) *bff.CandidateRepository {
+	crc.mu.RLock()
+	defer crc.mu.RUnlock()
+	v, ok := crc.cached[did]
+	if ok {
+		return &v
+	}
+	return nil
+}
+
+func (crc *candidateRepositoryCache) fetch(ctx context.Context) error {
+	data, err := crc.store.ListCandidateRepositories(ctx)
+	if err != nil {
+		return fmt.Errorf("listing candidate repositories: %w", err)
+	}
+
+	mapped := map[string]bff.CandidateRepository{}
+	for _, cr := range data {
+		mapped[cr.DID] = bff.CandidateRepositoryFromStore(cr)
+	}
+
+	crc.mu.Lock()
+	defer crc.mu.Unlock()
+	crc.cached = mapped
+	return nil
+}
+
 const workerCount = 3
 
 type FirehoseIngester struct {
-	stop        chan struct{}
-	log         *slog.Logger
-	usersGetter bff.StaticCandidateUsers
+	stop chan struct{}
+	log  *slog.Logger
+	crc  *candidateRepositoryCache
 }
 
 func (fi *FirehoseIngester) Start() error {
@@ -101,7 +137,7 @@ func (fi *FirehoseIngester) Stop() {
 
 func (fi *FirehoseIngester) handleRepoCommit(rootCtx context.Context, evt *atproto.SyncSubscribeRepos_Commit) error {
 	// Dispose of events from non-candidate repositories
-	candidateUser := fi.usersGetter.GetByDID(evt.Repo)
+	candidateUser := fi.crc.GetByDID(evt.Repo)
 	if candidateUser == nil {
 		return nil
 	}

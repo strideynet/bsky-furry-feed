@@ -11,13 +11,12 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createCandidateRepository = `-- name: CreateCandidateRepository :one
+const createCandidateRepository = `-- name: CreateCandidateRepository :exec
 INSERT INTO candidate_repositories (
     did, created_at, is_artist, comment
 ) VALUES (
     $1, $2, $3, $4
 )
-RETURNING did, created_at, is_artist, comment
 `
 
 type CreateCandidateRepositoryParams struct {
@@ -27,21 +26,14 @@ type CreateCandidateRepositoryParams struct {
 	Comment   string
 }
 
-func (q *Queries) CreateCandidateRepository(ctx context.Context, arg CreateCandidateRepositoryParams) (CandidateRepository, error) {
-	row := q.db.QueryRow(ctx, createCandidateRepository,
+func (q *Queries) CreateCandidateRepository(ctx context.Context, arg CreateCandidateRepositoryParams) error {
+	_, err := q.db.Exec(ctx, createCandidateRepository,
 		arg.DID,
 		arg.CreatedAt,
 		arg.IsArtist,
 		arg.Comment,
 	)
-	var i CandidateRepository
-	err := row.Scan(
-		&i.DID,
-		&i.CreatedAt,
-		&i.IsArtist,
-		&i.Comment,
-	)
-	return i, err
+	return err
 }
 
 const listCandidateRepositories = `-- name: ListCandidateRepositories :many
@@ -72,4 +64,30 @@ func (q *Queries) ListCandidateRepositories(ctx context.Context) ([]CandidateRep
 		return nil, err
 	}
 	return items, nil
+}
+
+const seedCandidateRepository = `-- name: SeedCandidateRepository :exec
+INSERT INTO candidate_repositories (
+    did, created_at, is_artist, comment
+) VALUES (
+             $1, $2, $3, $4
+         )
+ON CONFLICT DO NOTHING
+`
+
+type SeedCandidateRepositoryParams struct {
+	DID       string
+	CreatedAt pgtype.Timestamptz
+	IsArtist  bool
+	Comment   string
+}
+
+func (q *Queries) SeedCandidateRepository(ctx context.Context, arg SeedCandidateRepositoryParams) error {
+	_, err := q.db.Exec(ctx, seedCandidateRepository,
+		arg.DID,
+		arg.CreatedAt,
+		arg.IsArtist,
+		arg.Comment,
+	)
+	return err
 }

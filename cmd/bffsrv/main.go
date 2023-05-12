@@ -3,8 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/oklog/run"
-	bff "github.com/strideynet/bsky-furry-feed"
+	"github.com/strideynet/bsky-furry-feed/store"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/jaeger"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -53,10 +54,13 @@ func tracerProvider(ctx context.Context, url string) (*tracesdk.TracerProvider, 
 	return tp, nil
 }
 
+const localDBURL = "postgres://bff:bff@localhost:5432/bff?sslmode=disable"
+
 func runE(log *slog.Logger) error {
+	ctx := context.Background()
 	log.Info("setting up services")
 	_, err := tracerProvider(
-		context.Background(),
+		ctx,
 		"http://localhost:14268/api/traces",
 	)
 	if err != nil {
@@ -64,11 +68,24 @@ func runE(log *slog.Logger) error {
 	}
 	runGroup := run.Group{}
 
+	pool, err := pgxpool.New(ctx, localDBURL)
+	if err != nil {
+		return fmt.Errorf("creating db pool: %w", err)
+	}
+	defer pool.Close()
+	crc := &candidateRepositoryCache{
+		store: store.New(pool),
+	}
+	if err := crc.fetch(ctx); err != nil {
+		return fmt.Errorf("filling candidate repository cache: %w", err)
+	}
+	log.Info("cache filled", "cache", crc.cached)
+
 	// Setup ingester
 	fi := &FirehoseIngester{
-		stop:        make(chan struct{}),
-		log:         log.WithGroup("firehoseIngester"),
-		usersGetter: bff.NewStaticCandidateUsers(),
+		stop: make(chan struct{}),
+		log:  log.WithGroup("firehoseIngester"),
+		crc:  crc,
 	}
 	runGroup.Add(fi.Start, func(_ error) {
 		fi.Stop()
