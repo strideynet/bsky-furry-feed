@@ -99,16 +99,20 @@ func (fi *FirehoseIngester) Stop() {
 }
 
 func (fi *FirehoseIngester) handleRepoCommit(rootCtx context.Context, evt *atproto.SyncSubscribeRepos_Commit) error {
-	ctx, span := tracer.Start(rootCtx, "FirehoseIngester.handleRepoCommit")
-	defer span.End()
-	log := fi.log.With("repo", evt.Repo)
-
-	// Only track events from opted-in "furries"
+	// Dispose of events from non-candidate repositories
 	candidateUser := fi.usersGetter.GetByDID(evt.Repo)
 	if candidateUser == nil {
 		return nil
 	}
-	log = fi.log.With("candidateUser", candidateUser.comment)
+	// TODO: Find a way to use tail-based sampling so that we can capture this trace
+	// before candidateUser is run and ensure we always capture candidateUser
+	// traces.
+	ctx, span := tracer.Start(rootCtx, "FirehoseIngester.handleRepoCommit")
+	defer span.End()
+	log := fi.log.With(
+		"candidateRepository", evt.Repo,
+		"candidateRepository.comment", candidateUser.comment,
+	)
 
 	log.Debug("commit event received", "opsCount", len(evt.Ops))
 	rr, err := repo.ReadRepoFromCar(ctx, bytes.NewReader(evt.Blocks))

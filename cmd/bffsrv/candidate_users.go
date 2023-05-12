@@ -54,5 +54,9 @@ func NewStaticCandidateUsers() StaticCandidateUsers {
 			comment:  "cael (cael.tech)",
 			IsArtist: false,
 		},
+		"did:plc:wtfep3izymr6ot4tywoqcydc": {
+			comment:  "adam (snowfox.gay)",
+			IsArtist: false,
+		},
 	}
 }

@@ -6,7 +6,9 @@ import (
 	"github.com/oklog/run"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/jaeger"
+	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"golang.org/x/exp/slog"
 	"net/http"
 	"net/http/pprof"
@@ -23,29 +25,42 @@ func main() {
 	}
 }
 
-func tracerProvider(url string) (*tracesdk.TracerProvider, error) {
+func tracerProvider(ctx context.Context, url string) (*tracesdk.TracerProvider, error) {
 	exp, err := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(url)))
 	if err != nil {
 		return nil, fmt.Errorf("creating jaeger exporter: %w", err)
 	}
 
+	r, err := resource.New(
+		ctx,
+		resource.WithTelemetrySDK(),
+		resource.WithAttributes(
+			semconv.ServiceName("bffsrv"),
+		),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("creating resource attributes: %w", err)
+	}
+
 	tp := tracesdk.NewTracerProvider(
 		tracesdk.WithBatcher(exp),
+		tracesdk.WithResource(r),
 	)
+	otel.SetTracerProvider(tp)
+	// TODO: Tracer shutdown
 
 	return tp, nil
 }
 
 func runE(log *slog.Logger) error {
 	log.Info("setting up services")
-	tp, err := tracerProvider("http://localhost:14268/api/traces")
+	_, err := tracerProvider(
+		context.Background(),
+		"http://localhost:14268/api/traces",
+	)
 	if err != nil {
 		return fmt.Errorf("creating tracer provider: %w", err)
 	}
-	otel.SetTracerProvider(tp)
-
-	// TODO: Tracer shutdown
-
 	runGroup := run.Group{}
 
 	// Setup ingester
