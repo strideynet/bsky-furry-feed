@@ -15,7 +15,7 @@ import (
 	bff "github.com/strideynet/bsky-furry-feed"
 	"github.com/strideynet/bsky-furry-feed/store"
 	typegen "github.com/whyrusleeping/cbor-gen"
-	"golang.org/x/exp/slog"
+	"go.uber.org/zap"
 	"net/http"
 	"sync"
 	"time"
@@ -25,6 +25,7 @@ type candidateRepositoryCache struct {
 	store  *store.Queries
 	cached map[string]bff.CandidateRepository
 	mu     sync.RWMutex
+	log    *zap.Logger
 }
 
 func (crc *candidateRepositoryCache) GetByDID(
@@ -40,6 +41,7 @@ func (crc *candidateRepositoryCache) GetByDID(
 }
 
 func (crc *candidateRepositoryCache) fetch(ctx context.Context) error {
+	crc.log.Info("starting cache fill")
 	data, err := crc.store.ListCandidateRepositories(ctx)
 	if err != nil {
 		return fmt.Errorf("listing candidate repositories: %w", err)
@@ -53,6 +55,7 @@ func (crc *candidateRepositoryCache) fetch(ctx context.Context) error {
 	crc.mu.Lock()
 	defer crc.mu.Unlock()
 	crc.cached = mapped
+	crc.log.Info("finished cache fill", zap.Int("count", len(mapped)))
 	return nil
 }
 
@@ -60,7 +63,7 @@ const workerCount = 3
 
 type FirehoseIngester struct {
 	stop chan struct{}
-	log  *slog.Logger
+	log  *zap.Logger
 	crc  *candidateRepositoryCache
 }
 
@@ -78,7 +81,10 @@ func (fi *FirehoseIngester) Start() error {
 		<-fi.stop
 		fi.log.Info("closing websocket connection")
 		if err := con.Close(); err != nil {
-			fi.log.Error("error occurred closing websocket", "err", err)
+			fi.log.Error(
+				"error occurred closing websocket",
+				zap.Error(err),
+			)
 			return
 		}
 		cancel()
@@ -147,20 +153,21 @@ func (fi *FirehoseIngester) handleRepoCommit(rootCtx context.Context, evt *atpro
 	ctx, span := tracer.Start(rootCtx, "FirehoseIngester.handleRepoCommit")
 	defer span.End()
 	log := fi.log.With(
-		"candidateRepository", evt.Repo,
-		"candidateRepository.comment", candidateUser.Comment,
+		zap.String("candidate_repository", evt.Repo),
+		zap.String("candidate_repository.comment", candidateUser.Comment),
 	)
-
-	log.Debug("commit event received", "opsCount", len(evt.Ops))
 	rr, err := repo.ReadRepoFromCar(ctx, bytes.NewReader(evt.Blocks))
 	if err != nil {
 		return fmt.Errorf("reading repo from car %w", err)
 	}
 	for _, op := range evt.Ops {
-		log := log.With("path", op.Path, "action", op.Action)
+		log := log.With(
+			zap.String("path", op.Path),
+			zap.String("action", op.Action),
+		)
 		// Ignore anything that isn't a new record being added
 		if repomgr.EventKind(op.Action) != repomgr.EvtKindCreateRecord {
-			log.Debug("ignoring op", "action", op.Action)
+			log.Debug("ignoring op due to action")
 			continue
 		}
 		recordCid, record, err := rr.GetRecord(ctx, op.Path)
@@ -175,7 +182,6 @@ func (fi *FirehoseIngester) handleRepoCommit(rootCtx context.Context, evt *atpro
 		if lexutil.LexLink(recordCid) != *op.Cid {
 			return fmt.Errorf("mismatch in record and op cid: %s != %s", recordCid, *op.Cid)
 		}
-		log.Debug("record fetched", "record", record, "type", fmt.Sprintf("%T", record))
 		if err := fi.handleRecordCreate(ctx, log, evt.Repo, op.Path, record); err != nil {
 			return fmt.Errorf("handleRecordCreate: %w", err)
 		}
@@ -186,7 +192,7 @@ func (fi *FirehoseIngester) handleRepoCommit(rootCtx context.Context, evt *atpro
 
 func (fi *FirehoseIngester) handleRecordCreate(
 	ctx context.Context,
-	log *slog.Logger,
+	log *zap.Logger,
 	repoDID string,
 	recordPath string,
 	record typegen.CBORMarshaler,
@@ -199,19 +205,26 @@ func (fi *FirehoseIngester) handleRecordCreate(
 
 	switch data := record.(type) {
 	case *bsky.FeedLike:
-		log.Info("like", "data", data, "subject", data.Subject)
+		log.Info(
+			"like",
+			zap.Any("data", data),
+			zap.Any("subject", data.Subject),
+		)
 	case *bsky.FeedPost:
 		postType := "post"
 		if data.Reply != nil {
 			postType = "reply"
 		}
-		log.Info(postType, "data", data)
+		log.Info(postType, zap.Any("data", data))
 	case *bsky.FeedRepost:
-		log.Info("repost", "data", data)
+		log.Info("repost", zap.Any("data", data))
 	case *bsky.GraphFollow:
-		log.Info("follow", "data", data)
+		log.Info("follow", zap.Any("data", data))
 	default:
-		log.Info("unhandled record type", "type", fmt.Sprintf("%T", data))
+		log.Info(
+			"unhandled record type",
+			zap.String("type", fmt.Sprintf("%T", data)),
+		)
 	}
 
 	return nil

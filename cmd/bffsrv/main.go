@@ -11,7 +11,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
-	"golang.org/x/exp/slog"
+	"go.uber.org/zap"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -20,7 +20,7 @@ import (
 var tracer = otel.Tracer("github.com/strideynet/bsky-furry-feed")
 
 func main() {
-	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	log, _ := zap.NewDevelopment()
 	err := runE(log)
 	if err != nil {
 		panic(err)
@@ -56,7 +56,7 @@ func tracerProvider(ctx context.Context, url string) (*tracesdk.TracerProvider, 
 
 const localDBURL = "postgres://bff:bff@localhost:5432/bff?sslmode=disable"
 
-func runE(log *slog.Logger) error {
+func runE(log *zap.Logger) error {
 	ctx := context.Background()
 	log.Info("setting up services")
 	_, err := tracerProvider(
@@ -75,16 +75,16 @@ func runE(log *slog.Logger) error {
 	defer pool.Close()
 	crc := &candidateRepositoryCache{
 		store: store.New(pool),
+		log:   log.Named("candidate_repositories_cache"),
 	}
 	if err := crc.fetch(ctx); err != nil {
 		return fmt.Errorf("filling candidate repository cache: %w", err)
 	}
-	log.Info("cache filled", "candidateRepositoriesCount", len(crc.cached))
 
 	// Setup ingester
 	fi := &FirehoseIngester{
 		stop: make(chan struct{}),
-		log:  log.WithGroup("firehoseIngester"),
+		log:  log.Named("firehose_ingester"),
 		crc:  crc,
 	}
 	runGroup.Add(fi.Start, func(_ error) {
@@ -94,7 +94,7 @@ func runE(log *slog.Logger) error {
 	// Setup the public HTTP/XRPC server
 	srv := feedServer(log)
 	runGroup.Add(func() error {
-		log.Info("feed server listening", "addr", srv.Addr)
+		log.Info("feed server listening", zap.String("addr", srv.Addr))
 		return srv.ListenAndServe()
 	}, func(err error) {
 		srv.Close()
@@ -103,7 +103,7 @@ func runE(log *slog.Logger) error {
 	// Setup private diagnostics/metrics server
 	debugSrv := debugServer()
 	runGroup.Add(func() error {
-		log.Info("debug server listening", "addr", debugSrv.Addr)
+		log.Info("debug server listening", zap.String("addr", debugSrv.Addr))
 		return debugSrv.ListenAndServe()
 	}, func(err error) {
 		debugSrv.Close()

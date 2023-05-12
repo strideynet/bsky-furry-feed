@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"golang.org/x/exp/slog"
+	"go.uber.org/zap"
 	"net/http"
 	"strconv"
 )
@@ -13,7 +13,7 @@ type getFeedSkeletonParameters struct {
 	feed   string
 }
 
-func feedServer(log *slog.Logger) *http.Server {
+func feedServer(log *zap.Logger) *http.Server {
 	mux := &http.ServeMux{}
 	mux.Handle("/xrpc/app.bsky.feed.getFeedSkeleton", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
