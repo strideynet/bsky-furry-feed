@@ -1,0 +1,14 @@
+version: "2"
+overrides:
+  go:
+     rename:
+       did: DID
+sql:
+  - engine: "postgresql"
+    queries: "store/queries/"
+    schema: "store/migrations/"
+    gen:
+      go:
+        package: "store"
+        out: "store/"
+        sql_package: pgx/v5

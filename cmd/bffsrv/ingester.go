@@ -12,6 +12,7 @@ import (
 	"github.com/bluesky-social/indigo/repo"
 	"github.com/bluesky-social/indigo/repomgr"
 	"github.com/gorilla/websocket"
+	bff "github.com/strideynet/bsky-furry-feed"
 	typegen "github.com/whyrusleeping/cbor-gen"
 	"golang.org/x/exp/slog"
 	"net/http"
@@ -24,7 +25,7 @@ const workerCount = 3
 type FirehoseIngester struct {
 	stop        chan struct{}
 	log         *slog.Logger
-	usersGetter StaticCandidateUsers
+	usersGetter bff.StaticCandidateUsers
 }
 
 func (fi *FirehoseIngester) Start() error {
@@ -111,7 +112,7 @@ func (fi *FirehoseIngester) handleRepoCommit(rootCtx context.Context, evt *atpro
 	defer span.End()
 	log := fi.log.With(
 		"candidateRepository", evt.Repo,
-		"candidateRepository.comment", candidateUser.comment,
+		"candidateRepository.comment", candidateUser.Comment,
 	)
 
 	log.Debug("commit event received", "opsCount", len(evt.Ops))

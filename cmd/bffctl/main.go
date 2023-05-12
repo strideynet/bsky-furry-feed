@@ -10,6 +10,9 @@ func main() {
 	app := &cli.App{
 		Name:  "bffctl",
 		Usage: "The swiss army knife of any BFF operator",
+		Commands: []*cli.Command{
+			dbCmd(),
+		},
 	}
 	if err := app.Run(os.Args); err != nil {
 		fmt.Println(err)

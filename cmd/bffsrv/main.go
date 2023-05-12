@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/oklog/run"
+	bff "github.com/strideynet/bsky-furry-feed"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/jaeger"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -67,7 +68,7 @@ func runE(log *slog.Logger) error {
 	fi := &FirehoseIngester{
 		stop:        make(chan struct{}),
 		log:         log.WithGroup("firehoseIngester"),
-		usersGetter: NewStaticCandidateUsers(),
+		usersGetter: bff.NewStaticCandidateUsers(),
 	}
 	runGroup.Add(fi.Start, func(_ error) {
 		fi.Stop()
