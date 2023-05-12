@@ -79,7 +79,7 @@ func runE(log *slog.Logger) error {
 	if err := crc.fetch(ctx); err != nil {
 		return fmt.Errorf("filling candidate repository cache: %w", err)
 	}
-	log.Info("cache filled", "cache", crc.cached)
+	log.Info("cache filled", "candidateRepositoriesCount", len(crc.cached))
 
 	// Setup ingester
 	fi := &FirehoseIngester{
