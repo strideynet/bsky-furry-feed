@@ -10,13 +10,45 @@ import (
 	"os"
 )
 
+type environment struct {
+	dbURL string
+}
+
+var environments = map[string]environment{
+	"local": {
+		dbURL: "postgres://bff:bff@localhost:5432/bff?sslmode=disable",
+	},
+	"production": {
+		dbURL: "postgres://noah@noahstride.co.uk@localhost:15432/bff?sslmode=disable",
+	},
+}
+
 func main() {
 	log, _ := zap.NewDevelopment()
+	var env = &environment{}
 	app := &cli.App{
 		Name:  "bffctl",
 		Usage: "The swiss army knife of any BFF operator",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name: "environment",
+				Aliases: []string{
+					"e",
+				},
+				Required: true,
+				Action: func(c *cli.Context, s string) error {
+					v, ok := environments[s]
+					if !ok {
+						return fmt.Errorf("unrecognized environment: %s", s)
+					}
+					log.Info("configured environment", zap.String("env", s))
+					*env = v
+					return nil
+				},
+			},
+		},
 		Commands: []*cli.Command{
-			dbCmd(log),
+			dbCmd(log, env),
 			findDIDCmd(log),
 		},
 	}

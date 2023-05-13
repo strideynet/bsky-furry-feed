@@ -9,12 +9,7 @@ import (
 	"time"
 )
 
-// TODO: Add env parameter to select these.
-const localDBURL = "postgres://bff:bff@localhost:5432/bff?sslmode=disable"
-const remoteDBURL = "postgres://noah@noahstride.co.uk@localhost:15432/bff?sslmode=disable"
-const selectedDBURL = localDBURL
-
-func dbCmd(log *zap.Logger) *cli.Command {
+func dbCmd(log *zap.Logger, env *environment) *cli.Command {
 	return &cli.Command{
 		Name:  "db",
 		Usage: "Manage the database directly",
@@ -24,19 +19,44 @@ func dbCmd(log *zap.Logger) *cli.Command {
 				Usage:   "Manage candidate repositories",
 				Aliases: []string{"cr"},
 				Subcommands: []*cli.Command{
-					dbCandidateRepositoriesSeedCmd(log),
+					dbCandidateRepositoriesList(log, env),
+					dbCandidateRepositoriesSeedCmd(log, env),
 				},
 			},
 		},
 	}
 }
 
-func dbCandidateRepositoriesSeedCmd(log *zap.Logger) *cli.Command {
+func dbCandidateRepositoriesList(log *zap.Logger, env *environment) *cli.Command {
+	return &cli.Command{
+		Name:  "ls",
+		Usage: "Listcandidate repositories",
+		Action: func(cctx *cli.Context) error {
+			conn, err := pgx.Connect(cctx.Context, env.dbURL)
+			if err != nil {
+				return err
+			}
+			defer conn.Close(cctx.Context)
+
+			db := store.New(conn)
+			repos, err := db.ListCandidateRepositories(cctx.Context)
+			if err != nil {
+				return err
+			}
+			for _, r := range repos {
+				log.Info("repo", zap.Any("data", r))
+			}
+			return nil
+		},
+	}
+}
+
+func dbCandidateRepositoriesSeedCmd(log *zap.Logger, env *environment) *cli.Command {
 	return &cli.Command{
 		Name:  "seed",
 		Usage: "Seed the default set of candidate repositories",
 		Action: func(cctx *cli.Context) error {
-			conn, err := pgx.Connect(cctx.Context, selectedDBURL)
+			conn, err := pgx.Connect(cctx.Context, env.dbURL)
 			if err != nil {
 				return err
 			}
