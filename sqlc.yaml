@@ -3,6 +3,8 @@ overrides:
   go:
      rename:
        did: DID
+       uri: URI
+       repository_did: RepositoryDID
 sql:
   - engine: "postgresql"
     queries: "store/queries/"

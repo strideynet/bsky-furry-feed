@@ -12,6 +12,7 @@ import (
 	"github.com/bluesky-social/indigo/repo"
 	"github.com/bluesky-social/indigo/repomgr"
 	"github.com/gorilla/websocket"
+	"github.com/jackc/pgx/v5/pgtype"
 	bff "github.com/strideynet/bsky-furry-feed"
 	"github.com/strideynet/bsky-furry-feed/store"
 	typegen "github.com/whyrusleeping/cbor-gen"
@@ -62,9 +63,10 @@ func (crc *candidateRepositoryCache) fetch(ctx context.Context) error {
 const workerCount = 3
 
 type FirehoseIngester struct {
-	stop chan struct{}
-	log  *zap.Logger
-	crc  *candidateRepositoryCache
+	stop  chan struct{}
+	log   *zap.Logger
+	crc   *candidateRepositoryCache
+	store *store.Queries
 }
 
 func (fi *FirehoseIngester) Start() error {
@@ -108,7 +110,7 @@ func (fi *FirehoseIngester) Start() error {
 					// hanging.
 					ctx, cancel := context.WithTimeout(ctx, time.Second*30)
 					defer cancel()
-					if err := fi.handleRepoCommit(ctx, evt); err != nil {
+					if err := fi.handleCommit(ctx, evt); err != nil {
 						fi.log.Error("failed to handle repo commit")
 					}
 				}
@@ -141,7 +143,7 @@ func (fi *FirehoseIngester) Stop() {
 	close(fi.stop)
 }
 
-func (fi *FirehoseIngester) handleRepoCommit(rootCtx context.Context, evt *atproto.SyncSubscribeRepos_Commit) error {
+func (fi *FirehoseIngester) handleCommit(rootCtx context.Context, evt *atproto.SyncSubscribeRepos_Commit) error {
 	// Dispose of events from non-candidate repositories
 	candidateUser := fi.crc.GetByDID(evt.Repo)
 	if candidateUser == nil {
@@ -150,26 +152,26 @@ func (fi *FirehoseIngester) handleRepoCommit(rootCtx context.Context, evt *atpro
 	// TODO: Find a way to use tail-based sampling so that we can capture this trace
 	// before candidateUser is run and ensure we always capture candidateUser
 	// traces.
-	ctx, span := tracer.Start(rootCtx, "FirehoseIngester.handleRepoCommit")
+	ctx, span := tracer.Start(rootCtx, "firehose_ingester.handle_commit")
 	defer span.End()
-	log := fi.log.With(
-		zap.String("candidate_repository", evt.Repo),
-		zap.String("candidate_repository.comment", candidateUser.Comment),
-	)
 	rr, err := repo.ReadRepoFromCar(ctx, bytes.NewReader(evt.Blocks))
 	if err != nil {
 		return fmt.Errorf("reading repo from car %w", err)
 	}
 	for _, op := range evt.Ops {
-		log := log.With(
-			zap.String("path", op.Path),
-			zap.String("action", op.Action),
-		)
 		// Ignore anything that isn't a new record being added
 		if repomgr.EventKind(op.Action) != repomgr.EvtKindCreateRecord {
-			log.Debug("ignoring op due to action")
 			continue
 		}
+
+		uri := fmt.Sprintf("at://%s/%s", evt.Repo, op.Path)
+		log := fi.log.With(
+			zap.String("repository", evt.Repo),
+			zap.String("repository.comment", candidateUser.Comment),
+			zap.String("action", op.Action),
+			zap.String("uri", uri),
+		)
+
 		recordCid, record, err := rr.GetRecord(ctx, op.Path)
 		if err != nil {
 			if errors.Is(err, lexutil.ErrUnrecognizedType) {
@@ -182,7 +184,7 @@ func (fi *FirehoseIngester) handleRepoCommit(rootCtx context.Context, evt *atpro
 		if lexutil.LexLink(recordCid) != *op.Cid {
 			return fmt.Errorf("mismatch in record and op cid: %s != %s", recordCid, *op.Cid)
 		}
-		if err := fi.handleRecordCreate(ctx, log, evt.Repo, op.Path, record); err != nil {
+		if err := fi.handleRecordCreate(ctx, log, evt.Repo, uri, record); err != nil {
 			return fmt.Errorf("handleRecordCreate: %w", err)
 		}
 	}
@@ -194,37 +196,45 @@ func (fi *FirehoseIngester) handleRecordCreate(
 	ctx context.Context,
 	log *zap.Logger,
 	repoDID string,
-	recordPath string,
+	recordUri string,
 	record typegen.CBORMarshaler,
 ) error {
-	ctx, span := tracer.Start(ctx, "FirehoseIngester.handleRecordCreate")
+	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_record_create")
 	defer span.End()
-	log.Info("handling record create")
+	log.Info("handling record create", zap.Any("record", record))
 
 	// TODO: Manage goroutine worker pool for handling records
 
 	switch data := record.(type) {
-	case *bsky.FeedLike:
-		log.Info(
-			"like",
-			zap.Any("data", data),
-			zap.Any("subject", data.Subject),
-		)
 	case *bsky.FeedPost:
-		postType := "post"
-		if data.Reply != nil {
-			postType = "reply"
+		if data.Reply == nil {
+			createdAt, err := time.Parse("2006-01-02T15:04:05.000Z", data.CreatedAt)
+			if err != nil {
+				return fmt.Errorf("parsing post time: %w", err)
+			}
+			err = fi.store.CreateCandidatePost(
+				ctx,
+				store.CreateCandidatePostParams{
+					URI:           recordUri,
+					RepositoryDID: repoDID,
+					CreatedAt: pgtype.Timestamptz{
+						Time:  createdAt,
+						Valid: true,
+					},
+					IndexedAt: pgtype.Timestamptz{
+						Time:  time.Now(),
+						Valid: true,
+					},
+				},
+			)
+			if err != nil {
+				return fmt.Errorf("creating candidate post")
+			}
+		} else {
+			log.Info("ignoring reply")
 		}
-		log.Info(postType, zap.Any("data", data))
-	case *bsky.FeedRepost:
-		log.Info("repost", zap.Any("data", data))
-	case *bsky.GraphFollow:
-		log.Info("follow", zap.Any("data", data))
 	default:
-		log.Info(
-			"unhandled record type",
-			zap.String("type", fmt.Sprintf("%T", data)),
-		)
+		log.Info("ignoring unhandled record type")
 	}
 
 	return nil

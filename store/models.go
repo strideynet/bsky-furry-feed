@@ -8,6 +8,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type CandidatePost struct {
+	URI           string
+	RepositoryDID string
+	CreatedAt     pgtype.Timestamptz
+	IndexedAt     pgtype.Timestamptz
+}
+
 type CandidateRepository struct {
 	DID       string
 	CreatedAt pgtype.Timestamptz

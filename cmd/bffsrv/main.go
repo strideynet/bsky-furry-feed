@@ -73,8 +73,9 @@ func runE(log *zap.Logger) error {
 		return fmt.Errorf("creating db pool: %w", err)
 	}
 	defer pool.Close()
+	st := store.New(pool)
 	crc := &candidateRepositoryCache{
-		store: store.New(pool),
+		store: st,
 		log:   log.Named("candidate_repositories_cache"),
 	}
 	if err := crc.fetch(ctx); err != nil {
@@ -83,9 +84,10 @@ func runE(log *zap.Logger) error {
 
 	// Setup ingester
 	fi := &FirehoseIngester{
-		stop: make(chan struct{}),
-		log:  log.Named("firehose_ingester"),
-		crc:  crc,
+		stop:  make(chan struct{}),
+		log:   log.Named("firehose_ingester"),
+		crc:   crc,
+		store: st,
 	}
 	runGroup.Add(fi.Start, func(_ error) {
 		fi.Stop()

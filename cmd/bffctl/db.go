@@ -131,4 +131,8 @@ var seedCandidateRepositories = map[string]struct {
 		Comment:  "wuff (imjusta.dog)",
 		IsArtist: false,
 	},
+	"did:plc:cuo7esdirjyrw53uffaczjmt": {
+		Comment:  "aero (aero.bsky.social)",
+		IsArtist: false,
+	},
 }
