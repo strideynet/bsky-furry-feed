@@ -12,7 +12,7 @@ resource "google_sql_database_instance" "main_us_east" {
   region           = "us-east1"
 
   settings {
-    availability_type = "REGIONAL"
+    availability_type = "ZONAL"
     disk_autoresize   = true
     disk_size         = 30
     disk_type         = "PD_HDD"
