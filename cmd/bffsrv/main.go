@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/oklog/run"
+	"github.com/strideynet/bsky-furry-feed/feedserver"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/jaeger"
@@ -94,7 +95,7 @@ func runE(log *zap.Logger) error {
 	})
 
 	// Setup the public HTTP/XRPC server
-	srv := feedServer(log, st)
+	srv := feedserver.New(log, st)
 	runGroup.Add(func() error {
 		log.Info("feed server listening", zap.String("addr", srv.Addr))
 		return srv.ListenAndServe()
