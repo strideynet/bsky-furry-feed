@@ -17,3 +17,14 @@ migrate -path store/migrations -database "postgres://bff:bff@localhost:5432/bff?
 Bluesky client with feed support: https://skyfeed.app/#/
 
 You need HTTPS, so use Cloudflare Tunnel or similar when developing.
+
+## Operations
+
+IaC can be found in `infra/`.
+
+### Deploying
+
+If database migration is necessary, run this from your workstation.
+
+Manually bump container image versions in `infra/`.
+

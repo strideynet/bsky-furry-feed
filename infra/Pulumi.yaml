@@ -1,3 +1,0 @@
-name: bsky-furry-feed
-runtime: go
-description: A minimal Google Cloud Go Pulumi program
