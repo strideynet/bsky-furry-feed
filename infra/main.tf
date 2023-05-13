@@ -9,7 +9,7 @@ provider "google-beta" {
 resource "google_sql_database_instance" "main_us_east" {
   database_version = "POSTGRES_14"
   name             = "main-us-east"
-  region           = "us-east-1"
+  region           = "us-east1"
 
   settings {
     availability_type = "REGIONAL"
