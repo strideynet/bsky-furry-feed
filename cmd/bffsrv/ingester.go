@@ -166,15 +166,13 @@ func (fi *FirehoseIngester) handleCommit(rootCtx context.Context, evt *atproto.S
 		return fmt.Errorf("reading repo from car %w", err)
 	}
 	for _, op := range evt.Ops {
-		// Ignore anything that isn't a new record being added
+		// Ignore any op that isn't a record create.
 		if repomgr.EventKind(op.Action) != repomgr.EvtKindCreateRecord {
 			continue
 		}
-
-		uri := fmt.Sprintf("at://%s/%s", evt.Repo, op.Path)
 		log := log.With(
-			zap.String("action", op.Action),
-			zap.String("uri", uri),
+			zap.String("op.action", op.Action),
+			zap.String("op.path", op.Path),
 		)
 
 		recordCid, record, err := rr.GetRecord(ctx, op.Path)
@@ -189,6 +187,9 @@ func (fi *FirehoseIngester) handleCommit(rootCtx context.Context, evt *atproto.S
 		if lexutil.LexLink(recordCid) != *op.Cid {
 			return fmt.Errorf("mismatch in record and op cid: %s != %s", recordCid, *op.Cid)
 		}
+
+		uri := fmt.Sprintf("at://%s/%s", evt.Repo, op.Path)
+		log = log.With(zap.String("record.uri", uri))
 		if err := fi.handleRecordCreate(ctx, log, evt.Repo, uri, record); err != nil {
 			return fmt.Errorf("handling record create: %w", err)
 		}
@@ -215,7 +216,7 @@ func (fi *FirehoseIngester) handleRecordCreate(
 			return fmt.Errorf("handling feed post create: %w", err)
 		}
 	default:
-		log.Info("ignoring unhandled record type")
+		log.Info("ignoring record create due to handled type")
 	}
 
 	return nil

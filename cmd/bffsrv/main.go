@@ -95,7 +95,7 @@ func runE(log *zap.Logger) error {
 	})
 
 	// Setup the public HTTP/XRPC server
-	srv := feedserver.New(log, st)
+	srv := feedserver.New(log.Named("feed_server"), st)
 	runGroup.Add(func() error {
 		log.Info("feed server listening", zap.String("addr", srv.Addr))
 		return srv.ListenAndServe()
