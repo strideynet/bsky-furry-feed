@@ -3,22 +3,21 @@ FROM golang:1.19.3-buster AS build
 
 WORKDIR /app
 
-COPY go.mod ./
+COPY go.* ./
 RUN go mod download
 
-COPY *.go ./
+COPY . ./
 
-RUN go build -o /bffsrv ./cmd/bffsrv
+RUN go build -o /app/bffsrv ./cmd/bffsrv
 
 ## Deploy layer
 FROM gcr.io/distroless/base-debian10
 
-WORKDIR /
-COPY --from=build /bffsrv /bffsrv
+COPY --from=build /app/bffsrv /app/bffsrv
 
 EXPOSE 1337
 EXPOSE 1338
 
 USER nonroot:nonroot
 
-ENTRYPOINT ["/bffsrv"]
+ENTRYPOINT ["/app/bffsrv"]
