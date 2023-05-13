@@ -35,3 +35,32 @@ func (q *Queries) CreateCandidatePost(ctx context.Context, arg CreateCandidatePo
 	)
 	return err
 }
+
+const listCandidatePostsForFeed = `-- name: ListCandidatePostsForFeed :many
+SELECT uri, repository_did, created_at, indexed_at FROM candidate_posts ORDER BY created_at DESC
+`
+
+func (q *Queries) ListCandidatePostsForFeed(ctx context.Context) ([]CandidatePost, error) {
+	rows, err := q.db.Query(ctx, listCandidatePostsForFeed)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CandidatePost
+	for rows.Next() {
+		var i CandidatePost
+		if err := rows.Scan(
+			&i.URI,
+			&i.RepositoryDID,
+			&i.CreatedAt,
+			&i.IndexedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

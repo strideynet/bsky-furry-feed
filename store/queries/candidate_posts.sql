@@ -4,3 +4,6 @@ INSERT INTO candidate_posts (
 ) VALUES (
     $1, $2, $3, $4
  );
+
+-- name: ListCandidatePostsForFeed :many
+SELECT * FROM candidate_posts ORDER BY created_at DESC;

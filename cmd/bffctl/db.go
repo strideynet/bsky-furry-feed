@@ -5,12 +5,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"github.com/urfave/cli/v2"
+	"go.uber.org/zap"
 	"time"
 )
 
 const localDBURL = "postgres://bff:bff@localhost:5432/bff?sslmode=disable"
 
-func dbCmd() *cli.Command {
+func dbCmd(log *zap.Logger) *cli.Command {
 	return &cli.Command{
 		Name:  "db",
 		Usage: "Manage the database directly",
@@ -20,14 +21,14 @@ func dbCmd() *cli.Command {
 				Usage:   "Manage candidate repositories",
 				Aliases: []string{"cr"},
 				Subcommands: []*cli.Command{
-					dbCandidateRepositoriesImportCmd(),
+					dbCandidateRepositoriesImportCmd(log),
 				},
 			},
 		},
 	}
 }
 
-func dbCandidateRepositoriesImportCmd() *cli.Command {
+func dbCandidateRepositoriesImportCmd(log *zap.Logger) *cli.Command {
 	return &cli.Command{
 		Name:  "import",
 		Usage: "Import the default set of candidate repositories",
@@ -41,6 +42,10 @@ func dbCandidateRepositoriesImportCmd() *cli.Command {
 			db := store.New(conn)
 
 			for did, candidate := range seedCandidateRepositories {
+				log.Info("seeding candidate repository",
+					zap.String("did", did),
+					zap.Any("data", candidate),
+				)
 				err := db.SeedCandidateRepository(
 					cctx.Context,
 					store.SeedCandidateRepositoryParams{

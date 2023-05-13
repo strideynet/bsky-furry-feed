@@ -16,6 +16,7 @@ import (
 	bff "github.com/strideynet/bsky-furry-feed"
 	"github.com/strideynet/bsky-furry-feed/store"
 	typegen "github.com/whyrusleeping/cbor-gen"
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 	"net/http"
 	"sync"
@@ -87,10 +88,9 @@ func (fi *FirehoseIngester) Start() error {
 				"error occurred closing websocket",
 				zap.Error(err),
 			)
-			return
 		}
-		cancel()
 		fi.log.Info("closed websocket")
+		cancel()
 	}()
 
 	// Unbuffered channel so that the websocket will stop reading if the workers
@@ -117,7 +117,7 @@ func (fi *FirehoseIngester) Start() error {
 			}
 		}()
 	}
-
+	// TODO: sometimes stream exits of own accord, lets recover from that.
 	err = events.HandleRepoStream(ctx, con, &events.RepoStreamCallbacks{
 		RepoCommit: func(evt *atproto.SyncSubscribeRepos_Commit) error {
 			select {
@@ -130,6 +130,9 @@ func (fi *FirehoseIngester) Start() error {
 			return nil
 		},
 	})
+	if err != nil {
+		return err
+	}
 	fi.log.Info("waiting for workers to finish")
 	workerWg.Wait()
 	fi.log.Info("workers finished")
@@ -154,6 +157,10 @@ func (fi *FirehoseIngester) handleCommit(rootCtx context.Context, evt *atproto.S
 	// traces.
 	ctx, span := tracer.Start(rootCtx, "firehose_ingester.handle_commit")
 	defer span.End()
+	span.SetAttributes(
+		attribute.String("candidate_repository.did", evt.Repo),
+	)
+	log := fi.log.With(zap.String("candidate_repository.did", evt.Repo))
 	rr, err := repo.ReadRepoFromCar(ctx, bytes.NewReader(evt.Blocks))
 	if err != nil {
 		return fmt.Errorf("reading repo from car %w", err)
@@ -165,9 +172,7 @@ func (fi *FirehoseIngester) handleCommit(rootCtx context.Context, evt *atproto.S
 		}
 
 		uri := fmt.Sprintf("at://%s/%s", evt.Repo, op.Path)
-		log := fi.log.With(
-			zap.String("repository", evt.Repo),
-			zap.String("repository.comment", candidateUser.Comment),
+		log := log.With(
 			zap.String("action", op.Action),
 			zap.String("uri", uri),
 		)
@@ -185,7 +190,7 @@ func (fi *FirehoseIngester) handleCommit(rootCtx context.Context, evt *atproto.S
 			return fmt.Errorf("mismatch in record and op cid: %s != %s", recordCid, *op.Cid)
 		}
 		if err := fi.handleRecordCreate(ctx, log, evt.Repo, uri, record); err != nil {
-			return fmt.Errorf("handleRecordCreate: %w", err)
+			return fmt.Errorf("handling record create: %w", err)
 		}
 	}
 
@@ -203,39 +208,53 @@ func (fi *FirehoseIngester) handleRecordCreate(
 	defer span.End()
 	log.Info("handling record create", zap.Any("record", record))
 
-	// TODO: Manage goroutine worker pool for handling records
-
 	switch data := record.(type) {
 	case *bsky.FeedPost:
-		if data.Reply == nil {
-			createdAt, err := time.Parse("2006-01-02T15:04:05.000Z", data.CreatedAt)
-			if err != nil {
-				return fmt.Errorf("parsing post time: %w", err)
-			}
-			err = fi.store.CreateCandidatePost(
-				ctx,
-				store.CreateCandidatePostParams{
-					URI:           recordUri,
-					RepositoryDID: repoDID,
-					CreatedAt: pgtype.Timestamptz{
-						Time:  createdAt,
-						Valid: true,
-					},
-					IndexedAt: pgtype.Timestamptz{
-						Time:  time.Now(),
-						Valid: true,
-					},
-				},
-			)
-			if err != nil {
-				return fmt.Errorf("creating candidate post")
-			}
-		} else {
-			log.Info("ignoring reply")
+		err := fi.handleFeedPostCreate(ctx, log, repoDID, recordUri, data)
+		if err != nil {
+			return fmt.Errorf("handling feed post create: %w", err)
 		}
 	default:
 		log.Info("ignoring unhandled record type")
 	}
 
+	return nil
+}
+
+func (fi *FirehoseIngester) handleFeedPostCreate(
+	ctx context.Context,
+	log *zap.Logger,
+	repoDID string,
+	recordUri string,
+	data *bsky.FeedPost,
+) error {
+	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_feed_post_create")
+	defer span.End()
+	if data.Reply == nil {
+		createdAt, err := time.Parse("2006-01-02T15:04:05.000Z", data.CreatedAt)
+		if err != nil {
+			return fmt.Errorf("parsing post time: %w", err)
+		}
+		err = fi.store.CreateCandidatePost(
+			ctx,
+			store.CreateCandidatePostParams{
+				URI:           recordUri,
+				RepositoryDID: repoDID,
+				CreatedAt: pgtype.Timestamptz{
+					Time:  createdAt,
+					Valid: true,
+				},
+				IndexedAt: pgtype.Timestamptz{
+					Time:  time.Now(),
+					Valid: true,
+				},
+			},
+		)
+		if err != nil {
+			return fmt.Errorf("creating candidate post: %w", err)
+		}
+	} else {
+		log.Info("ignoring reply")
+	}
 	return nil
 }

@@ -1,20 +1,23 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/xrpc"
 	"github.com/urfave/cli/v2"
+	"go.uber.org/zap"
 	"os"
 )
 
 func main() {
+	log, _ := zap.NewDevelopment()
 	app := &cli.App{
 		Name:  "bffctl",
 		Usage: "The swiss army knife of any BFF operator",
 		Commands: []*cli.Command{
-			dbCmd(),
-			findDID(),
+			dbCmd(log),
+			findDIDCmd(log),
 		},
 	}
 	if err := app.Run(os.Args); err != nil {
@@ -23,7 +26,22 @@ func main() {
 	}
 }
 
-func findDID() *cli.Command {
+func findDID(ctx context.Context, handle string) (string, error) {
+	pdsClient := &xrpc.Client{
+		Host: "https://bsky.social",
+	}
+	did, err := atproto.IdentityResolveHandle(
+		ctx,
+		pdsClient,
+		handle,
+	)
+	if err != nil {
+		return "", err
+	}
+	return did.Did, nil
+}
+
+func findDIDCmd(log *zap.Logger) *cli.Command {
 	handle := ""
 	return &cli.Command{
 		Name: "find-did",
@@ -36,18 +54,11 @@ func findDID() *cli.Command {
 			},
 		},
 		Action: func(cctx *cli.Context) error {
-			pdsClient := &xrpc.Client{
-				Host: "https://bsky.social",
-			}
-			did, err := atproto.IdentityResolveHandle(
-				cctx.Context,
-				pdsClient,
-				handle,
-			)
+			did, err := findDID(cctx.Context, handle)
 			if err != nil {
 				return err
 			}
-			fmt.Printf("Found DID: %s\n", did.Did)
+			log.Info("found did", zap.String("did", did))
 			return nil
 		},
 	}
