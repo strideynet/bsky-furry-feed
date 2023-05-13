@@ -22,7 +22,7 @@ import (
 var tracer = otel.Tracer("bffsrv")
 
 func main() {
-	log, _ := zap.NewDevelopment()
+	log, _ := zap.NewProduction()
 	err := runE(log)
 	if err != nil {
 		panic(err)

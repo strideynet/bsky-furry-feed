@@ -21,17 +21,17 @@ func dbCmd(log *zap.Logger) *cli.Command {
 				Usage:   "Manage candidate repositories",
 				Aliases: []string{"cr"},
 				Subcommands: []*cli.Command{
-					dbCandidateRepositoriesImportCmd(log),
+					dbCandidateRepositoriesSeedCmd(log),
 				},
 			},
 		},
 	}
 }
 
-func dbCandidateRepositoriesImportCmd(log *zap.Logger) *cli.Command {
+func dbCandidateRepositoriesSeedCmd(log *zap.Logger) *cli.Command {
 	return &cli.Command{
-		Name:  "import",
-		Usage: "Import the default set of candidate repositories",
+		Name:  "seed",
+		Usage: "Seed the default set of candidate repositories",
 		Action: func(cctx *cli.Context) error {
 			conn, err := pgx.Connect(cctx.Context, localDBURL)
 			if err != nil {
@@ -102,7 +102,7 @@ var seedCandidateRepositories = map[string]struct {
 	},
 	"did:plc:o74zbazekchwk2v4twee4ekb": {
 		Comment:  "kio (kio.dev)",
-		IsArtist: false,
+		IsArtist: true,
 	},
 	"did:plc:rgbf6ph3eki5lffvrs6syf4w": {
 		Comment:  "cael (cael.tech)",

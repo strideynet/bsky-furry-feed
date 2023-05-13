@@ -24,7 +24,17 @@ IaC can be found in `infra/`. The state and deployment is managed by Spacelift.
 
 ### Deploying
 
-If database migration is necessary, run this from your workstation.
+If database migration is necessary, run this from your workstation before
+updating any components.
 
-Manually bump container image versions in `infra/`.
+#### Ingester VM
 
+Container currently managed in GCE directly as lack of support in Terraform for 
+GCE container VMs.
+
+Set container metadata to enable logging:
+
+```
+google-logging-enabled true
+google-logging-use-fluentbit true
+```
