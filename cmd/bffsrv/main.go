@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cloud.google.com/go/cloudsqlconn"
 	"context"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -14,6 +15,7 @@ import (
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.uber.org/zap"
+	"net"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -21,11 +23,14 @@ import (
 
 var tracer = otel.Tracer("bffsrv")
 
+// TODO: Better, more granular, configuration.
+var inProduction = os.Getenv("ENV") == "production"
+
 func main() {
 	log, _ := zap.NewProduction()
 	err := runE(log)
 	if err != nil {
-		panic(err)
+		log.Fatal("exited with error", zap.Error(err))
 	}
 }
 
@@ -58,6 +63,28 @@ func tracerProvider(ctx context.Context, url string) (*tracesdk.TracerProvider, 
 
 const localDBURL = "postgres://bff:bff@localhost:5432/bff?sslmode=disable"
 
+func connectDB(ctx context.Context) (*pgxpool.Pool, error) {
+	// TODO: Make this less horrible.
+	// We should check env var for GCP Cloud SQL mode
+	// We should detect the service account email.
+	if inProduction {
+		d, err := cloudsqlconn.NewDialer(context.Background(), cloudsqlconn.WithIAMAuthN())
+		if err != nil {
+			return nil, fmt.Errorf("creating cloud sql dialer: %w", err)
+		}
+		// TODO: Make this configurable
+		cfg, err := pgxpool.ParseConfig("user=849144245446-compute@developer database=bff")
+		if err != nil {
+			return nil, fmt.Errorf("parsing cloud sql config: %w", err)
+		}
+		cfg.ConnConfig.DialFunc = func(ctx context.Context, _, _ string) (net.Conn, error) {
+			return d.Dial(ctx, "bsky-furry-feed:us-east1:main-us-east")
+		}
+		return pgxpool.NewWithConfig(ctx, cfg)
+	}
+	return pgxpool.New(ctx, localDBURL)
+}
+
 func runE(log *zap.Logger) error {
 	ctx := context.Background()
 	log.Info("setting up services")
@@ -70,9 +97,9 @@ func runE(log *zap.Logger) error {
 	}
 	runGroup := run.Group{}
 
-	pool, err := pgxpool.New(ctx, localDBURL)
+	pool, err := connectDB(ctx)
 	if err != nil {
-		return fmt.Errorf("creating db pool: %w", err)
+		return fmt.Errorf("connecting to db: %w", err)
 	}
 	defer pool.Close()
 	queries := store.New(pool)

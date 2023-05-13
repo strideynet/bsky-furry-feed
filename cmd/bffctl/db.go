@@ -9,7 +9,10 @@ import (
 	"time"
 )
 
+// TODO: Add env parameter to select these.
 const localDBURL = "postgres://bff:bff@localhost:5432/bff?sslmode=disable"
+const remoteDBURL = "postgres://noah@noahstride.co.uk@localhost:15432/bff?sslmode=disable"
+const selectedDBURL = localDBURL
 
 func dbCmd(log *zap.Logger) *cli.Command {
 	return &cli.Command{
@@ -33,7 +36,7 @@ func dbCandidateRepositoriesSeedCmd(log *zap.Logger) *cli.Command {
 		Name:  "seed",
 		Usage: "Seed the default set of candidate repositories",
 		Action: func(cctx *cli.Context) error {
-			conn, err := pgx.Connect(cctx.Context, localDBURL)
+			conn, err := pgx.Connect(cctx.Context, selectedDBURL)
 			if err != nil {
 				return err
 			}
