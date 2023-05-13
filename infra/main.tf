@@ -45,7 +45,7 @@ resource "google_sql_database" "database" {
 }
 
 resource "google_sql_user" "main_us_east_default_compute_service_account" {
-  name     = data.google_compute_default_service_account.default.email
+  name = replace(data.google_compute_default_service_account.default.email, ".gserviceaccount.com", "")
   instance = google_sql_database_instance.main_us_east.name
   type     = "CLOUD_IAM_SERVICE_ACCOUNT"
 }
