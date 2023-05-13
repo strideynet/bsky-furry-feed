@@ -39,21 +39,27 @@ google-logging-enabled true
 google-logging-use-fluentbit true
 ```
 
+Standard logging/metrics not ticked.
+
 #### SQL
 
-Terraform/GCP makes it difficult to apply permissions to Cloud SQL IAM users.
-Therefore, we must manually grant these accounts permissions:
-- Generate a password for the `postgres` built-in user
-- Connect to this user.
-- Run `apply_permissions.sql`
-- Generate a new password for this user, and dispose of it.
+You can open a local proxy with:
 
-Once these are set up, you can open a local proxy with:
-
-```
+```sh
 gcloud config set project bsky-furry-feed
 gcloud auth application-default login
+# Port 15432 is used to differentiate from the local development postgres
+# instance.
 ./cloud-sql-proxy --auto-iam-authn bsky-furry-feed:us-east1:main-us-east -p 15432
 ```
 
-When authenticating provide your username and no password.
+When authenticating provide your username/email and no password, IAM auth takes
+care of the "password" element (short lived tokens are injected).
+
+Permissions may be a bit screwy at the moment. You'll need to manually grant 
+access to tables to service accounts.
+
+At a later date I should:
+- Use migrations to create a role.
+- Grant this role access to all tables.
+- Add guidance on granting this role to cloudsqliamserviceaccount and cloudsqliamuser.
