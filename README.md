@@ -20,7 +20,7 @@ You need HTTPS, so use Cloudflare Tunnel or similar when developing.
 
 ## Operations
 
-IaC can be found in `infra/`.
+IaC can be found in `infra/`. The state and deployment is managed by Spacelift.
 
 ### Deploying
 

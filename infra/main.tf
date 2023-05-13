@@ -1,3 +1,11 @@
+provider "google" {
+  project     = "bsky-furry-feed"
+}
+
+provider "google-beta" {
+  project     = "bsky-furry-feed"
+}
+
 resource "google_sql_database_instance" "main_us_east" {
   database_version = "POSTGRES_14"
   name             = "main-us-east"
