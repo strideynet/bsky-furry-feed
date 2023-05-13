@@ -25,11 +25,11 @@ func feedServer(log *zap.Logger, st *store.Queries) *http.Server {
 		w.Write([]byte(fmt.Sprintf(`{"@context":["https://www.w3.org/ns/did/v1"],"id":"did:web:%s","service":[{"id":"#bsky_fg","type":"BskyFeedGenerator","serviceEndpoint":"https://%s"}]}`, hostname, hostname)))
 	})
 	mux.Handle("/xrpc/app.bsky.feed.getFeedSkeleton", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Info("request", zap.Any("url", r.URL))
 		q := r.URL.Query()
 		params := getFeedSkeletonParameters{
 			cursor: q.Get("cursor"),
 			feed:   q.Get("feed"),
+			limit:  50,
 		}
 		limitStr := q.Get("limit")
 		if limitStr != "" {
@@ -38,7 +38,19 @@ func feedServer(log *zap.Logger, st *store.Queries) *http.Server {
 				panic(err)
 			}
 			params.limit = limit
+			if limit < 1 {
+				panic("limit too low")
+			}
+			if limit > 100 {
+				panic("limit too high")
+			}
 		}
+		log.Info(
+			"get feed skeleton request",
+			zap.String("feed", params.feed),
+			zap.String("cursor", params.cursor),
+			zap.Int("limit", params.limit),
+		)
 
 		type post struct {
 			Post string `json:"post"`
@@ -47,21 +59,35 @@ func feedServer(log *zap.Logger, st *store.Queries) *http.Server {
 			Cursor string `json:"cursor"`
 			Feed   []post `json:"feed"`
 		}{
-			Cursor: "end",
-			Feed:   []post{},
+			Feed: []post{},
 		}
 
-		if params.cursor != "end" {
-			posts, err := st.ListCandidatePostsForFeed(r.Context())
+		if params.cursor == "" {
+			// Inject a pinned skeet at the top.
+			pinnedPost := "at://did:plc:dllwm3fafh66ktjofzxhylwk/app.bsky.feed.post/3jvmbtpvjlq2j"
+			output.Feed = append(output.Feed, post{
+				Post: pinnedPost,
+			})
+
+			posts, err := st.ListCandidatePostsForFeed(r.Context(), int32(params.limit))
 			if err != nil {
 				log.Error("failed to fetch posts", zap.Error(err))
+				panic(err)
 			}
 
 			for _, p := range posts {
+				// Remove pinned skeet to avoid showing it twice
+				if p.URI == pinnedPost {
+					continue
+				}
 				output.Feed = append(output.Feed, post{
 					Post: p.URI,
 				})
 			}
+			// TODO: index_at timestamp of last post
+			output.Cursor = "end"
+		} else {
+			output.Cursor = ""
 		}
 
 		w.WriteHeader(200)

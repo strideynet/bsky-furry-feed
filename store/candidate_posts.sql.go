@@ -37,11 +37,11 @@ func (q *Queries) CreateCandidatePost(ctx context.Context, arg CreateCandidatePo
 }
 
 const listCandidatePostsForFeed = `-- name: ListCandidatePostsForFeed :many
-SELECT uri, repository_did, created_at, indexed_at FROM candidate_posts ORDER BY created_at DESC
+SELECT uri, repository_did, created_at, indexed_at FROM candidate_posts ORDER BY created_at DESC LIMIT $1
 `
 
-func (q *Queries) ListCandidatePostsForFeed(ctx context.Context) ([]CandidatePost, error) {
-	rows, err := q.db.Query(ctx, listCandidatePostsForFeed)
+func (q *Queries) ListCandidatePostsForFeed(ctx context.Context, limit int32) ([]CandidatePost, error) {
+	rows, err := q.db.Query(ctx, listCandidatePostsForFeed, limit)
 	if err != nil {
 		return nil, err
 	}

@@ -6,4 +6,4 @@ INSERT INTO candidate_posts (
  );
 
 -- name: ListCandidatePostsForFeed :many
-SELECT * FROM candidate_posts ORDER BY created_at DESC;
+SELECT * FROM candidate_posts ORDER BY created_at DESC LIMIT $1;
