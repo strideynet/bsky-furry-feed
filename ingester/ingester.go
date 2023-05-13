@@ -1,4 +1,4 @@
-package main
+package ingester
 
 import (
 	"bytes"
@@ -13,9 +13,9 @@ import (
 	"github.com/bluesky-social/indigo/repomgr"
 	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5/pgtype"
-	bff "github.com/strideynet/bsky-furry-feed"
 	"github.com/strideynet/bsky-furry-feed/store"
 	typegen "github.com/whyrusleeping/cbor-gen"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 	"net/http"
@@ -23,51 +23,24 @@ import (
 	"time"
 )
 
-type candidateRepositoryCache struct {
-	store  *store.Queries
-	cached map[string]bff.CandidateRepository
-	mu     sync.RWMutex
-	log    *zap.Logger
-}
-
-func (crc *candidateRepositoryCache) GetByDID(
-	did string,
-) *bff.CandidateRepository {
-	crc.mu.RLock()
-	defer crc.mu.RUnlock()
-	v, ok := crc.cached[did]
-	if ok {
-		return &v
-	}
-	return nil
-}
-
-func (crc *candidateRepositoryCache) fetch(ctx context.Context) error {
-	crc.log.Info("starting cache fill")
-	data, err := crc.store.ListCandidateRepositories(ctx)
-	if err != nil {
-		return fmt.Errorf("listing candidate repositories: %w", err)
-	}
-
-	mapped := map[string]bff.CandidateRepository{}
-	for _, cr := range data {
-		mapped[cr.DID] = bff.CandidateRepositoryFromStore(cr)
-	}
-
-	crc.mu.Lock()
-	defer crc.mu.Unlock()
-	crc.cached = mapped
-	crc.log.Info("finished cache fill", zap.Int("count", len(mapped)))
-	return nil
-}
+var tracer = otel.Tracer("github.com/strideynet/bsky-furry-feed/ingester")
 
 const workerCount = 3
 
 type FirehoseIngester struct {
-	stop  chan struct{}
-	log   *zap.Logger
-	crc   *candidateRepositoryCache
-	store *store.Queries
+	stop    chan struct{}
+	log     *zap.Logger
+	crc     *CandidateRepositoryCache
+	queries *store.Queries
+}
+
+func NewFirehoseIngester(log *zap.Logger, queries *store.Queries, crc *CandidateRepositoryCache) *FirehoseIngester {
+	return &FirehoseIngester{
+		stop:    make(chan struct{}),
+		log:     log,
+		crc:     crc,
+		queries: queries,
+	}
 }
 
 func (fi *FirehoseIngester) Start() error {
@@ -111,7 +84,7 @@ func (fi *FirehoseIngester) Start() error {
 					ctx, cancel := context.WithTimeout(ctx, time.Second*30)
 					defer cancel()
 					if err := fi.handleCommit(ctx, evt); err != nil {
-						fi.log.Error("failed to handle repo commit")
+						fi.log.Error("failed to handle repo commit", zap.Error(err))
 					}
 				}
 			}
@@ -232,11 +205,11 @@ func (fi *FirehoseIngester) handleFeedPostCreate(
 	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_feed_post_create")
 	defer span.End()
 	if data.Reply == nil {
-		createdAt, err := time.Parse("2006-01-02T15:04:05.000Z", data.CreatedAt)
+		createdAt, err := time.Parse("2006-01-02T15:04:05.999999999Z", data.CreatedAt)
 		if err != nil {
 			return fmt.Errorf("parsing post time: %w", err)
 		}
-		err = fi.store.CreateCandidatePost(
+		err = fi.queries.CreateCandidatePost(
 			ctx,
 			store.CreateCandidatePostParams{
 				URI:           recordUri,

@@ -13,10 +13,10 @@ type getFeedSkeletonParameters struct {
 }
 
 // https://feed-generator.skyfeed.app/xrpc/app.bsky.feed.getFeedSkeleton?feed=did:web:feed-generator.skyfeed.app/app.bsky.feed.generator/posts-with-links
-func New(log *zap.Logger, st *store.Queries) *http.Server {
+func New(log *zap.Logger, queries *store.Queries) *http.Server {
 	mux := &http.ServeMux{}
 	mux.Handle(didHandler())
-	mux.Handle(getFeedSkeletonHandler(log, st))
+	mux.Handle(getFeedSkeletonHandler(log, queries))
 	mux.Handle(notFoundHandler(log))
 
 	return &http.Server{

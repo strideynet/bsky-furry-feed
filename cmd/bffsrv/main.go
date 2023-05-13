@@ -6,6 +6,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/oklog/run"
 	"github.com/strideynet/bsky-furry-feed/feedserver"
+	"github.com/strideynet/bsky-furry-feed/ingester"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/jaeger"
@@ -18,7 +19,7 @@ import (
 	"os"
 )
 
-var tracer = otel.Tracer("github.com/strideynet/bsky-furry-feed")
+var tracer = otel.Tracer("bffsrv")
 
 func main() {
 	log, _ := zap.NewDevelopment()
@@ -74,28 +75,25 @@ func runE(log *zap.Logger) error {
 		return fmt.Errorf("creating db pool: %w", err)
 	}
 	defer pool.Close()
-	st := store.New(pool)
-	crc := &candidateRepositoryCache{
-		store: st,
-		log:   log.Named("candidate_repositories_cache"),
-	}
-	if err := crc.fetch(ctx); err != nil {
+	queries := store.New(pool)
+	crc := ingester.NewCandidateRepositoryCache(
+		log.Named("candidate_repositories_cache"),
+		queries,
+	)
+	if err := crc.Fetch(ctx); err != nil {
 		return fmt.Errorf("filling candidate repository cache: %w", err)
 	}
 
 	// Setup ingester
-	fi := &FirehoseIngester{
-		stop:  make(chan struct{}),
-		log:   log.Named("firehose_ingester"),
-		crc:   crc,
-		store: st,
-	}
+	fi := ingester.NewFirehoseIngester(
+		log.Named("firehose_ingester"), queries, crc,
+	)
 	runGroup.Add(fi.Start, func(_ error) {
 		fi.Stop()
 	})
 
 	// Setup the public HTTP/XRPC server
-	srv := feedserver.New(log.Named("feed_server"), st)
+	srv := feedserver.New(log.Named("feed_server"), queries)
 	runGroup.Add(func() error {
 		log.Info("feed server listening", zap.String("addr", srv.Addr))
 		return srv.ListenAndServe()

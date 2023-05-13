@@ -8,7 +8,9 @@ import (
 	"strconv"
 )
 
-func getFeedSkeletonHandler(log *zap.Logger, st *store.Queries) (string, http.HandlerFunc) {
+func getFeedSkeletonHandler(
+	log *zap.Logger, queries *store.Queries,
+) (string, http.HandlerFunc) {
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
 		params := getFeedSkeletonParameters{
@@ -54,7 +56,7 @@ func getFeedSkeletonHandler(log *zap.Logger, st *store.Queries) (string, http.Ha
 				Post: pinnedPost,
 			})
 
-			posts, err := st.ListCandidatePostsForFeed(r.Context(), int32(params.limit))
+			posts, err := queries.ListCandidatePostsForFeed(r.Context(), int32(params.limit))
 			if err != nil {
 				log.Error("failed to fetch posts", zap.Error(err))
 				panic(err)
