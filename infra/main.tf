@@ -6,6 +6,9 @@ provider "google-beta" {
   project     = "bsky-furry-feed"
 }
 
+data "google_compute_default_service_account" "default" {
+}
+
 resource "google_sql_database_instance" "main_us_east" {
   database_version = "POSTGRES_14"
   name             = "main-us-east"
@@ -28,6 +31,27 @@ resource "google_sql_database_instance" "main_us_east" {
     ip_configuration {
       ipv4_enabled = true
     }
+
+    database_flags {
+      name  = "cloudsql.iam_authentication"
+      value = "on"
+    }
   }
 }
 
+resource "google_sql_database" "database" {
+  name     = "bff"
+  instance = google_sql_database_instance.main_us_east.name
+}
+
+resource "google_sql_user" "main_us_east_default_compute_service_account" {
+  name     = data.google_compute_default_service_account.default.id
+  instance = google_sql_database_instance.main_us_east.name
+  type     = "CLOUD_IAM_SERVICE_ACCOUNT"
+}
+
+resource "google_sql_user" "main_us_east_noah" {
+  name     = "noah@noahstride.co.uk"
+  instance = google_sql_database_instance.main_us_east.name
+  type     = "CLOUD_IAM_USER"
+}
