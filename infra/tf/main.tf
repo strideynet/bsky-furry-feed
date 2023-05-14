@@ -55,3 +55,9 @@ resource "google_sql_user" "main_us_east_noah" {
   instance = google_sql_database_instance.main_us_east.name
   type     = "CLOUD_IAM_USER"
 }
+
+resource "google_container_cluster" "us_east" {
+  name               = "us-east"
+  location           = "us-east1"
+  enable_autopilot = true
+}

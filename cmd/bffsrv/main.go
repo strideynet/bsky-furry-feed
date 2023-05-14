@@ -130,17 +130,13 @@ func runE(log *zap.Logger) error {
 		fi.Stop()
 	})
 
+	// Setup the public HTTP/XRPC server
 	// TODO: Make these externally configurable
 	hostname := "dev-feed.ottr.sh"
 	if inProduction {
 		hostname = "feed.ottr.sh"
 	}
 	listenAddr := ":1337"
-	if inProduction {
-		listenAddr = ":80"
-	}
-
-	// Setup the public HTTP/XRPC server
 	srv := feedserver.New(
 		log.Named("feed_server"),
 		queries,
