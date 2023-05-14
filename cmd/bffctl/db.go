@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/strideynet/bsky-furry-feed/store"
@@ -21,6 +22,7 @@ func dbCmd(log *zap.Logger, env *environment) *cli.Command {
 				Subcommands: []*cli.Command{
 					dbCandidateRepositoriesList(log, env),
 					dbCandidateRepositoriesSeedCmd(log, env),
+					dbCandidateRepositoriesAddCmd(log, env),
 				},
 			},
 		},
@@ -64,6 +66,7 @@ func dbCandidateRepositoriesSeedCmd(log *zap.Logger, env *environment) *cli.Comm
 
 			db := store.New(conn)
 
+			log.Info("seed candidates", zap.Int("count", len(seedCandidateRepositories)))
 			for did, candidate := range seedCandidateRepositories {
 				log.Info("seeding candidate repository",
 					zap.String("did", did),
@@ -85,6 +88,70 @@ func dbCandidateRepositoriesSeedCmd(log *zap.Logger, env *environment) *cli.Comm
 					return err
 				}
 			}
+
+			return nil
+		},
+	}
+}
+
+func dbCandidateRepositoriesAddCmd(log *zap.Logger, env *environment) *cli.Command {
+	handle := ""
+	name := ""
+	isArtist := false
+	return &cli.Command{
+		Name:  "add",
+		Usage: "Adds a new candidate repository",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:        "handle",
+				Required:    true,
+				Destination: &handle,
+			},
+			&cli.StringFlag{
+				Name:        "name",
+				Required:    true,
+				Destination: &name,
+			},
+			&cli.BoolFlag{
+				Name:        "artist",
+				Destination: &isArtist,
+			},
+		},
+		Action: func(cctx *cli.Context) error {
+			conn, err := pgx.Connect(cctx.Context, env.dbURL)
+			if err != nil {
+				return err
+			}
+			defer conn.Close(cctx.Context)
+
+			did, err := findDID(cctx.Context, handle)
+			if err != nil {
+				return err
+			}
+			log.Info("found did", zap.String("did", did))
+
+			db := store.New(conn)
+
+			params := store.CreateCandidateRepositoryParams{
+				DID: did,
+				CreatedAt: pgtype.Timestamptz{
+					Time:  time.Now(),
+					Valid: true,
+				},
+				IsArtist: isArtist,
+				Comment:  fmt.Sprintf("%s (%s)", name, handle),
+			}
+			log.Info("adding candidate repository",
+				zap.Any("data", params),
+			)
+			err = db.CreateCandidateRepository(
+				cctx.Context,
+				params,
+			)
+			if err != nil {
+				return err
+			}
+			log.Info("added candidate repository")
 
 			return nil
 		},

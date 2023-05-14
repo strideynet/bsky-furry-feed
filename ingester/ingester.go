@@ -29,7 +29,7 @@ var tracer = otel.Tracer("github.com/strideynet/bsky-furry-feed/ingester")
 
 var eventsProcessed = promauto.NewSummaryVec(prometheus.SummaryOpts{
 	Name: "bff_ingester_firehose_event_duration_seconds",
-	Help: "The total number of processed events from the firehose",
+	Help: "The total number of events from the firehose processed by workers",
 }, []string{"type"})
 
 const workerCount = 3
