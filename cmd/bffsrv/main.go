@@ -10,6 +10,7 @@ import (
 	"github.com/strideynet/bsky-furry-feed/feedserver"
 	"github.com/strideynet/bsky-furry-feed/ingester"
 	"github.com/strideynet/bsky-furry-feed/store"
+	"go.opentelemetry.io/contrib/detectors/gcp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/jaeger"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -53,6 +54,7 @@ func tracerProvider(ctx context.Context, url string) (*tracesdk.TracerProvider, 
 
 	r, err := resource.New(
 		ctx,
+		resource.WithDetectors(gcp.NewDetector()),
 		resource.WithTelemetrySDK(),
 		resource.WithAttributes(
 			semconv.ServiceName("bffsrv"),
