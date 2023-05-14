@@ -186,13 +186,26 @@ func (fi *FirehoseIngester) handleRecordCreate(
 	case *bsky.FeedPost:
 		err := fi.handleFeedPostCreate(ctx, log, repoDID, recordUri, data)
 		if err != nil {
-			return fmt.Errorf("handling feed post create: %w", err)
+			return fmt.Errorf("handling app.bsky.feed.post create: %w", err)
+		}
+	case *bsky.FeedLike:
+		err := fi.handleFeedLikeCreate(ctx, log, repoDID, recordUri, data)
+		if err != nil {
+			return fmt.Errorf("handling app.bsky.feed.like: %w", err)
 		}
 	default:
 		log.Info("ignoring record create due to handled type")
 	}
 
 	return nil
+}
+
+func parseTime(str string) (time.Time, error) {
+	t, err := time.Parse("2006-01-02T15:04:05.999999999Z", str)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("parsing post time: %w", err)
+	}
+	return t, nil
 }
 
 func (fi *FirehoseIngester) handleFeedPostCreate(
@@ -205,7 +218,7 @@ func (fi *FirehoseIngester) handleFeedPostCreate(
 	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_feed_post_create")
 	defer span.End()
 	if data.Reply == nil {
-		createdAt, err := time.Parse("2006-01-02T15:04:05.999999999Z", data.CreatedAt)
+		createdAt, err := parseTime(data.CreatedAt)
 		if err != nil {
 			return fmt.Errorf("parsing post time: %w", err)
 		}
@@ -230,5 +243,42 @@ func (fi *FirehoseIngester) handleFeedPostCreate(
 	} else {
 		log.Info("ignoring reply")
 	}
+	return nil
+}
+
+func (fi *FirehoseIngester) handleFeedLikeCreate(
+	ctx context.Context,
+	log *zap.Logger,
+	repoDID string,
+	recordUri string,
+	data *bsky.FeedLike,
+) error {
+	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_feed_like_create")
+	defer span.End()
+
+	createdAt, err := parseTime(data.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("parsing like time: %w", err)
+	}
+	err = fi.queries.CreateCandidateLike(
+		ctx,
+		store.CreateCandidateLikeParams{
+			URI:           recordUri,
+			RepositoryDID: repoDID,
+			SubjectUri:    data.Subject.Uri,
+			CreatedAt: pgtype.Timestamptz{
+				Time:  createdAt,
+				Valid: true,
+			},
+			IndexedAt: pgtype.Timestamptz{
+				Time:  time.Now(),
+				Valid: true,
+			},
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("creating candidate like: %w", err)
+	}
+
 	return nil
 }

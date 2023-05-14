@@ -30,6 +30,8 @@ IaC can be found in `infra/`. The state and deployment is managed by Spacelift.
 If database migration is necessary, run this from your workstation before
 updating any components.
 
+Update the container image used by the GCE VMs, reboot them.
+
 #### Ingester VM
 
 Container currently managed in GCE directly as lack of support in Terraform for 
