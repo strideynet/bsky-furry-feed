@@ -132,8 +132,14 @@ func runE(log *zap.Logger) error {
 		fi.Stop()
 	})
 
+	// TODO: Make this externally configurable
+	hostname := "dev-feed.ottr.sh"
+	if inProduction {
+		hostname = "feed.ottr.sh"
+	}
+
 	// Setup the public HTTP/XRPC server
-	srv := feedserver.New(log.Named("feed_server"), queries)
+	srv := feedserver.New(log.Named("feed_server"), queries, hostname)
 	runGroup.Add(func() error {
 		log.Info("feed server listening", zap.String("addr", srv.Addr))
 		return srv.ListenAndServe()
