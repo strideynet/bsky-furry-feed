@@ -13,6 +13,6 @@ INSERT INTO candidate_repositories (
 INSERT INTO candidate_repositories (
     did, created_at, is_artist, comment
 ) VALUES (
-             $1, $2, $3, $4
-         )
+    $1, $2, $3, $4
+)
 ON CONFLICT DO NOTHING;
