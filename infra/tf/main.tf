@@ -17,8 +17,8 @@ resource "google_sql_database_instance" "main_us_east" {
   settings {
     availability_type = "ZONAL"
     disk_autoresize   = true
-    disk_size         = 30
-    disk_type         = "PD_HDD"
+    disk_size         = 15
+    disk_type         = "PD_SSD"
     tier              = "db-f1-micro"
     deletion_protection_enabled = true
 
