@@ -3,6 +3,7 @@ package feedserver
 import (
 	"encoding/json"
 	"github.com/strideynet/bsky-furry-feed/store"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
 	"net/http"
 	"strconv"
@@ -10,8 +11,8 @@ import (
 
 func getFeedSkeletonHandler(
 	log *zap.Logger, queries *store.Queries,
-) (string, http.HandlerFunc) {
-	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+) (string, http.Handler) {
+	var h http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
 		params := getFeedSkeletonParameters{
 			cursor: q.Get("cursor"),
@@ -81,6 +82,6 @@ func getFeedSkeletonHandler(
 		encoder := json.NewEncoder(w)
 		encoder.Encode(output)
 		// TODO: Handle err.
-	})
-	return "/xrpc/app.bsky.feed.getFeedSkeleton", h
+	}
+	return "/xrpc/app.bsky.feed.getFeedSkeleton", otelhttp.NewHandler(h, "get_feed_skeleton")
 }
