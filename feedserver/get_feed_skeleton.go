@@ -2,12 +2,21 @@ package feedserver
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
 	"net/http"
 	"strconv"
 )
+
+var pinnedPost = ""
+
+func handleErr(w http.ResponseWriter, log *zap.Logger, err error) {
+	log.Error("failed to handle request", zap.Error(err))
+	w.WriteHeader(500)
+	w.Write([]byte(fmt.Sprintf("failed to handle request: %s", err)))
+}
 
 func getFeedSkeletonHandler(
 	log *zap.Logger, queries *store.Queries,
@@ -23,14 +32,17 @@ func getFeedSkeletonHandler(
 		if limitStr != "" {
 			limit, err := strconv.Atoi(limitStr)
 			if err != nil {
-				panic(err)
+				handleErr(w, log, err)
+				return
 			}
 			params.limit = limit
 			if limit < 1 {
-				panic("limit too low")
+				handleErr(w, log, fmt.Errorf("limit too low (%d)", limit))
+				return
 			}
 			if limit > 100 {
-				panic("limit too high")
+				handleErr(w, log, fmt.Errorf("limit too high (%d)", limit))
+				return
 			}
 		}
 		log.Info(
@@ -51,16 +63,25 @@ func getFeedSkeletonHandler(
 		}
 
 		if params.cursor == "" {
-			// Inject a pinned skeet at the top.
-			pinnedPost := "at://did:plc:dllwm3fafh66ktjofzxhylwk/app.bsky.feed.post/3jvmbtpvjlq2j"
-			output.Feed = append(output.Feed, post{
-				Post: pinnedPost,
-			})
+			// Inject a pinned post at the top of the first page. We can use
+			// this for service outage notifications etc.
+			if pinnedPost != "" {
+				output.Feed = append(output.Feed, post{
+					Post: pinnedPost,
+				})
+			}
 
-			posts, err := queries.ListCandidatePostsForFeed(r.Context(), int32(params.limit))
+			posts, err := queries.ListCandidatePostsForFeed(
+				r.Context(),
+				int32(params.limit),
+			)
 			if err != nil {
-				log.Error("failed to fetch posts", zap.Error(err))
-				panic(err)
+				handleErr(
+					w,
+					log,
+					fmt.Errorf("fetching candidate posts: %w", err),
+				)
+				return
 			}
 
 			for _, p := range posts {
@@ -80,8 +101,7 @@ func getFeedSkeletonHandler(
 
 		w.WriteHeader(200)
 		encoder := json.NewEncoder(w)
-		encoder.Encode(output)
-		// TODO: Handle err.
+		_ = encoder.Encode(output)
 	}
 	return "/xrpc/app.bsky.feed.getFeedSkeleton", otelhttp.NewHandler(h, "get_feed_skeleton")
 }
