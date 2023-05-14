@@ -65,3 +65,9 @@ resource "google_container_cluster" "us_east" {
     services_ipv4_cidr_block = ""
   }
 }
+
+resource "google_service_account_iam_member" "bff_ingester_workload_identity_binding" {
+  service_account_id = data.google_compute_default_service_account.default.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "serviceAccount:bsky-furry-feed.svc.id.goog[default/bff-ingester]"
+}

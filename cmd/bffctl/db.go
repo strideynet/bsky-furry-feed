@@ -167,4 +167,8 @@ var seedCandidateRepositories = map[string]struct {
 		Comment:  "lio (pogcha.mp)",
 		IsArtist: false,
 	},
+	"did:plc:w5a2nvvmdatnyb2cyijwwk3v": {
+		Comment:  "reese (reese.bsky.social)",
+		IsArtist: false,
+	},
 }
