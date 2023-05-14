@@ -29,13 +29,14 @@ spec:
       serviceAccountName: bff-ingester
       containers:
       - name: ingester
-        image: ghcr.io/strideynet/bsky-furry-feed/bffsrv:b856f200bfb558f132e03698af7e5757da9605e8
+        image: ghcr.io/strideynet/bsky-furry-feed/bffsrv:f73aca2507eb556dc8692a8042dbf59f8afdbc1a
         env:
           - name: ENV
             value: production
         ports:
         - containerPort: 1337
         - containerPort: 1338
+          name: debug
         resources:
           requests:
             memory: 500Mi
@@ -65,3 +66,15 @@ spec:
       name: bff-ingester
       port:
         number: 80
+---
+apiVersion: monitoring.googleapis.com/v1
+kind: PodMonitoring
+metadata:
+  name: bff-ingester
+spec:
+  selector:
+    matchLabels:
+      app: prom-example
+  endpoints:
+    - port: debug
+      interval: 30s

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"net/http/pprof"
 )
@@ -18,6 +19,7 @@ func debugServer() *http.Server {
 	mux.HandleFunc("/livez", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	})
+	mux.Handle("/metrics", promhttp.Handler())
 
 	return &http.Server{
 		Addr:    "127.0.0.1:1338",

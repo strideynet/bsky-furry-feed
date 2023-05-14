@@ -13,6 +13,8 @@ import (
 	"github.com/bluesky-social/indigo/repomgr"
 	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/strideynet/bsky-furry-feed/store"
 	typegen "github.com/whyrusleeping/cbor-gen"
 	"go.opentelemetry.io/otel"
@@ -24,6 +26,11 @@ import (
 )
 
 var tracer = otel.Tracer("github.com/strideynet/bsky-furry-feed/ingester")
+
+var eventsProcessed = promauto.NewSummaryVec(prometheus.SummaryOpts{
+	Name: "bff_ingester_firehose_event_duration_seconds",
+	Help: "The total number of processed events from the firehose",
+}, []string{"type"})
 
 const workerCount = 3
 
@@ -79,13 +86,15 @@ func (fi *FirehoseIngester) Start() error {
 				case <-ctx.Done():
 					return
 				case evt := <-evtChan:
+					start := time.Now()
 					// 30 seconds max to deal with any batch. This prevents a worker
 					// hanging.
 					ctx, cancel := context.WithTimeout(ctx, time.Second*30)
-					defer cancel()
 					if err := fi.handleCommit(ctx, evt); err != nil {
 						fi.log.Error("failed to handle repo commit", zap.Error(err))
 					}
+					eventsProcessed.WithLabelValues("repo_commit").Observe(time.Since(start).Seconds())
+					cancel()
 				}
 			}
 		}()
