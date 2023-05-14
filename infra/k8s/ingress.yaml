@@ -1,0 +1,21 @@
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: bff
+spec:
+  domains:
+    - feed.furryli.st
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bff
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: "ingress"
+    networking.gke.io/managed-certificates: "bff"
+spec:
+  defaultBackend:
+    service:
+      name: bff-ingester
+      port:
+        number: 80

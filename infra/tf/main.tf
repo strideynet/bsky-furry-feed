@@ -36,6 +36,10 @@ resource "google_sql_database_instance" "main_us_east" {
       name  = "cloudsql.iam_authentication"
       value = "on"
     }
+
+    insights_config {
+      query_insights_enabled = true
+    }
   }
 }
 
@@ -90,4 +94,3 @@ resource "google_dns_record_set" "feed_furrylist" {
 
   rrdatas = [google_compute_global_address.ingress.address]
 }
-

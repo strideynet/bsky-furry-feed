@@ -29,7 +29,7 @@ spec:
       serviceAccountName: bff-ingester
       containers:
       - name: ingester
-        image: ghcr.io/strideynet/bsky-furry-feed/bffsrv:34ff8b186ffe7d71365f41ede1fac5fb6fc16130
+        image: ghcr.io/strideynet/bsky-furry-feed/bffsrv:1a8761613cb0ed2daacc46d4f0dae0670772ef2c
         env:
           - name: ENV
             value: production
@@ -55,17 +55,6 @@ spec:
     app.kubernetes.io/name: ingester
     app.kubernetes.io/part-of: bff
   type: ClusterIP
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: bff
-spec:
-  defaultBackend:
-    service:
-      name: bff-ingester
-      port:
-        number: 80
 ---
 apiVersion: monitoring.googleapis.com/v1
 kind: PodMonitoring

@@ -1,4 +1,4 @@
-# Brain dump
+# Planning
 
 ## Candidates
 
@@ -36,3 +36,19 @@ Planned feeds in order of implementation:
 - Furry "whats hot"
 
 Eventually allow these feeds to be broken down by AD and Artist status.
+
+# Bluesky schema dumps
+
+## `app.bsky.feed.repost`
+
+```yaml
+# `at://did:plc:dllwm3fafh66ktjofzxhylwk/app.bsky.feed.repost/3jvpgz5ik4p26`
+ {
+  "$type": "app.bsky.feed.repost",
+  "createdAt": "2023-05-14T18:09:45.052Z",
+  "subject": {
+    "cid": "bafyreieflx5rcjwadinfayfnsgzn4cqzj3lncfslam4dysr7ms4xa2xmna",
+    "uri": "at://did:plc:ouytv644apqbu2pm7fnp7qrj/app.bsky.feed.post/3jvkfw2ovbc2b"
+  }
+}
+```
