@@ -21,7 +21,7 @@ func New(
 	mux := &http.ServeMux{}
 	mux.Handle(didHandler(hostname))
 	mux.Handle(getFeedSkeletonHandler(log, queries))
-	mux.Handle(notFoundHandler(log))
+	mux.Handle(rootHandler(log))
 
 	return &http.Server{
 		Addr:    listenAddr,

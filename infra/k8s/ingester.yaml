@@ -40,3 +40,28 @@ spec:
           requests:
             memory: 500Mi
             cpu: 500m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bff-ingester
+spec:
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 1337
+  selector:
+    app.kubernetes.io/name: ingester
+    app.kubernetes.io/part-of: bff
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bff
+spec:
+  defaultBackend:
+    service:
+      name: bff-ingester
+      port:
+        number: 80

@@ -6,12 +6,18 @@ import (
 	"net/http"
 )
 
-func notFoundHandler(log *zap.Logger) (string, http.Handler) {
+func rootHandler(log *zap.Logger) (string, http.Handler) {
 	var h http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
-		log.Info("request to non-existent path", zap.Any("path", r.URL.Path))
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("Not Found"))
+		if r.URL.Path != "/" {
+			log.Info("request to non-existent path", zap.Any("path", r.URL.Path))
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte("Not Found"))
+			return
+		}
+		w.WriteHeader(200)
+		w.Write([]byte("bluesky-furry-feed"))
+
 	}
 
-	return "/", otelhttp.NewHandler(h, "not_found")
+	return "/", otelhttp.NewHandler(h, "root")
 }
