@@ -72,7 +72,22 @@ resource "google_service_account_iam_member" "bff_ingester_workload_identity_bin
   member             = "serviceAccount:bsky-furry-feed.svc.id.goog[default/bff-ingester]"
 }
 
+resource "google_compute_global_address" "ingress" {
+  name         = "ingress"
+  address_type = "EXTERNAL"
+}
+
 resource "google_dns_managed_zone" "furrylist" {
   name = "furrylist"
   dns_name = "furryli.st."
 }
+
+resource "google_dns_record_set" "feed_furrylist" {
+  name         = "feed.${google_dns_managed_zone.furrylist.dns_name}"
+  managed_zone = google_dns_managed_zone.furrylist.name
+  type         = "A"
+  ttl          = 300
+
+  rrdatas = [google_compute_global_address.ingress.address]
+}
+
