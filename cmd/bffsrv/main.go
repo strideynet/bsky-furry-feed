@@ -134,7 +134,7 @@ func runE(log *zap.Logger) error {
 	// TODO: Make these externally configurable
 	hostname := "dev-feed.ottr.sh"
 	if inProduction {
-		hostname = "feed.ottr.sh"
+		hostname = "feed.furryli.st"
 	}
 	listenAddr := ":1337"
 	srv := feedserver.New(
