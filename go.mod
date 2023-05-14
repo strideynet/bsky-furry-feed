@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	cloud.google.com/go/cloudsqlconn v1.2.4
+	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace v1.13.1
 	github.com/bluesky-social/indigo v0.0.0-20230510211720-da6d879e182c
 	github.com/gorilla/websocket v1.5.0
 	github.com/jackc/pgx/v5 v5.3.1
@@ -19,12 +20,15 @@ require (
 require (
 	cloud.google.com/go/compute v1.19.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
+	cloud.google.com/go/trace v1.9.0 // indirect
+	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.37.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/s2a-go v0.1.3 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect

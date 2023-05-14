@@ -19,6 +19,9 @@ var environments = map[string]environment{
 		dbURL: "postgres://bff:bff@localhost:5432/bff?sslmode=disable",
 	},
 	"production": {
+		// Requires noah has run
+		// ./cloud-sql-proxy --auto-iam-authn bsky-furry-feed:us-east1:main-us-east -p 15432
+		// TODO: Support detecting user email ??
 		dbURL: "postgres://noah@noahstride.co.uk@localhost:15432/bff?sslmode=disable",
 	},
 }

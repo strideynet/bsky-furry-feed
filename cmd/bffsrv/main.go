@@ -4,6 +4,7 @@ import (
 	"cloud.google.com/go/cloudsqlconn"
 	"context"
 	"fmt"
+	texporter "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/oklog/run"
 	"github.com/strideynet/bsky-furry-feed/feedserver"
@@ -24,6 +25,7 @@ import (
 var tracer = otel.Tracer("bffsrv")
 
 // TODO: Better, more granular, configuration.
+// A `inGCP` would make more sense rather than `isProduction`
 var inProduction = os.Getenv("ENV") == "production"
 
 func main() {
@@ -35,9 +37,18 @@ func main() {
 }
 
 func tracerProvider(ctx context.Context, url string) (*tracesdk.TracerProvider, error) {
-	exp, err := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(url)))
-	if err != nil {
-		return nil, fmt.Errorf("creating jaeger exporter: %w", err)
+	var exp tracesdk.SpanExporter
+	var err error
+	if inProduction {
+		exp, err = texporter.New()
+		if err != nil {
+			return nil, fmt.Errorf("creating gcp trace exporter: %w", err)
+		}
+	} else {
+		exp, err = jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(url)))
+		if err != nil {
+			return nil, fmt.Errorf("creating jaeger exporter: %w", err)
+		}
 	}
 
 	r, err := resource.New(
