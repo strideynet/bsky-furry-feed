@@ -72,7 +72,7 @@ resource "google_service_account_iam_member" "bff_ingester_workload_identity_bin
   member             = "serviceAccount:bsky-furry-feed.svc.id.goog[default/bff-ingester]"
 }
 
-resource "google_dns_managed_zone" "furryli_st" {
-  name = "furryli.st"
-  dns_name = "furryli.st"
+resource "google_dns_managed_zone" "furrylist" {
+  name = "furrylist"
+  dns_name = "furryli.st."
 }
