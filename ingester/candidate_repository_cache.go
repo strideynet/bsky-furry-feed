@@ -7,6 +7,7 @@ import (
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.uber.org/zap"
 	"sync"
+	"time"
 )
 
 type CandidateRepositoryCache struct {
@@ -38,7 +39,7 @@ func (crc *CandidateRepositoryCache) GetByDID(
 	return nil
 }
 
-func (crc *CandidateRepositoryCache) Fetch(ctx context.Context) error {
+func (crc *CandidateRepositoryCache) Fill(ctx context.Context) error {
 	crc.log.Info("starting cache fill")
 	data, err := crc.queries.ListCandidateRepositories(ctx)
 	if err != nil {
@@ -55,4 +56,21 @@ func (crc *CandidateRepositoryCache) Fetch(ctx context.Context) error {
 	crc.cached = mapped
 	crc.log.Info("finished cache fill", zap.Int("count", len(mapped)))
 	return nil
+}
+
+func (crc *CandidateRepositoryCache) Start(ctx context.Context) error {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-ticker.C:
+			ctx, cancel := context.WithTimeout(ctx, time.Second*10)
+			if err := crc.Fill(ctx); err != nil {
+				crc.log.Error("failed to fill cache", zap.Error(err))
+			}
+			cancel()
+		}
+	}
 }

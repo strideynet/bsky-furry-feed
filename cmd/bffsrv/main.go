@@ -118,16 +118,25 @@ func runE(log *zap.Logger) error {
 		log.Named("candidate_repositories_cache"),
 		queries,
 	)
-	if err := crc.Fetch(ctx); err != nil {
+	if err := crc.Fill(ctx); err != nil {
 		return fmt.Errorf("filling candidate repository cache: %w", err)
 	}
+	crcCtx, crcStop := context.WithCancel(ctx)
+	runGroup.Add(func() error {
+		return crc.Start(crcCtx)
+	}, func(err error) {
+		crcStop()
+	})
 
 	// Setup ingester
 	fi := ingester.NewFirehoseIngester(
 		log.Named("firehose_ingester"), queries, crc,
 	)
-	runGroup.Add(fi.Start, func(_ error) {
-		fi.Stop()
+	fiCtx, fiStop := context.WithCancel(ctx)
+	runGroup.Add(func() error {
+		return fi.Start(fiCtx)
+	}, func(_ error) {
+		fiStop()
 	})
 
 	// Setup the public HTTP/XRPC server

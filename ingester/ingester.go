@@ -35,7 +35,6 @@ var eventsProcessed = promauto.NewSummaryVec(prometheus.SummaryOpts{
 const workerCount = 3
 
 type FirehoseIngester struct {
-	stop    chan struct{}
 	log     *zap.Logger
 	crc     *CandidateRepositoryCache
 	queries *store.Queries
@@ -43,15 +42,14 @@ type FirehoseIngester struct {
 
 func NewFirehoseIngester(log *zap.Logger, queries *store.Queries, crc *CandidateRepositoryCache) *FirehoseIngester {
 	return &FirehoseIngester{
-		stop:    make(chan struct{}),
 		log:     log,
 		crc:     crc,
 		queries: queries,
 	}
 }
 
-func (fi *FirehoseIngester) Start() error {
-	ctx, cancel := context.WithCancel(context.Background())
+func (fi *FirehoseIngester) Start(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	subscribeUrl := "wss://bsky.social/xrpc/com.atproto.sync.subscribeRepos"
 
@@ -61,7 +59,8 @@ func (fi *FirehoseIngester) Start() error {
 	}
 
 	go func() {
-		<-fi.stop
+		<-ctx.Done()
+		fi.log.Info("stopping firehose ingester")
 		fi.log.Info("closing websocket connection")
 		if err := con.Close(); err != nil {
 			fi.log.Error(
@@ -120,12 +119,6 @@ func (fi *FirehoseIngester) Start() error {
 	fi.log.Info("workers finished")
 
 	return err
-}
-
-func (fi *FirehoseIngester) Stop() {
-	fi.log.Info("stopping firehose ingester")
-	// TODO: Tidier shutdown of websocket/workers order
-	close(fi.stop)
 }
 
 func (fi *FirehoseIngester) handleCommit(rootCtx context.Context, evt *atproto.SyncSubscribeRepos_Commit) error {
