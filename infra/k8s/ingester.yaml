@@ -29,7 +29,7 @@ spec:
       serviceAccountName: bff-ingester
       containers:
       - name: ingester
-        image: ghcr.io/strideynet/bsky-furry-feed/bffsrv:f73aca2507eb556dc8692a8042dbf59f8afdbc1a
+        image: ghcr.io/strideynet/bsky-furry-feed/bffsrv:c3804cbab1ea6849dd20d616131e0eb143bf88b4
         env:
           - name: ENV
             value: production
@@ -74,7 +74,8 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: prom-example
+      app.kubernetes.io/name: ingester
+      app.kubernetes.io/part-of: bff
   endpoints:
     - port: debug
       interval: 30s
