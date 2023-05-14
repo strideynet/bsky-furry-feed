@@ -18,8 +18,6 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.uber.org/zap"
 	"net"
-	"net/http"
-	"net/http/pprof"
 	"os"
 )
 
@@ -132,14 +130,23 @@ func runE(log *zap.Logger) error {
 		fi.Stop()
 	})
 
-	// TODO: Make this externally configurable
+	// TODO: Make these externally configurable
 	hostname := "dev-feed.ottr.sh"
 	if inProduction {
 		hostname = "feed.ottr.sh"
 	}
+	listenAddr := ":1337"
+	if inProduction {
+		listenAddr = ":80"
+	}
 
 	// Setup the public HTTP/XRPC server
-	srv := feedserver.New(log.Named("feed_server"), queries, hostname)
+	srv := feedserver.New(
+		log.Named("feed_server"),
+		queries,
+		hostname,
+		listenAddr,
+	)
 	runGroup.Add(func() error {
 		log.Info("feed server listening", zap.String("addr", srv.Addr))
 		return srv.ListenAndServe()
@@ -160,24 +167,4 @@ func runE(log *zap.Logger) error {
 
 	log.Info("setup complete. running services")
 	return runGroup.Run()
-}
-
-func debugServer() *http.Server {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/debug/pprof/", pprof.Index)
-	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
-	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
-	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-	})
-	mux.HandleFunc("/livez", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-	})
-
-	return &http.Server{
-		Addr:    "127.0.0.1:1338",
-		Handler: mux,
-	}
 }

@@ -12,14 +12,19 @@ type getFeedSkeletonParameters struct {
 	feed   string
 }
 
-func New(log *zap.Logger, queries *store.Queries, hostname string) *http.Server {
+func New(
+	log *zap.Logger,
+	queries *store.Queries,
+	hostname string,
+	listenAddr string,
+) *http.Server {
 	mux := &http.ServeMux{}
 	mux.Handle(didHandler(hostname))
 	mux.Handle(getFeedSkeletonHandler(log, queries))
 	mux.Handle(notFoundHandler(log))
 
 	return &http.Server{
-		Addr:    ":1337",
+		Addr:    listenAddr,
 		Handler: mux,
 	}
 }
