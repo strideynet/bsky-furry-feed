@@ -9,10 +9,5 @@ INSERT INTO candidate_repositories (
     $1, $2, $3, $4
 );
 
--- name: SeedCandidateRepository :exec
-INSERT INTO candidate_repositories (
-    did, created_at, is_artist, comment
-) VALUES (
-    $1, $2, $3, $4
-)
-ON CONFLICT DO NOTHING;
+-- name: GetCandidateRepositoryByDID :one
+SELECT * FROM candidate_repositories WHERE did = $1;

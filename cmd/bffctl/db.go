@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
+	"strings"
 	"time"
 )
 
@@ -72,9 +74,9 @@ func dbCandidateRepositoriesSeedCmd(log *zap.Logger, env *environment) *cli.Comm
 					zap.String("did", did),
 					zap.Any("data", candidate),
 				)
-				err := db.SeedCandidateRepository(
+				err := db.CreateCandidateRepository(
 					cctx.Context,
-					store.SeedCandidateRepositoryParams{
+					store.CreateCandidateRepositoryParams{
 						DID: did,
 						CreatedAt: pgtype.Timestamptz{
 							Time:  time.Now(),
@@ -85,7 +87,14 @@ func dbCandidateRepositoriesSeedCmd(log *zap.Logger, env *environment) *cli.Comm
 					},
 				)
 				if err != nil {
-					return err
+					if strings.Contains(err.Error(), "duplicate key") {
+						log.Warn(
+							"already exists, no action taken",
+							zap.String("did", did),
+						)
+					} else {
+						return err
+					}
 				}
 			}
 
@@ -124,16 +133,17 @@ func dbCandidateRepositoriesAddCmd(log *zap.Logger, env *environment) *cli.Comma
 			}
 			defer conn.Close(cctx.Context)
 
-			did, err := findDID(cctx.Context, handle)
+			client := bluesky.NewClient()
+			did, err := client.ResolveHandle(cctx.Context, handle)
 			if err != nil {
 				return err
 			}
-			log.Info("found did", zap.String("did", did))
+			log.Info("found did", zap.String("did", did.Did))
 
 			db := store.New(conn)
 
 			params := store.CreateCandidateRepositoryParams{
-				DID: did,
+				DID: did.Did,
 				CreatedAt: pgtype.Timestamptz{
 					Time:  time.Now(),
 					Valid: true,
@@ -149,7 +159,14 @@ func dbCandidateRepositoriesAddCmd(log *zap.Logger, env *environment) *cli.Comma
 				params,
 			)
 			if err != nil {
-				return err
+				if strings.Contains(err.Error(), "duplicate key") {
+					log.Warn(
+						"already exists, no action taken",
+						zap.String("did", did.Did),
+					)
+				} else {
+					return err
+				}
 			}
 			log.Info("added candidate repository")
 

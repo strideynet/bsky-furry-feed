@@ -12,12 +12,6 @@ import (
 
 var pinnedPost = ""
 
-func handleErr(w http.ResponseWriter, log *zap.Logger, err error) {
-	log.Error("failed to handle request", zap.Error(err))
-	w.WriteHeader(500)
-	w.Write([]byte(fmt.Sprintf("failed to handle request: %s", err)))
-}
-
 func getFeedSkeletonHandler(
 	log *zap.Logger, queries *store.Queries,
 ) (string, http.Handler) {

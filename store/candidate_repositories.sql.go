@@ -36,6 +36,22 @@ func (q *Queries) CreateCandidateRepository(ctx context.Context, arg CreateCandi
 	return err
 }
 
+const getCandidateRepositoryByDID = `-- name: GetCandidateRepositoryByDID :one
+SELECT did, created_at, is_artist, comment FROM candidate_repositories WHERE did = $1
+`
+
+func (q *Queries) GetCandidateRepositoryByDID(ctx context.Context, did string) (CandidateRepository, error) {
+	row := q.db.QueryRow(ctx, getCandidateRepositoryByDID, did)
+	var i CandidateRepository
+	err := row.Scan(
+		&i.DID,
+		&i.CreatedAt,
+		&i.IsArtist,
+		&i.Comment,
+	)
+	return i, err
+}
+
 const listCandidateRepositories = `-- name: ListCandidateRepositories :many
 SELECT did, created_at, is_artist, comment FROM candidate_repositories
 ORDER BY did
@@ -64,30 +80,4 @@ func (q *Queries) ListCandidateRepositories(ctx context.Context) ([]CandidateRep
 		return nil, err
 	}
 	return items, nil
-}
-
-const seedCandidateRepository = `-- name: SeedCandidateRepository :exec
-INSERT INTO candidate_repositories (
-    did, created_at, is_artist, comment
-) VALUES (
-             $1, $2, $3, $4
-         )
-ON CONFLICT DO NOTHING
-`
-
-type SeedCandidateRepositoryParams struct {
-	DID       string
-	CreatedAt pgtype.Timestamptz
-	IsArtist  bool
-	Comment   string
-}
-
-func (q *Queries) SeedCandidateRepository(ctx context.Context, arg SeedCandidateRepositoryParams) error {
-	_, err := q.db.Exec(ctx, seedCandidateRepository,
-		arg.DID,
-		arg.CreatedAt,
-		arg.IsArtist,
-		arg.Comment,
-	)
-	return err
 }

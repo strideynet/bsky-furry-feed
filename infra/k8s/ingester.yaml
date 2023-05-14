@@ -29,7 +29,7 @@ spec:
       serviceAccountName: bff-ingester
       containers:
       - name: ingester
-        image: ghcr.io/strideynet/bsky-furry-feed/bffsrv:37016f2b0123fe4428fc7f56e5e1b6c12bdd45dd
+        image: ghcr.io/strideynet/bsky-furry-feed/bffsrv:71e5016bdaec204dbffad79e3dbb9c317001c45b
         env:
           - name: ENV
             value: production
@@ -39,7 +39,7 @@ spec:
           name: debug
         resources:
           requests:
-            memory: 500Mi
+            memory: 512Mi # Minimum for GKE autopilot
             cpu: 500m
 ---
 apiVersion: v1

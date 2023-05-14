@@ -1,10 +1,8 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"github.com/bluesky-social/indigo/api/atproto"
-	"github.com/bluesky-social/indigo/xrpc"
+	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 	"os"
@@ -61,21 +59,6 @@ func main() {
 	}
 }
 
-func findDID(ctx context.Context, handle string) (string, error) {
-	pdsClient := &xrpc.Client{
-		Host: "https://bsky.social",
-	}
-	did, err := atproto.IdentityResolveHandle(
-		ctx,
-		pdsClient,
-		handle,
-	)
-	if err != nil {
-		return "", err
-	}
-	return did.Did, nil
-}
-
 func findDIDCmd(log *zap.Logger) *cli.Command {
 	handle := ""
 	return &cli.Command{
@@ -89,11 +72,12 @@ func findDIDCmd(log *zap.Logger) *cli.Command {
 			},
 		},
 		Action: func(cctx *cli.Context) error {
-			did, err := findDID(cctx.Context, handle)
+			client := bluesky.NewClient()
+			did, err := client.ResolveHandle(cctx.Context, handle)
 			if err != nil {
 				return err
 			}
-			log.Info("found did", zap.String("did", did))
+			log.Info("found did", zap.String("did", did.Did))
 			return nil
 		},
 	}

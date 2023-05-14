@@ -6,10 +6,10 @@ import (
 )
 
 type CandidateRepository struct {
-	DID       string
-	CreatedAt time.Time
-	IsArtist  bool
-	Comment   string
+	DID       string    `json:"did"`
+	CreatedAt time.Time `json:"created_at"`
+	IsArtist  bool      `json:"is_artist"`
+	Comment   string    `json:"comment"`
 }
 
 func CandidateRepositoryFromStore(cr store.CandidateRepository) CandidateRepository {
