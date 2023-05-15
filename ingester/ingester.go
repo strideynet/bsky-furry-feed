@@ -33,7 +33,7 @@ var eventsProcessed = promauto.NewSummaryVec(prometheus.SummaryOpts{
 	Help: "The total number of events from the firehose processed by workers",
 }, []string{"type"})
 
-const workerCount = 3
+const workerCount = 5
 
 type FirehoseIngester struct {
 	log     *zap.Logger
