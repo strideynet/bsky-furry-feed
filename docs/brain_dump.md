@@ -54,3 +54,10 @@ Eventually allow these feeds to be broken down by AD and Artist status.
 ```
 
 "at://did:plc:dllwm3fafh66ktjofzxhylwk/app.bsky.feed.post/3jvmbtpvjlq2j"
+
+## `app.bsky.graph.follow`
+
+```yaml
+# at://did:plc:dllwm3fafh66ktjofzxhylwk/app.bsky.graph.follow/3jvqt4hcod52j
+{"$type":"app.bsky.graph.follow","createdAt":"2023-05-15T07:19:00.748Z","subject":"did:plc:uiyhzxwqz5fqdwt3p3xuxkab"}
+```

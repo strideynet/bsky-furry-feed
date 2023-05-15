@@ -33,6 +33,9 @@ spec:
         env:
           - name: ENV
             value: production
+        envFrom:
+          - secretRef:
+              name: shared-env
         ports:
         - containerPort: 1337
         - containerPort: 1338
