@@ -49,6 +49,8 @@ func NewFirehoseIngester(log *zap.Logger, queries *store.Queries, crc *Candidate
 	}
 }
 
+// TODO: Shutdown syncronisation of the various goroutines in this function
+// is a little rubbish - need to revisit this and fix it.
 func (fi *FirehoseIngester) Start(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -60,9 +62,6 @@ func (fi *FirehoseIngester) Start(ctx context.Context) error {
 	}
 
 	go func() {
-		// TODO: Shutdown syncronisation of worker pool and ingester is still
-		// pretty messy - this needs tidying up and whilst it works, isn't
-		// a shining example :P)
 		<-ctx.Done()
 		fi.log.Info("stopping firehose ingester")
 		fi.log.Info("closing websocket connection")
