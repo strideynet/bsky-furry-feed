@@ -60,6 +60,9 @@ func (fi *FirehoseIngester) Start(ctx context.Context) error {
 	}
 
 	go func() {
+		// TODO: Shutdown syncronisation of worker pool and ingester is still
+		// pretty messy - this needs tidying up and whilst it works, isn't
+		// a shining example :P)
 		<-ctx.Done()
 		fi.log.Info("stopping firehose ingester")
 		fi.log.Info("closing websocket connection")
@@ -115,6 +118,7 @@ func (fi *FirehoseIngester) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	cancel()
 	fi.log.Info("waiting for workers to finish")
 	workerWg.Wait()
 	fi.log.Info("workers finished")
@@ -199,7 +203,7 @@ func (fi *FirehoseIngester) handleRecordCreate(
 	case *bsky.GraphFollow:
 		err := fi.handleGraphFollowCreate(ctx, log, repoDID, recordUri, data)
 		if err != nil {
-			return fmt.Errorf("handling app.bsky.feed.like: %w", err)
+			return fmt.Errorf("handling app.bsky.graph.follow: %w", err)
 		}
 	default:
 		log.Info("ignoring record create due to handled type")
