@@ -39,6 +39,12 @@ Eventually allow these feeds to be broken down by AD and Artist status.
 
 # Bluesky schema dumps
 
+getFeedSkeleton URL format:
+
+```
+/xrpc/app.bsky.feed.getFeedSkeleton?feed=at%3A%2F%2Fdid%3Aweb%3Adev-feed.ottr.sh%2Fapp.bsky.feed.generator%2Fdev+feed&limit=50
+```
+
 ## `app.bsky.feed.repost`
 
 ```yaml
@@ -53,7 +59,7 @@ Eventually allow these feeds to be broken down by AD and Artist status.
 }
 ```
 
-"at://did:plc:dllwm3fafh66ktjofzxhylwk/app.bsky.feed.post/3jvmbtpvjlq2j"
+Pin post: "at://did:plc:dllwm3fafh66ktjofzxhylwk/app.bsky.feed.post/3jvmbtpvjlq2j"
 
 ## `app.bsky.graph.follow`
 

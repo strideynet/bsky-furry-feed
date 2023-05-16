@@ -12,6 +12,12 @@ import (
 
 var pinnedPost = ""
 
+type getFeedSkeletonParameters struct {
+	cursor string
+	limit  int
+	feed   string
+}
+
 func getFeedSkeletonHandler(
 	log *zap.Logger, queries *store.Queries,
 ) (string, http.Handler) {

@@ -13,12 +13,6 @@ func handleErr(w http.ResponseWriter, log *zap.Logger, err error) {
 	w.Write([]byte(fmt.Sprintf("failed to handle request: %s", err)))
 }
 
-type getFeedSkeletonParameters struct {
-	cursor string
-	limit  int
-	feed   string
-}
-
 func New(
 	log *zap.Logger,
 	queries *store.Queries,
