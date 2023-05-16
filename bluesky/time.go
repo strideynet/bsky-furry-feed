@@ -13,5 +13,5 @@ func ParseTime(str string) (time.Time, error) {
 }
 
 func FormatTime(t time.Time) string {
-	return t.Format(timeFormat)
+	return t.UTC().Format(timeFormat)
 }

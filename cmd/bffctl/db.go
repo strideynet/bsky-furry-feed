@@ -136,7 +136,7 @@ func dbCandidateRepositoriesAddCmd(log *zap.Logger, env *environment) *cli.Comma
 			client := bluesky.NewClient()
 			did, err := client.ResolveHandle(cctx.Context, handle)
 			if err != nil {
-				return err
+				return fmt.Errorf("resolving handle: %w", err)
 			}
 			log.Info("found did", zap.String("did", did.Did))
 
