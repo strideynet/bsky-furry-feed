@@ -64,3 +64,37 @@ func (q *Queries) ListCandidatePostsForFeed(ctx context.Context, limit int32) ([
 	}
 	return items, nil
 }
+
+const listCandidatePostsForFeedWithCursor = `-- name: ListCandidatePostsForFeedWithCursor :many
+SELECT uri, repository_did, created_at, indexed_at FROM candidate_posts WHERE created_at < $1 ORDER BY created_at DESC LIMIT $2
+`
+
+type ListCandidatePostsForFeedWithCursorParams struct {
+	CreatedAt pgtype.Timestamptz
+	Limit     int32
+}
+
+func (q *Queries) ListCandidatePostsForFeedWithCursor(ctx context.Context, arg ListCandidatePostsForFeedWithCursorParams) ([]CandidatePost, error) {
+	rows, err := q.db.Query(ctx, listCandidatePostsForFeedWithCursor, arg.CreatedAt, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CandidatePost
+	for rows.Next() {
+		var i CandidatePost
+		if err := rows.Scan(
+			&i.URI,
+			&i.RepositoryDID,
+			&i.CreatedAt,
+			&i.IndexedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

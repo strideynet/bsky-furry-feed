@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
 	typegen "github.com/whyrusleeping/cbor-gen"
 	"go.opentelemetry.io/otel"
@@ -211,14 +212,6 @@ func (fi *FirehoseIngester) handleRecordCreate(
 	return nil
 }
 
-func parseTime(str string) (time.Time, error) {
-	t, err := time.Parse("2006-01-02T15:04:05.999999999Z", str)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("parsing post time: %w", err)
-	}
-	return t, nil
-}
-
 func (fi *FirehoseIngester) handleFeedPostCreate(
 	ctx context.Context,
 	log *zap.Logger,
@@ -229,7 +222,7 @@ func (fi *FirehoseIngester) handleFeedPostCreate(
 	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_feed_post_create")
 	defer span.End()
 	if data.Reply == nil {
-		createdAt, err := parseTime(data.CreatedAt)
+		createdAt, err := bluesky.ParseTime(data.CreatedAt)
 		if err != nil {
 			return fmt.Errorf("parsing post time: %w", err)
 		}
@@ -267,7 +260,7 @@ func (fi *FirehoseIngester) handleFeedLikeCreate(
 	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_feed_like_create")
 	defer span.End()
 
-	createdAt, err := parseTime(data.CreatedAt)
+	createdAt, err := bluesky.ParseTime(data.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("parsing like time: %w", err)
 	}
@@ -311,7 +304,7 @@ func (fi *FirehoseIngester) handleGraphFollowCreate(
 		return nil
 	}
 	if discordWebhookGraphFollow == "" {
-		log.Warn("no webhook configured for graph follow ")
+		log.Warn("no webhook configured for graph follow")
 		return nil
 	}
 
