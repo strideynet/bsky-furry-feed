@@ -23,6 +23,8 @@ func getFeedSkeletonHandler(
 ) (string, http.Handler) {
 	var h http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
+		// TODO: Function for extracting these params
+		// TODO: Route based on `feed` param
 		params := getFeedSkeletonParameters{
 			cursor: q.Get("cursor"),
 			feed:   q.Get("feed"),
@@ -52,6 +54,7 @@ func getFeedSkeletonHandler(
 			zap.Int("limit", params.limit),
 		)
 
+		// TODO: Pull these response types out of this method
 		type post struct {
 			Post string `json:"post"`
 		}
