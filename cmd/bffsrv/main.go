@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	texporter "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace"
+	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/oklog/run"
 	"github.com/strideynet/bsky-furry-feed/feedserver"
@@ -78,22 +79,30 @@ func connectDB(ctx context.Context) (*pgxpool.Pool, error) {
 	// TODO: Make this less horrible.
 	// We should check env var for GCP Cloud SQL mode
 	// We should detect the service account email.
+	var err error
+	var cfg *pgxpool.Config
 	if inProduction {
 		d, err := cloudsqlconn.NewDialer(context.Background(), cloudsqlconn.WithIAMAuthN())
 		if err != nil {
 			return nil, fmt.Errorf("creating cloud sql dialer: %w", err)
 		}
 		// TODO: Make this configurable
-		cfg, err := pgxpool.ParseConfig("user=849144245446-compute@developer database=bff")
+		cfg, err = pgxpool.ParseConfig("user=849144245446-compute@developer database=bff")
 		if err != nil {
 			return nil, fmt.Errorf("parsing cloud sql config: %w", err)
 		}
 		cfg.ConnConfig.DialFunc = func(ctx context.Context, _, _ string) (net.Conn, error) {
 			return d.Dial(ctx, "bsky-furry-feed:us-east1:main-us-east")
 		}
-		return pgxpool.NewWithConfig(ctx, cfg)
+	} else {
+		cfg, err = pgxpool.ParseConfig(localDBURL)
+		if err != nil {
+			return nil, fmt.Errorf("parsing db url: %w", err)
+		}
 	}
-	return pgxpool.New(ctx, localDBURL)
+	cfg.ConnConfig.Tracer = otelpgx.NewTracer()
+
+	return pgxpool.NewWithConfig(ctx, cfg)
 }
 
 func runE(log *zap.Logger) error {
