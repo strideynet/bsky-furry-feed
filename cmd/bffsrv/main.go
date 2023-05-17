@@ -73,6 +73,7 @@ func tracerProvider(ctx context.Context, url string) (*tracesdk.TracerProvider, 
 	return tp, nil
 }
 
+// TODO: Make this configurable
 const localDBURL = "postgres://bff:bff@localhost:5432/bff?sslmode=disable"
 
 func connectDB(ctx context.Context) (*pgxpool.Pool, error) {
