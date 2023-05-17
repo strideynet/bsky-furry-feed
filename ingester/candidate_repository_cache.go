@@ -10,11 +10,32 @@ import (
 	"time"
 )
 
+// CandidateRepositoryCache holds a view of the candidate repositories from
+// the database, refreshing itself every minute. It's designed to be safely
+// called concurrently. This prevents us needing to hit the database for every
+// event which would produce significant load on the db and also increase the
+// amount of time it takes to handle an event we aren't interested in.
+// The only downside to this approach is that it takes up to a minute for
+// new candidate repositories to be monitored.
 type CandidateRepositoryCache struct {
-	queries *store.Queries
-	cached  map[string]bff.CandidateRepository
-	mu      sync.RWMutex
 	log     *zap.Logger
+	queries *store.Queries
+
+	// period is how often to attempt to fresh the list of candidate
+	// repositories.
+	period time.Duration
+	// refreshTimeout is how long to give any attempt to complete. This is
+	// necessary to prevent a hung iteration from blocking the loop.
+	// Realistically, we don't expect this process to take any longer than
+	// ten seconds.
+	refreshTimeout time.Duration
+
+	// cached is a map keyed by the repository DID to the data about the
+	// repository. The go standard map implementation is fast enough for our
+	// needs at this time.
+	cached map[string]bff.CandidateRepository
+	// mu protects cached to prevent concurrent access leading to corruption.
+	mu sync.RWMutex
 }
 
 func NewCandidateRepositoryCache(
@@ -22,8 +43,10 @@ func NewCandidateRepositoryCache(
 	queries *store.Queries,
 ) *CandidateRepositoryCache {
 	return &CandidateRepositoryCache{
-		queries: queries,
-		log:     log,
+		queries:        queries,
+		log:            log,
+		period:         time.Minute,
+		refreshTimeout: time.Second * 10,
 	}
 }
 
@@ -59,14 +82,16 @@ func (crc *CandidateRepositoryCache) Fill(ctx context.Context) error {
 }
 
 func (crc *CandidateRepositoryCache) Start(ctx context.Context) error {
-	ticker := time.NewTicker(time.Minute)
+	ticker := time.NewTicker(crc.period)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			ctx, cancel := context.WithTimeout(ctx, time.Second*10)
+			// TODO: If this fails enough times, we should bail out, this allows
+			// a process restart to potentially rectify the situation.
+			ctx, cancel := context.WithTimeout(ctx, crc.refreshTimeout)
 			if err := crc.Fill(ctx); err != nil {
 				crc.log.Error("failed to fill cache", zap.Error(err))
 			}

@@ -17,8 +17,10 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/sys/unix"
 	"net"
 	"os"
+	"os/signal"
 )
 
 var tracer = otel.Tracer("bffsrv")
@@ -105,7 +107,9 @@ func connectDB(ctx context.Context) (*pgxpool.Pool, error) {
 }
 
 func runE(log *zap.Logger) error {
-	ctx := context.Background()
+	ctx, cancel := signal.NotifyContext(context.Background(), unix.SIGINT)
+	defer cancel()
+
 	log.Info("setting up services")
 	_, err := tracerProvider(
 		ctx,
@@ -114,21 +118,28 @@ func runE(log *zap.Logger) error {
 	if err != nil {
 		return fmt.Errorf("creating tracer provider: %w", err)
 	}
+
 	pool, err := connectDB(ctx)
 	if err != nil {
 		return fmt.Errorf("connecting to db: %w", err)
 	}
 	defer pool.Close()
 	queries := store.New(pool)
+
+	// Create an errgroup to manage the lifetimes of the subservices.
+	// If one exits, all will exit.
+	eg, egCtx := errgroup.WithContext(ctx)
+
 	crc := ingester.NewCandidateRepositoryCache(
 		log.Named("candidate_repositories_cache"),
 		queries,
 	)
+	// Prefill the CRC before we proceed to ensure all candidate repositories
+	// are available to sub-services. This eliminates some potential weirdness
+	// when handling events/requests shortly after process startup.
 	if err := crc.Fill(ctx); err != nil {
 		return fmt.Errorf("filling candidate repository cache: %w", err)
 	}
-
-	eg, egCtx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
 		return crc.Start(egCtx)
 	})
@@ -158,7 +169,9 @@ func runE(log *zap.Logger) error {
 		log.Info("feed server listening", zap.String("addr", srv.Addr))
 		go func() {
 			<-egCtx.Done()
-			srv.Close()
+			if err := srv.Close(); err != nil {
+				log.Error("failed to close feed server", zap.Error(err))
+			}
 		}()
 		return srv.ListenAndServe()
 	})
@@ -169,7 +182,9 @@ func runE(log *zap.Logger) error {
 		log.Info("debug server listening", zap.String("addr", debugSrv.Addr))
 		go func() {
 			<-egCtx.Done()
-			debugSrv.Close()
+			if err := debugSrv.Close(); err != nil {
+				log.Error("failed to close debug server", zap.Error(err))
+			}
 		}()
 		return debugSrv.ListenAndServe()
 	})
