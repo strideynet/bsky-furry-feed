@@ -6,7 +6,6 @@ import (
 	"fmt"
 	texporter "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/oklog/run"
 	"github.com/strideynet/bsky-furry-feed/feedserver"
 	"github.com/strideynet/bsky-furry-feed/ingester"
 	"github.com/strideynet/bsky-furry-feed/store"
@@ -17,6 +16,7 @@ import (
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 	"net"
 	"os"
 )
@@ -114,8 +114,6 @@ func runE(log *zap.Logger) error {
 	if err != nil {
 		return fmt.Errorf("creating tracer provider: %w", err)
 	}
-	runGroup := run.Group{}
-
 	pool, err := connectDB(ctx)
 	if err != nil {
 		return fmt.Errorf("connecting to db: %w", err)
@@ -129,22 +127,18 @@ func runE(log *zap.Logger) error {
 	if err := crc.Fill(ctx); err != nil {
 		return fmt.Errorf("filling candidate repository cache: %w", err)
 	}
-	crcCtx, crcStop := context.WithCancel(ctx)
-	runGroup.Add(func() error {
-		return crc.Start(crcCtx)
-	}, func(err error) {
-		crcStop()
+
+	eg, egCtx := errgroup.WithContext(ctx)
+	eg.Go(func() error {
+		return crc.Start(egCtx)
 	})
 
 	// Setup ingester
 	fi := ingester.NewFirehoseIngester(
 		log.Named("firehose_ingester"), queries, crc,
 	)
-	fiCtx, fiStop := context.WithCancel(ctx)
-	runGroup.Add(func() error {
-		return fi.Start(fiCtx)
-	}, func(_ error) {
-		fiStop()
+	eg.Go(func() error {
+		return fi.Start(egCtx)
 	})
 
 	// Setup the public HTTP/XRPC server
@@ -160,24 +154,26 @@ func runE(log *zap.Logger) error {
 		hostname,
 		listenAddr,
 	)
-	runGroup.Add(func() error {
+	eg.Go(func() error {
 		log.Info("feed server listening", zap.String("addr", srv.Addr))
+		go func() {
+			<-egCtx.Done()
+			srv.Close()
+		}()
 		return srv.ListenAndServe()
-	}, func(err error) {
-		srv.Close()
 	})
 
 	// Setup private diagnostics/metrics server
 	debugSrv := debugServer()
-	runGroup.Add(func() error {
+	eg.Go(func() error {
 		log.Info("debug server listening", zap.String("addr", debugSrv.Addr))
+		go func() {
+			<-egCtx.Done()
+			debugSrv.Close()
+		}()
 		return debugSrv.ListenAndServe()
-	}, func(err error) {
-		debugSrv.Close()
 	})
 
-	runGroup.Add(run.SignalHandler(context.Background(), os.Interrupt))
-
 	log.Info("setup complete. running services")
-	return runGroup.Run()
+	return eg.Wait()
 }
