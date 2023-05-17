@@ -31,6 +31,7 @@ func (fi *FirehoseIngester) handleGraphFollowCreate(
 		return nil
 	}
 
+	// TODO: There's probably a nice discord library to use for this!!
 	var jsonStr = []byte(fmt.Sprintf(`
 {
     "username": "bff-system",
