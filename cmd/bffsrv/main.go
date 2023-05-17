@@ -1,11 +1,9 @@
 package main
 
 import (
-	"cloud.google.com/go/cloudsqlconn"
 	"context"
 	"fmt"
 	texporter "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/strideynet/bsky-furry-feed/feedserver"
 	"github.com/strideynet/bsky-furry-feed/ingester"
 	"github.com/strideynet/bsky-furry-feed/store"
@@ -18,7 +16,6 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sys/unix"
-	"net"
 	"os"
 	"os/signal"
 )
@@ -74,38 +71,6 @@ func tracerProvider(ctx context.Context, url string) (*tracesdk.TracerProvider, 
 	return tp, nil
 }
 
-// TODO: Make this configurable
-const localDBURL = "postgres://bff:bff@localhost:5432/bff?sslmode=disable"
-
-func connectDB(ctx context.Context) (*pgxpool.Pool, error) {
-	// TODO: Make this less horrible.
-	// We should check env var for GCP Cloud SQL mode
-	// We should detect the service account email.
-	var err error
-	var cfg *pgxpool.Config
-	if inProduction {
-		d, err := cloudsqlconn.NewDialer(context.Background(), cloudsqlconn.WithIAMAuthN())
-		if err != nil {
-			return nil, fmt.Errorf("creating cloud sql dialer: %w", err)
-		}
-		// TODO: Make this configurable
-		cfg, err = pgxpool.ParseConfig("user=849144245446-compute@developer database=bff")
-		if err != nil {
-			return nil, fmt.Errorf("parsing cloud sql config: %w", err)
-		}
-		cfg.ConnConfig.DialFunc = func(ctx context.Context, _, _ string) (net.Conn, error) {
-			return d.Dial(ctx, "bsky-furry-feed:us-east1:main-us-east")
-		}
-	} else {
-		cfg, err = pgxpool.ParseConfig(localDBURL)
-		if err != nil {
-			return nil, fmt.Errorf("parsing db url: %w", err)
-		}
-	}
-
-	return pgxpool.NewWithConfig(ctx, cfg)
-}
-
 func runE(log *zap.Logger) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), unix.SIGINT)
 	defer cancel()
@@ -119,12 +84,22 @@ func runE(log *zap.Logger) error {
 		return fmt.Errorf("creating tracer provider: %w", err)
 	}
 
-	pool, err := connectDB(ctx)
-	if err != nil {
-		return fmt.Errorf("connecting to db: %w", err)
+	var storeConfig store.Config
+	if inProduction {
+		storeConfig.CloudSQL = &store.CloudSQLConnectorConfig{
+			Instance: "bsky-furry-feed:us-east1:main-us-east",
+			Database: "bff",
+		}
+	} else {
+		storeConfig.Direct = &store.DirectConnectorConfig{
+			URI: "postgres://bff:bff@localhost:5432/bff?sslmode=disable",
+		}
 	}
-	defer pool.Close()
-	queries := store.New(pool)
+	queries, queriesClose, err := storeConfig.Connect(ctx)
+	if err != nil {
+		return fmt.Errorf("connecting to store: %w", err)
+	}
+	defer queriesClose()
 
 	// Create an errgroup to manage the lifetimes of the subservices.
 	// If one exits, all will exit.
