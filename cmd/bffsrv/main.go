@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	texporter "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace"
-	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/oklog/run"
 	"github.com/strideynet/bsky-furry-feed/feedserver"
@@ -101,7 +100,6 @@ func connectDB(ctx context.Context) (*pgxpool.Pool, error) {
 			return nil, fmt.Errorf("parsing db url: %w", err)
 		}
 	}
-	cfg.ConnConfig.Tracer = otelpgx.NewTracer()
 
 	return pgxpool.NewWithConfig(ctx, cfg)
 }
