@@ -12,10 +12,8 @@ import (
 	"github.com/bluesky-social/indigo/repo"
 	"github.com/bluesky-social/indigo/repomgr"
 	"github.com/gorilla/websocket"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
 	typegen "github.com/whyrusleeping/cbor-gen"
 	"go.opentelemetry.io/otel"
@@ -23,7 +21,6 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"net/http"
-	"os"
 	"sync"
 	"time"
 )
@@ -228,120 +225,6 @@ func (fi *FirehoseIngester) handleRecordCreate(
 	default:
 		log.Info("ignoring record create due to handled type")
 	}
-
-	return nil
-}
-
-func (fi *FirehoseIngester) handleFeedPostCreate(
-	ctx context.Context,
-	log *zap.Logger,
-	repoDID string,
-	recordUri string,
-	data *bsky.FeedPost,
-) error {
-	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_feed_post_create")
-	defer span.End()
-	if data.Reply == nil {
-		createdAt, err := bluesky.ParseTime(data.CreatedAt)
-		if err != nil {
-			return fmt.Errorf("parsing post time: %w", err)
-		}
-		err = fi.queries.CreateCandidatePost(
-			ctx,
-			store.CreateCandidatePostParams{
-				URI:           recordUri,
-				RepositoryDID: repoDID,
-				CreatedAt: pgtype.Timestamptz{
-					Time:  createdAt,
-					Valid: true,
-				},
-				IndexedAt: pgtype.Timestamptz{
-					Time:  time.Now(),
-					Valid: true,
-				},
-			},
-		)
-		if err != nil {
-			return fmt.Errorf("creating candidate post: %w", err)
-		}
-	} else {
-		log.Info("ignoring reply")
-	}
-	return nil
-}
-
-func (fi *FirehoseIngester) handleFeedLikeCreate(
-	ctx context.Context,
-	log *zap.Logger,
-	repoDID string,
-	recordUri string,
-	data *bsky.FeedLike,
-) error {
-	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_feed_like_create")
-	defer span.End()
-
-	createdAt, err := bluesky.ParseTime(data.CreatedAt)
-	if err != nil {
-		return fmt.Errorf("parsing like time: %w", err)
-	}
-	err = fi.queries.CreateCandidateLike(
-		ctx,
-		store.CreateCandidateLikeParams{
-			URI:           recordUri,
-			RepositoryDID: repoDID,
-			SubjectUri:    data.Subject.Uri,
-			CreatedAt: pgtype.Timestamptz{
-				Time:  createdAt,
-				Valid: true,
-			},
-			IndexedAt: pgtype.Timestamptz{
-				Time:  time.Now(),
-				Valid: true,
-			},
-		},
-	)
-	if err != nil {
-		return fmt.Errorf("creating candidate like: %w", err)
-	}
-
-	return nil
-}
-
-var discordWebhookGraphFollow = os.Getenv("DISCORD_WEBHOOK_GRAPH_FOLLOW")
-
-func (fi *FirehoseIngester) handleGraphFollowCreate(
-	ctx context.Context,
-	log *zap.Logger,
-	repoDID string,
-	recordUri string,
-	data *bsky.GraphFollow,
-) error {
-	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_graph_follow_create")
-	defer span.End()
-
-	if fi.crc.GetByDID(data.Subject) != nil {
-		// We aren't interested in repositories we already track.
-		return nil
-	}
-	if discordWebhookGraphFollow == "" {
-		log.Warn("no webhook configured for graph follow")
-		return nil
-	}
-
-	var jsonStr = []byte(fmt.Sprintf(`
-{
-    "username": "bff-system",
-    "content": "**Furry follow?**\n**Source repository:** %s \n**Followed:** https://psky.app/profile/%s"
-}`, repoDID, data.Subject))
-	req, err := http.NewRequest("POST", discordWebhookGraphFollow, bytes.NewBuffer(jsonStr))
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("sending discord webhook: %w", err)
-	}
-	defer resp.Body.Close()
 
 	return nil
 }
