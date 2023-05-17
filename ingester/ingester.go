@@ -105,15 +105,18 @@ func (fi *FirehoseIngester) Start(ctx context.Context) error {
 	})
 
 	eg.Go(func() error {
+		ctx, cancel := context.WithCancel(egCtx)
+		defer cancel()
+
 		con, _, err := websocket.DefaultDialer.DialContext(
-			egCtx, fi.subscribeURL, http.Header{},
+			ctx, fi.subscribeURL, http.Header{},
 		)
 		if err != nil {
 			return fmt.Errorf("dialing websocket: %w", err)
 		}
 
 		go func() {
-			<-egCtx.Done()
+			<-ctx.Done()
 			fi.log.Info("closing websocket subscription")
 			if err := con.Close(); err != nil {
 				fi.log.Error(
@@ -126,7 +129,7 @@ func (fi *FirehoseIngester) Start(ctx context.Context) error {
 		// TODO: sometimes stream exits of own accord, we should attempt to
 		// reconnect several times and then return an error to cause the
 		// process to crash out.
-		return events.HandleRepoStream(egCtx, con, &events.RepoStreamCallbacks{
+		return events.HandleRepoStream(ctx, con, &events.RepoStreamCallbacks{
 			RepoCommit: func(evt *atproto.SyncSubscribeRepos_Commit) error {
 				select {
 				case <-ctx.Done():
