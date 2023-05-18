@@ -12,11 +12,10 @@ import (
 )
 
 const createCandidateActor = `-- name: CreateCandidateActor :exec
-INSERT INTO candidate_actors (
-    did, created_at, is_artist, comment
-) VALUES (
-    $1, $2, $3, $4
-)
+INSERT INTO
+    candidate_actors (did, created_at, is_artist, comment)
+VALUES
+    ($1, $2, $3, $4)
 `
 
 type CreateCandidateActorParams struct {
@@ -37,7 +36,11 @@ func (q *Queries) CreateCandidateActor(ctx context.Context, arg CreateCandidateA
 }
 
 const getCandidateActorByDID = `-- name: GetCandidateActorByDID :one
-SELECT did, created_at, is_artist, comment FROM candidate_actors WHERE did = $1
+SELECT did, created_at, is_artist, comment
+FROM
+    candidate_actors
+WHERE
+    did = $1
 `
 
 func (q *Queries) GetCandidateActorByDID(ctx context.Context, did string) (CandidateActor, error) {
@@ -53,8 +56,11 @@ func (q *Queries) GetCandidateActorByDID(ctx context.Context, did string) (Candi
 }
 
 const listCandidateActors = `-- name: ListCandidateActors :many
-SELECT did, created_at, is_artist, comment FROM candidate_actors
-ORDER BY did
+SELECT did, created_at, is_artist, comment
+FROM
+    candidate_actors
+ORDER BY
+    did
 `
 
 func (q *Queries) ListCandidateActors(ctx context.Context) ([]CandidateActor, error) {

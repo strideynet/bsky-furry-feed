@@ -38,7 +38,7 @@ func scanCmd(log *zap.Logger, env *environment) *cli.Command {
 
 			_ = bluesky.NewClient(bluesky.AuthInfoFromCreateSession(out))
 
-			return nil
+			return fmt.Errorf("not yet implemented")
 		},
 	}
 }

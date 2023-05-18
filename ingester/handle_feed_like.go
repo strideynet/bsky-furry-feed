@@ -29,8 +29,8 @@ func (fi *FirehoseIngester) handleFeedLikeCreate(
 		ctx,
 		store.CreateCandidateLikeParams{
 			URI:        recordUri,
-			ActorDid:   repoDID,
-			SubjectUri: data.Subject.Uri,
+			ActorDID:   repoDID,
+			SubjectURI: data.Subject.Uri,
 			CreatedAt: pgtype.Timestamptz{
 				Time:  createdAt,
 				Valid: true,

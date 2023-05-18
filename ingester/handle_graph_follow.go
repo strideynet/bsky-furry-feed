@@ -1,13 +1,15 @@
 package ingester
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"github.com/bluesky-social/indigo/api/bsky"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/strideynet/bsky-furry-feed/bluesky"
+	"github.com/strideynet/bsky-furry-feed/store"
 	"go.uber.org/zap"
-	"net/http"
 	"os"
+	"time"
 )
 
 var discordWebhookGraphFollow = os.Getenv("DISCORD_WEBHOOK_GRAPH_FOLLOW")
@@ -22,30 +24,29 @@ func (fi *FirehoseIngester) handleGraphFollowCreate(
 	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_graph_follow_create")
 	defer span.End()
 
-	if fi.crc.GetByDID(data.Subject) != nil {
-		// We aren't interested in actors we already track.
-		return nil
-	}
-	if discordWebhookGraphFollow == "" {
-		log.Warn("no webhook configured for graph follow")
-		return nil
-	}
-
-	// TODO: There's probably a nice discord library to use for this!!
-	var jsonStr = []byte(fmt.Sprintf(`
-{
-    "username": "bff-system",
-    "content": "**Furry follow?**\n**Source actor:** %s \n**Followed:** https://psky.app/profile/%s"
-}`, repoDID, data.Subject))
-	req, err := http.NewRequest("POST", discordWebhookGraphFollow, bytes.NewBuffer(jsonStr))
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	createdAt, err := bluesky.ParseTime(data.CreatedAt)
 	if err != nil {
-		return fmt.Errorf("sending discord webhook: %w", err)
+		return fmt.Errorf("parsing follow time: %w", err)
 	}
-	defer resp.Body.Close()
+	err = fi.queries.CreateCandidateFollow(
+		ctx,
+		store.CreateCandidateFollowParams{
+			URI:        recordUri,
+			ActorDID:   repoDID,
+			SubjectDid: data.Subject,
+			CreatedAt: pgtype.Timestamptz{
+				Time:  createdAt,
+				Valid: true,
+			},
+			IndexedAt: pgtype.Timestamptz{
+				Time:  time.Now(),
+				Valid: true,
+			},
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("creating candidate follow: %w", err)
+	}
 
 	return nil
 }

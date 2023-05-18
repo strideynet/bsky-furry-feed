@@ -29,7 +29,7 @@ func (fi *FirehoseIngester) handleFeedPostCreate(
 			ctx,
 			store.CreateCandidatePostParams{
 				URI:      recordUri,
-				ActorDid: repoDID,
+				ActorDID: repoDID,
 				CreatedAt: pgtype.Timestamptz{
 					Time:  createdAt,
 					Valid: true,

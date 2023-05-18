@@ -15,17 +15,25 @@ type CandidateActor struct {
 	Comment   string
 }
 
+type CandidateFollow struct {
+	URI        string
+	ActorDID   string
+	SubjectDid string
+	CreatedAt  pgtype.Timestamptz
+	IndexedAt  pgtype.Timestamptz
+}
+
 type CandidateLike struct {
 	URI        string
-	ActorDid   string
-	SubjectUri string
+	ActorDID   string
+	SubjectURI string
 	CreatedAt  pgtype.Timestamptz
 	IndexedAt  pgtype.Timestamptz
 }
 
 type CandidatePost struct {
 	URI       string
-	ActorDid  string
+	ActorDID  string
 	CreatedAt pgtype.Timestamptz
 	IndexedAt pgtype.Timestamptz
 }
