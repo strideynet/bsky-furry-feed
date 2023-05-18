@@ -12,7 +12,7 @@ type CandidateActor struct {
 	Comment   string    `json:"comment"`
 }
 
-func CandidateRepositoryFromStore(cr store.CandidateActor) CandidateActor {
+func CandidateActorFromStore(cr store.CandidateActor) CandidateActor {
 	return CandidateActor{
 		DID:       cr.DID,
 		CreatedAt: cr.CreatedAt.Time,

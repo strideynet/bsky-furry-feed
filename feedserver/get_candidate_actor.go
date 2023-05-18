@@ -13,7 +13,7 @@ import (
 	"net/http"
 )
 
-func getCandidateRepositoryHandler(
+func getCandidateActorHandler(
 	log *zap.Logger, queries *store.Queries,
 ) (string, http.Handler) {
 	var h http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +37,7 @@ func getCandidateRepositoryHandler(
 			handleErr(w, log, fmt.Errorf("getting candidate repository: %w", err))
 			return
 		}
-		candidateRepository := bff.CandidateRepositoryFromStore(data)
+		candidateRepository := bff.CandidateActorFromStore(data)
 		w.WriteHeader(200)
 		encoder := json.NewEncoder(w)
 		encoder.SetIndent("", " ")

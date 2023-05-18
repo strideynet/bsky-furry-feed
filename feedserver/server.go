@@ -22,7 +22,7 @@ func New(
 	mux := &http.ServeMux{}
 	mux.Handle(didHandler(hostname))
 	mux.Handle(getFeedSkeletonHandler(log, queries))
-	mux.Handle(getCandidateRepositoryHandler(log, queries))
+	mux.Handle(getCandidateActorHandler(log, queries))
 	mux.Handle(rootHandler(log))
 
 	return &http.Server{

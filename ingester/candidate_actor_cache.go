@@ -71,7 +71,7 @@ func (crc *CandidateActorCache) Fill(ctx context.Context) error {
 
 	mapped := map[string]bff.CandidateActor{}
 	for _, cr := range data {
-		mapped[cr.DID] = bff.CandidateRepositoryFromStore(cr)
+		mapped[cr.DID] = bff.CandidateActorFromStore(cr)
 	}
 
 	crc.mu.Lock()
