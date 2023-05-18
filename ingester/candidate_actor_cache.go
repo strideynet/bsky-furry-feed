@@ -22,7 +22,7 @@ type CandidateActorCache struct {
 	queries *store.Queries
 
 	// period is how often to attempt to fresh the list of candidate
-	// repositories.
+	// actors.
 	period time.Duration
 	// refreshTimeout is how long to give any attempt to complete. This is
 	// necessary to prevent a hung iteration from blocking the loop.

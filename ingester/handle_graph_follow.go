@@ -8,11 +8,8 @@ import (
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.uber.org/zap"
-	"os"
 	"time"
 )
-
-var discordWebhookGraphFollow = os.Getenv("DISCORD_WEBHOOK_GRAPH_FOLLOW")
 
 func (fi *FirehoseIngester) handleGraphFollowCreate(
 	ctx context.Context,
