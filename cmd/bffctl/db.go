@@ -133,7 +133,7 @@ func dbCandidateRepositoriesAddCmd(log *zap.Logger, env *environment) *cli.Comma
 			}
 			defer conn.Close(cctx.Context)
 
-			client := bluesky.NewClient()
+			client := bluesky.NewUnauthClient()
 			did, err := client.ResolveHandle(cctx.Context, handle)
 			if err != nil {
 				return fmt.Errorf("resolving handle: %w", err)

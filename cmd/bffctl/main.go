@@ -72,7 +72,7 @@ func findDIDCmd(log *zap.Logger) *cli.Command {
 			},
 		},
 		Action: func(cctx *cli.Context) error {
-			client := bluesky.NewClient()
+			client := bluesky.NewClient(nil)
 			did, err := client.ResolveHandle(cctx.Context, handle)
 			if err != nil {
 				return err

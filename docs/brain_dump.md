@@ -39,6 +39,17 @@ Eventually allow these feeds to be broken down by AD and Artist status.
 
 # Bluesky schema dumps
 
+bluesky access token:
+
+```json
+{
+  "scope": "com.atproto.access",
+  "sub": "did:plc:dllwm3fafh66ktjofzxhylwk",
+  "iat": 1684399554,
+  "exp": 1684406754
+}
+```
+
 getFeedSkeleton URL format:
 
 ```
