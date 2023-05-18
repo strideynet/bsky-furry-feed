@@ -94,3 +94,13 @@ resource "google_dns_record_set" "feed_furrylist" {
 
   rrdatas = [google_compute_global_address.ingress.address]
 }
+
+resource "google_dns_record_set" "furrylist" {
+  name         = "${google_dns_managed_zone.furrylist.dns_name}"
+  managed_zone = google_dns_managed_zone.furrylist.name
+  type         = "A"
+  ttl          = 300
+
+  rrdatas = ["76.76.21.21"]
+}
+
