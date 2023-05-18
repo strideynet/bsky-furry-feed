@@ -144,20 +144,20 @@ func (fi *FirehoseIngester) Start(ctx context.Context) error {
 }
 
 func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncSubscribeRepos_Commit) error {
-	// Dispose of events from non-candidate repositories
-	candidateUser := fi.crc.GetByDID(evt.Repo)
-	if candidateUser == nil {
+	// Dispose of events from non-candidate actors
+	candidateActor := fi.crc.GetByDID(evt.Repo)
+	if candidateActor == nil {
 		return nil
 	}
 	// TODO: Find a way to use tail-based sampling so that we can capture this trace
-	// before candidateUser is run and ensure we always capture candidateUser
+	// before candidateActor is run and ensure we always capture candidateActor
 	// traces.
 	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_commit")
 	defer span.End()
 	span.SetAttributes(
-		attribute.String("candidate_repository.did", evt.Repo),
+		attribute.String("candidate_actor.did", evt.Repo),
 	)
-	log := fi.log.With(zap.String("candidate_repository.did", evt.Repo))
+	log := fi.log.With(zap.String("candidate_actor.did", evt.Repo))
 	rr, err := repo.ReadRepoFromCar(ctx, bytes.NewReader(evt.Blocks))
 	if err != nil {
 		return fmt.Errorf("reading repo from car %w", err)

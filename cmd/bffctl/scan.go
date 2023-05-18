@@ -21,7 +21,7 @@ var password = os.Getenv("BSKY_PASSWORD")
 func scanCmd(log *zap.Logger, env *environment) *cli.Command {
 	return &cli.Command{
 		Name:  "scan",
-		Usage: "Find and add new candidate repositories to add to bff",
+		Usage: "Find and add new candidate actors to add to bff",
 		Action: func(cctx *cli.Context) error {
 			conn, err := pgx.Connect(cctx.Context, env.dbURL)
 			if err != nil {

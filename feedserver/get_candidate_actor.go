@@ -34,7 +34,7 @@ func getCandidateActorHandler(
 				handleErr(w, log, fmt.Errorf("no results found for handle"))
 				return
 			}
-			handleErr(w, log, fmt.Errorf("getting candidate repository: %w", err))
+			handleErr(w, log, fmt.Errorf("getting candidate actor: %w", err))
 			return
 		}
 		candidateRepository := bff.CandidateActorFromStore(data)

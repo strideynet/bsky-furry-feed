@@ -109,11 +109,11 @@ func runE(log *zap.Logger) error {
 		log.Named("candidate_actor_cache"),
 		queries,
 	)
-	// Prefill the CRC before we proceed to ensure all candidate repositories
+	// Prefill the CRC before we proceed to ensure all candidate actors
 	// are available to sub-services. This eliminates some potential weirdness
 	// when handling events/requests shortly after process startup.
 	if err := crc.Fill(ctx); err != nil {
-		return fmt.Errorf("filling candidate repository cache: %w", err)
+		return fmt.Errorf("filling candidate actor cache: %w", err)
 	}
 	eg.Go(func() error {
 		return crc.Start(egCtx)

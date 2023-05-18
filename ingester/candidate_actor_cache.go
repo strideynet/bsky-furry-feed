@@ -66,7 +66,7 @@ func (crc *CandidateActorCache) Fill(ctx context.Context) error {
 	crc.log.Info("starting cache fill")
 	data, err := crc.queries.ListCandidateActors(ctx)
 	if err != nil {
-		return fmt.Errorf("listing candidate repositories: %w", err)
+		return fmt.Errorf("listing candidate actors: %w", err)
 	}
 
 	mapped := map[string]bff.CandidateActor{}

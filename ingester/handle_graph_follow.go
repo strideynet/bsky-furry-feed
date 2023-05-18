@@ -23,7 +23,7 @@ func (fi *FirehoseIngester) handleGraphFollowCreate(
 	defer span.End()
 
 	if fi.crc.GetByDID(data.Subject) != nil {
-		// We aren't interested in repositories we already track.
+		// We aren't interested in actors we already track.
 		return nil
 	}
 	if discordWebhookGraphFollow == "" {

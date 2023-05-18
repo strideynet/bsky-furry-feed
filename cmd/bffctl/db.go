@@ -20,18 +20,18 @@ func dbCmd(log *zap.Logger, env *environment) *cli.Command {
 			{
 				Name:    "candidate-actors",
 				Usage:   "Manage candidate actors",
-				Aliases: []string{"cr"},
+				Aliases: []string{"ca"},
 				Subcommands: []*cli.Command{
-					dbCandidateRepositoriesList(log, env),
-					dbCandidateRepositoriesSeedCmd(log, env),
-					dbCandidateRepositoriesAddCmd(log, env),
+					dbCandidateActorsList(log, env),
+					dbCandidateActorsSeedCmd(log, env),
+					dbCandidateActorsAddCmd(log, env),
 				},
 			},
 		},
 	}
 }
 
-func dbCandidateRepositoriesList(log *zap.Logger, env *environment) *cli.Command {
+func dbCandidateActorsList(log *zap.Logger, env *environment) *cli.Command {
 	return &cli.Command{
 		Name:  "ls",
 		Usage: "List candidate actors",
@@ -55,7 +55,7 @@ func dbCandidateRepositoriesList(log *zap.Logger, env *environment) *cli.Command
 	}
 }
 
-func dbCandidateRepositoriesSeedCmd(log *zap.Logger, env *environment) *cli.Command {
+func dbCandidateActorsSeedCmd(log *zap.Logger, env *environment) *cli.Command {
 	return &cli.Command{
 		Name:  "seed",
 		Usage: "Seed the default set of candidate actors",
@@ -68,9 +68,9 @@ func dbCandidateRepositoriesSeedCmd(log *zap.Logger, env *environment) *cli.Comm
 
 			db := store.New(conn)
 
-			log.Info("seed candidates", zap.Int("count", len(seedCandidateRepositories)))
-			for did, candidate := range seedCandidateRepositories {
-				log.Info("seeding candidate repository",
+			log.Info("seed candidates", zap.Int("count", len(seedCandidateActors)))
+			for did, candidate := range seedCandidateActors {
+				log.Info("seeding candidate actor",
 					zap.String("did", did),
 					zap.Any("data", candidate),
 				)
@@ -103,7 +103,7 @@ func dbCandidateRepositoriesSeedCmd(log *zap.Logger, env *environment) *cli.Comm
 	}
 }
 
-func dbCandidateRepositoriesAddCmd(log *zap.Logger, env *environment) *cli.Command {
+func dbCandidateActorsAddCmd(log *zap.Logger, env *environment) *cli.Command {
 	handle := ""
 	name := ""
 	isArtist := false
@@ -175,7 +175,7 @@ func dbCandidateRepositoriesAddCmd(log *zap.Logger, env *environment) *cli.Comma
 	}
 }
 
-var seedCandidateRepositories = map[string]struct {
+var seedCandidateActors = map[string]struct {
 	Comment  string
 	IsArtist bool
 }{

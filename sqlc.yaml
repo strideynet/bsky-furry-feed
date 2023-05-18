@@ -4,7 +4,8 @@ overrides:
      rename:
        did: DID
        uri: URI
-       repository_did: RepositoryDID
+       actor_did: ActorDID
+       subject_uri: SubjectURI
 sql:
   - engine: "postgresql"
     queries: "store/queries/"
