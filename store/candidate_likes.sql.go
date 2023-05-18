@@ -13,24 +13,24 @@ import (
 
 const createCandidateLike = `-- name: CreateCandidateLike :exec
 INSERT INTO candidate_likes (
-uri, repository_did, subject_uri, created_at, indexed_at
+uri, actor_did, subject_uri, created_at, indexed_at
 ) VALUES (
 $1, $2, $3, $4, $5
 )
 `
 
 type CreateCandidateLikeParams struct {
-	URI           string
-	RepositoryDID string
-	SubjectUri    string
-	CreatedAt     pgtype.Timestamptz
-	IndexedAt     pgtype.Timestamptz
+	URI        string
+	ActorDid   string
+	SubjectUri string
+	CreatedAt  pgtype.Timestamptz
+	IndexedAt  pgtype.Timestamptz
 }
 
 func (q *Queries) CreateCandidateLike(ctx context.Context, arg CreateCandidateLikeParams) error {
 	_, err := q.db.Exec(ctx, createCandidateLike,
 		arg.URI,
-		arg.RepositoryDID,
+		arg.ActorDid,
 		arg.SubjectUri,
 		arg.CreatedAt,
 		arg.IndexedAt,

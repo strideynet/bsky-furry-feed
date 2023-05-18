@@ -22,13 +22,13 @@ func getCandidateRepositoryHandler(
 			handleErr(w, log, fmt.Errorf("no handle provided"))
 			return
 		}
-		client := bluesky.NewClient()
+		client := bluesky.NewUnauthClient()
 		did, err := client.ResolveHandle(r.Context(), handle)
 		if err != nil {
 			handleErr(w, log, fmt.Errorf("resolving handle: %w", err))
 			return
 		}
-		data, err := queries.GetCandidateRepositoryByDID(r.Context(), did.Did)
+		data, err := queries.GetCandidateActorByDID(r.Context(), did.Did)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				handleErr(w, log, fmt.Errorf("no results found for handle"))
@@ -43,5 +43,5 @@ func getCandidateRepositoryHandler(
 		encoder.SetIndent("", " ")
 		_ = encoder.Encode(candidateRepository)
 	}
-	return "/get_candidate_repository", otelhttp.NewHandler(h, "get_candidate_repository")
+	return "/get_candidate_actor", otelhttp.NewHandler(h, "get_candidate_actor")
 }

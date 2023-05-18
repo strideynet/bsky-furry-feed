@@ -8,24 +8,24 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type CandidateLike struct {
-	URI           string
-	RepositoryDID string
-	SubjectUri    string
-	CreatedAt     pgtype.Timestamptz
-	IndexedAt     pgtype.Timestamptz
-}
-
-type CandidatePost struct {
-	URI           string
-	RepositoryDID string
-	CreatedAt     pgtype.Timestamptz
-	IndexedAt     pgtype.Timestamptz
-}
-
-type CandidateRepository struct {
+type CandidateActor struct {
 	DID       string
 	CreatedAt pgtype.Timestamptz
 	IsArtist  bool
 	Comment   string
+}
+
+type CandidateLike struct {
+	URI        string
+	ActorDid   string
+	SubjectUri string
+	CreatedAt  pgtype.Timestamptz
+	IndexedAt  pgtype.Timestamptz
+}
+
+type CandidatePost struct {
+	URI       string
+	ActorDid  string
+	CreatedAt pgtype.Timestamptz
+	IndexedAt pgtype.Timestamptz
 }

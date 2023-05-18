@@ -105,8 +105,8 @@ func runE(log *zap.Logger) error {
 	// If one exits, all will exit.
 	eg, egCtx := errgroup.WithContext(ctx)
 
-	crc := ingester.NewCandidateRepositoryCache(
-		log.Named("candidate_repositories_cache"),
+	crc := ingester.NewCandidateActorCache(
+		log.Named("candidate_actor_cache"),
 		queries,
 	)
 	// Prefill the CRC before we proceed to ensure all candidate repositories

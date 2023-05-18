@@ -35,7 +35,7 @@ var workItemsProcessed = promauto.NewSummaryVec(prometheus.SummaryOpts{
 type FirehoseIngester struct {
 	// dependencies
 	log     *zap.Logger
-	crc     *CandidateRepositoryCache
+	crc     *CandidateActorCache
 	queries *store.Queries
 
 	// configuration
@@ -45,7 +45,7 @@ type FirehoseIngester struct {
 }
 
 func NewFirehoseIngester(
-	log *zap.Logger, queries *store.Queries, crc *CandidateRepositoryCache,
+	log *zap.Logger, queries *store.Queries, crc *CandidateActorCache,
 ) *FirehoseIngester {
 	return &FirehoseIngester{
 		log:     log,

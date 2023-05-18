@@ -36,7 +36,7 @@ func scanCmd(log *zap.Logger, env *environment) *cli.Command {
 				return fmt.Errorf("failed to authenticate: %w", err)
 			}
 
-			client := bluesky.NewClient(bluesky.AuthInfoFromCreateSession(out))
+			_ = bluesky.NewClient(bluesky.AuthInfoFromCreateSession(out))
 
 			return nil
 		},

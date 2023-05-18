@@ -1,13 +1,13 @@
--- name: ListCandidateRepositories :many
-SELECT * FROM candidate_repositories
+-- name: ListCandidateActors :many
+SELECT * FROM candidate_actors
 ORDER BY did;
 
--- name: CreateCandidateRepository :exec
-INSERT INTO candidate_repositories (
+-- name: CreateCandidateActor :exec
+INSERT INTO candidate_actors (
     did, created_at, is_artist, comment
 ) VALUES (
     $1, $2, $3, $4
 );
 
--- name: GetCandidateRepositoryByDID :one
-SELECT * FROM candidate_repositories WHERE did = $1;
+-- name: GetCandidateActorByDID :one
+SELECT * FROM candidate_actors WHERE did = $1;

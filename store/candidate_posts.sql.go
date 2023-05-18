@@ -13,23 +13,23 @@ import (
 
 const createCandidatePost = `-- name: CreateCandidatePost :exec
 INSERT INTO candidate_posts (
-    uri, repository_did, created_at, indexed_at
+    uri, actor_did, created_at, indexed_at
 ) VALUES (
     $1, $2, $3, $4
  )
 `
 
 type CreateCandidatePostParams struct {
-	URI           string
-	RepositoryDID string
-	CreatedAt     pgtype.Timestamptz
-	IndexedAt     pgtype.Timestamptz
+	URI       string
+	ActorDid  string
+	CreatedAt pgtype.Timestamptz
+	IndexedAt pgtype.Timestamptz
 }
 
 func (q *Queries) CreateCandidatePost(ctx context.Context, arg CreateCandidatePostParams) error {
 	_, err := q.db.Exec(ctx, createCandidatePost,
 		arg.URI,
-		arg.RepositoryDID,
+		arg.ActorDid,
 		arg.CreatedAt,
 		arg.IndexedAt,
 	)
@@ -37,7 +37,7 @@ func (q *Queries) CreateCandidatePost(ctx context.Context, arg CreateCandidatePo
 }
 
 const listCandidatePostsForFeed = `-- name: ListCandidatePostsForFeed :many
-SELECT uri, repository_did, created_at, indexed_at FROM candidate_posts ORDER BY created_at DESC LIMIT $1
+SELECT uri, actor_did, created_at, indexed_at FROM candidate_posts ORDER BY created_at DESC LIMIT $1
 `
 
 func (q *Queries) ListCandidatePostsForFeed(ctx context.Context, limit int32) ([]CandidatePost, error) {
@@ -51,7 +51,7 @@ func (q *Queries) ListCandidatePostsForFeed(ctx context.Context, limit int32) ([
 		var i CandidatePost
 		if err := rows.Scan(
 			&i.URI,
-			&i.RepositoryDID,
+			&i.ActorDid,
 			&i.CreatedAt,
 			&i.IndexedAt,
 		); err != nil {
@@ -66,7 +66,7 @@ func (q *Queries) ListCandidatePostsForFeed(ctx context.Context, limit int32) ([
 }
 
 const listCandidatePostsForFeedWithCursor = `-- name: ListCandidatePostsForFeedWithCursor :many
-SELECT uri, repository_did, created_at, indexed_at FROM candidate_posts WHERE created_at < $1 ORDER BY created_at DESC LIMIT $2
+SELECT uri, actor_did, created_at, indexed_at FROM candidate_posts WHERE created_at < $1 ORDER BY created_at DESC LIMIT $2
 `
 
 type ListCandidatePostsForFeedWithCursorParams struct {
@@ -85,7 +85,7 @@ func (q *Queries) ListCandidatePostsForFeedWithCursor(ctx context.Context, arg L
 		var i CandidatePost
 		if err := rows.Scan(
 			&i.URI,
-			&i.RepositoryDID,
+			&i.ActorDid,
 			&i.CreatedAt,
 			&i.IndexedAt,
 		); err != nil {

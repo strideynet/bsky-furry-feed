@@ -18,8 +18,8 @@ func dbCmd(log *zap.Logger, env *environment) *cli.Command {
 		Usage: "Manage the database directly",
 		Subcommands: []*cli.Command{
 			{
-				Name:    "candidate-repositories",
-				Usage:   "Manage candidate repositories",
+				Name:    "candidate-actors",
+				Usage:   "Manage candidate actors",
 				Aliases: []string{"cr"},
 				Subcommands: []*cli.Command{
 					dbCandidateRepositoriesList(log, env),
@@ -34,7 +34,7 @@ func dbCmd(log *zap.Logger, env *environment) *cli.Command {
 func dbCandidateRepositoriesList(log *zap.Logger, env *environment) *cli.Command {
 	return &cli.Command{
 		Name:  "ls",
-		Usage: "Listcandidate repositories",
+		Usage: "List candidate actors",
 		Action: func(cctx *cli.Context) error {
 			conn, err := pgx.Connect(cctx.Context, env.dbURL)
 			if err != nil {
@@ -43,7 +43,7 @@ func dbCandidateRepositoriesList(log *zap.Logger, env *environment) *cli.Command
 			defer conn.Close(cctx.Context)
 
 			db := store.New(conn)
-			repos, err := db.ListCandidateRepositories(cctx.Context)
+			repos, err := db.ListCandidateActors(cctx.Context)
 			if err != nil {
 				return err
 			}
@@ -58,7 +58,7 @@ func dbCandidateRepositoriesList(log *zap.Logger, env *environment) *cli.Command
 func dbCandidateRepositoriesSeedCmd(log *zap.Logger, env *environment) *cli.Command {
 	return &cli.Command{
 		Name:  "seed",
-		Usage: "Seed the default set of candidate repositories",
+		Usage: "Seed the default set of candidate actors",
 		Action: func(cctx *cli.Context) error {
 			conn, err := pgx.Connect(cctx.Context, env.dbURL)
 			if err != nil {
@@ -74,9 +74,9 @@ func dbCandidateRepositoriesSeedCmd(log *zap.Logger, env *environment) *cli.Comm
 					zap.String("did", did),
 					zap.Any("data", candidate),
 				)
-				err := db.CreateCandidateRepository(
+				err := db.CreateCandidateActor(
 					cctx.Context,
-					store.CreateCandidateRepositoryParams{
+					store.CreateCandidateActorParams{
 						DID: did,
 						CreatedAt: pgtype.Timestamptz{
 							Time:  time.Now(),
@@ -109,7 +109,7 @@ func dbCandidateRepositoriesAddCmd(log *zap.Logger, env *environment) *cli.Comma
 	isArtist := false
 	return &cli.Command{
 		Name:  "add",
-		Usage: "Adds a new candidate repository",
+		Usage: "Adds a new candidate actor",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "handle",
@@ -142,7 +142,7 @@ func dbCandidateRepositoriesAddCmd(log *zap.Logger, env *environment) *cli.Comma
 
 			db := store.New(conn)
 
-			params := store.CreateCandidateRepositoryParams{
+			params := store.CreateCandidateActorParams{
 				DID: did.Did,
 				CreatedAt: pgtype.Timestamptz{
 					Time:  time.Now(),
@@ -151,10 +151,10 @@ func dbCandidateRepositoriesAddCmd(log *zap.Logger, env *environment) *cli.Comma
 				IsArtist: isArtist,
 				Comment:  fmt.Sprintf("%s (%s)", name, handle),
 			}
-			log.Info("adding candidate repository",
+			log.Info("adding candidate actor",
 				zap.Any("data", params),
 			)
-			err = db.CreateCandidateRepository(
+			err = db.CreateCandidateActor(
 				cctx.Context,
 				params,
 			)
@@ -168,7 +168,7 @@ func dbCandidateRepositoriesAddCmd(log *zap.Logger, env *environment) *cli.Comma
 					return err
 				}
 			}
-			log.Info("added candidate repository")
+			log.Info("added candidate actor")
 
 			return nil
 		},

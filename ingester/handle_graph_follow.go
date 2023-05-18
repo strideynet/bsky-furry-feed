@@ -35,7 +35,7 @@ func (fi *FirehoseIngester) handleGraphFollowCreate(
 	var jsonStr = []byte(fmt.Sprintf(`
 {
     "username": "bff-system",
-    "content": "**Furry follow?**\n**Source repository:** %s \n**Followed:** https://psky.app/profile/%s"
+    "content": "**Furry follow?**\n**Source actor:** %s \n**Followed:** https://psky.app/profile/%s"
 }`, repoDID, data.Subject))
 	req, err := http.NewRequest("POST", discordWebhookGraphFollow, bytes.NewBuffer(jsonStr))
 	req.Header.Set("Content-Type", "application/json")

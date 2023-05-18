@@ -10,14 +10,14 @@ import (
 	"time"
 )
 
-// CandidateRepositoryCache holds a view of the candidate repositories from
+// CandidateActorCache holds a view of the candidate actors from
 // the database, refreshing itself every minute. It's designed to be safely
 // called concurrently. This prevents us needing to hit the database for every
 // event which would produce significant load on the db and also increase the
 // amount of time it takes to handle an event we aren't interested in.
 // The only downside to this approach is that it takes up to a minute for
 // new candidate repositories to be monitored.
-type CandidateRepositoryCache struct {
+type CandidateActorCache struct {
 	log     *zap.Logger
 	queries *store.Queries
 
@@ -30,19 +30,19 @@ type CandidateRepositoryCache struct {
 	// ten seconds.
 	refreshTimeout time.Duration
 
-	// cached is a map keyed by the repository DID to the data about the
-	// repository. The go standard map implementation is fast enough for our
+	// cached is a map keyed by the actor DID to the data about the
+	// actor. The go standard map implementation is fast enough for our
 	// needs at this time.
-	cached map[string]bff.CandidateRepository
+	cached map[string]bff.CandidateActor
 	// mu protects cached to prevent concurrent access leading to corruption.
 	mu sync.RWMutex
 }
 
-func NewCandidateRepositoryCache(
+func NewCandidateActorCache(
 	log *zap.Logger,
 	queries *store.Queries,
-) *CandidateRepositoryCache {
-	return &CandidateRepositoryCache{
+) *CandidateActorCache {
+	return &CandidateActorCache{
 		queries:        queries,
 		log:            log,
 		period:         time.Minute,
@@ -50,9 +50,9 @@ func NewCandidateRepositoryCache(
 	}
 }
 
-func (crc *CandidateRepositoryCache) GetByDID(
+func (crc *CandidateActorCache) GetByDID(
 	did string,
-) *bff.CandidateRepository {
+) *bff.CandidateActor {
 	crc.mu.RLock()
 	defer crc.mu.RUnlock()
 	v, ok := crc.cached[did]
@@ -62,14 +62,14 @@ func (crc *CandidateRepositoryCache) GetByDID(
 	return nil
 }
 
-func (crc *CandidateRepositoryCache) Fill(ctx context.Context) error {
+func (crc *CandidateActorCache) Fill(ctx context.Context) error {
 	crc.log.Info("starting cache fill")
-	data, err := crc.queries.ListCandidateRepositories(ctx)
+	data, err := crc.queries.ListCandidateActors(ctx)
 	if err != nil {
 		return fmt.Errorf("listing candidate repositories: %w", err)
 	}
 
-	mapped := map[string]bff.CandidateRepository{}
+	mapped := map[string]bff.CandidateActor{}
 	for _, cr := range data {
 		mapped[cr.DID] = bff.CandidateRepositoryFromStore(cr)
 	}
@@ -81,7 +81,7 @@ func (crc *CandidateRepositoryCache) Fill(ctx context.Context) error {
 	return nil
 }
 
-func (crc *CandidateRepositoryCache) Start(ctx context.Context) error {
+func (crc *CandidateActorCache) Start(ctx context.Context) error {
 	ticker := time.NewTicker(crc.period)
 	defer ticker.Stop()
 	for {

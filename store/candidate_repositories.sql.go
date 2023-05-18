@@ -11,23 +11,23 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createCandidateRepository = `-- name: CreateCandidateRepository :exec
-INSERT INTO candidate_repositories (
+const createCandidateActor = `-- name: CreateCandidateActor :exec
+INSERT INTO candidate_actors (
     did, created_at, is_artist, comment
 ) VALUES (
     $1, $2, $3, $4
 )
 `
 
-type CreateCandidateRepositoryParams struct {
+type CreateCandidateActorParams struct {
 	DID       string
 	CreatedAt pgtype.Timestamptz
 	IsArtist  bool
 	Comment   string
 }
 
-func (q *Queries) CreateCandidateRepository(ctx context.Context, arg CreateCandidateRepositoryParams) error {
-	_, err := q.db.Exec(ctx, createCandidateRepository,
+func (q *Queries) CreateCandidateActor(ctx context.Context, arg CreateCandidateActorParams) error {
+	_, err := q.db.Exec(ctx, createCandidateActor,
 		arg.DID,
 		arg.CreatedAt,
 		arg.IsArtist,
@@ -36,13 +36,13 @@ func (q *Queries) CreateCandidateRepository(ctx context.Context, arg CreateCandi
 	return err
 }
 
-const getCandidateRepositoryByDID = `-- name: GetCandidateRepositoryByDID :one
-SELECT did, created_at, is_artist, comment FROM candidate_repositories WHERE did = $1
+const getCandidateActorByDID = `-- name: GetCandidateActorByDID :one
+SELECT did, created_at, is_artist, comment FROM candidate_actors WHERE did = $1
 `
 
-func (q *Queries) GetCandidateRepositoryByDID(ctx context.Context, did string) (CandidateRepository, error) {
-	row := q.db.QueryRow(ctx, getCandidateRepositoryByDID, did)
-	var i CandidateRepository
+func (q *Queries) GetCandidateActorByDID(ctx context.Context, did string) (CandidateActor, error) {
+	row := q.db.QueryRow(ctx, getCandidateActorByDID, did)
+	var i CandidateActor
 	err := row.Scan(
 		&i.DID,
 		&i.CreatedAt,
@@ -52,20 +52,20 @@ func (q *Queries) GetCandidateRepositoryByDID(ctx context.Context, did string) (
 	return i, err
 }
 
-const listCandidateRepositories = `-- name: ListCandidateRepositories :many
-SELECT did, created_at, is_artist, comment FROM candidate_repositories
+const listCandidateActors = `-- name: ListCandidateActors :many
+SELECT did, created_at, is_artist, comment FROM candidate_actors
 ORDER BY did
 `
 
-func (q *Queries) ListCandidateRepositories(ctx context.Context) ([]CandidateRepository, error) {
-	rows, err := q.db.Query(ctx, listCandidateRepositories)
+func (q *Queries) ListCandidateActors(ctx context.Context) ([]CandidateActor, error) {
+	rows, err := q.db.Query(ctx, listCandidateActors)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []CandidateRepository
+	var items []CandidateActor
 	for rows.Next() {
-		var i CandidateRepository
+		var i CandidateActor
 		if err := rows.Scan(
 			&i.DID,
 			&i.CreatedAt,

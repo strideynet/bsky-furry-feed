@@ -5,15 +5,15 @@ import (
 	"time"
 )
 
-type CandidateRepository struct {
+type CandidateActor struct {
 	DID       string    `json:"did"`
 	CreatedAt time.Time `json:"created_at"`
 	IsArtist  bool      `json:"is_artist"`
 	Comment   string    `json:"comment"`
 }
 
-func CandidateRepositoryFromStore(cr store.CandidateRepository) CandidateRepository {
-	return CandidateRepository{
+func CandidateRepositoryFromStore(cr store.CandidateActor) CandidateActor {
+	return CandidateActor{
 		DID:       cr.DID,
 		CreatedAt: cr.CreatedAt.Time,
 		IsArtist:  cr.IsArtist,

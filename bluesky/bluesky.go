@@ -3,7 +3,6 @@ package bluesky
 import (
 	"context"
 	"github.com/bluesky-social/indigo/api/atproto"
-	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/bluesky-social/indigo/xrpc"
 )
 
@@ -78,11 +77,10 @@ func NewClient(auth *xrpc.AuthInfo) *Client {
 }
 
 func (c *Client) GetFollowers(ctx context.Context, actor string) (*atproto.IdentityResolveHandle_Output, error) {
-	bsky.GraphGetFollowers(ctx, c.xrpc, actor, "", 100)
 	out, err := atproto.IdentityResolveHandle(
 		ctx,
 		c.xrpc,
-		handle,
+		actor,
 	)
 	if err != nil {
 		return nil, err

@@ -55,7 +55,7 @@ func (c *Config) Connect(ctx context.Context) (*Queries, func(), error) {
 	case c.CloudSQL != nil:
 		pgxCfg, err = c.CloudSQL.poolConfig(ctx)
 	case c.Direct != nil:
-
+		pgxCfg, err = c.Direct.poolConfig()
 	}
 	pool, err := pgxpool.NewWithConfig(ctx, pgxCfg)
 	if err != nil {

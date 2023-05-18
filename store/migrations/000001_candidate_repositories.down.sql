@@ -1,1 +1,1 @@
-DROP TABLE candidate_repositories;
+DROP TABLE candidate_actors;
