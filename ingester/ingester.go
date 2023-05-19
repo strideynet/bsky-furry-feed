@@ -206,7 +206,7 @@ func (fi *FirehoseIngester) handleRecordCreate(
 ) error {
 	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_record_create")
 	defer span.End()
-	log.Info("handling record create", zap.Any("record", record))
+	log.Debug("handling record create", zap.Any("record", record))
 
 	switch data := record.(type) {
 	case *bsky.FeedPost:
@@ -225,7 +225,7 @@ func (fi *FirehoseIngester) handleRecordCreate(
 			return fmt.Errorf("handling app.bsky.graph.follow: %w", err)
 		}
 	default:
-		log.Info("ignoring record create due to handled type")
+		log.Debug("ignoring record create due to handled type")
 	}
 
 	return nil
