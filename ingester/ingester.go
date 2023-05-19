@@ -59,7 +59,7 @@ func NewFirehoseIngester(
 }
 
 func (fi *FirehoseIngester) Start(ctx context.Context) error {
-	eg, egCtx := errgroup.WithContext(ctx)
+	eg, ctx := errgroup.WithContext(ctx)
 
 	// Unbuffered channel so that the websocket will stop reading if the workers
 	// are not ready. In future, we may want to consider some reasonable
@@ -68,12 +68,14 @@ func (fi *FirehoseIngester) Start(ctx context.Context) error {
 	eg.Go(func() error {
 		workerWg := sync.WaitGroup{}
 		for n := 1; n < fi.workerCount; n++ {
+			n := n
 			workerWg.Add(1)
 			go func() {
 				defer workerWg.Done()
 				for {
 					select {
 					case <-ctx.Done():
+						fi.log.Info("worker exiting", zap.Int("worker", n))
 						return
 					case evt := <-evtChan:
 						// record start time so we can collect
@@ -102,7 +104,7 @@ func (fi *FirehoseIngester) Start(ctx context.Context) error {
 	})
 
 	eg.Go(func() error {
-		ctx, cancel := context.WithCancel(egCtx)
+		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
 		con, _, err := websocket.DefaultDialer.DialContext(

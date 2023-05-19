@@ -101,10 +101,6 @@ func runE(log *zap.Logger) error {
 	}
 	defer queriesClose()
 
-	// Create an errgroup to manage the lifetimes of the subservices.
-	// If one exits, all will exit.
-	eg, egCtx := errgroup.WithContext(ctx)
-
 	crc := ingester.NewCandidateActorCache(
 		log.Named("candidate_actor_cache"),
 		queries,
@@ -115,8 +111,12 @@ func runE(log *zap.Logger) error {
 	if err := crc.Fill(ctx); err != nil {
 		return fmt.Errorf("filling candidate actor cache: %w", err)
 	}
+
+	// Create an errgroup to manage the lifetimes of the subservices.
+	// If one exits, all will exit.
+	eg, ctx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
-		return crc.Start(egCtx)
+		return crc.Start(ctx)
 	})
 
 	// Setup ingester
@@ -124,7 +124,7 @@ func runE(log *zap.Logger) error {
 		log.Named("firehose_ingester"), queries, crc,
 	)
 	eg.Go(func() error {
-		return fi.Start(egCtx)
+		return fi.Start(ctx)
 	})
 
 	// Setup the public HTTP/XRPC server
@@ -143,7 +143,7 @@ func runE(log *zap.Logger) error {
 	eg.Go(func() error {
 		log.Info("feed server listening", zap.String("addr", srv.Addr))
 		go func() {
-			<-egCtx.Done()
+			<-ctx.Done()
 			if err := srv.Close(); err != nil {
 				log.Error("failed to close feed server", zap.Error(err))
 			}
@@ -156,7 +156,7 @@ func runE(log *zap.Logger) error {
 	eg.Go(func() error {
 		log.Info("debug server listening", zap.String("addr", debugSrv.Addr))
 		go func() {
-			<-egCtx.Done()
+			<-ctx.Done()
 			if err := debugSrv.Close(); err != nil {
 				log.Error("failed to close debug server", zap.Error(err))
 			}
