@@ -3,6 +3,7 @@ package bluesky
 import (
 	"context"
 	"github.com/bluesky-social/indigo/api/atproto"
+	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/bluesky-social/indigo/xrpc"
 )
 
@@ -76,14 +77,39 @@ func NewClient(auth *xrpc.AuthInfo) *Client {
 	}
 }
 
-func (c *Client) GetFollowers(ctx context.Context, actor string) (*atproto.IdentityResolveHandle_Output, error) {
-	out, err := atproto.IdentityResolveHandle(
+func (c *Client) GetFollowers(
+	ctx context.Context, actor string, cursor string, limit int64,
+) (*bsky.GraphGetFollowers_Output, error) {
+	out, err := bsky.GraphGetFollowers(
 		ctx,
 		c.xrpc,
 		actor,
+		cursor,
+		limit,
 	)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
+}
+
+func (c *Client) GetPostThread(
+	ctx context.Context, uri string,
+) (*bsky.FeedGetPostThread_Output, error) {
+	out, err := bsky.FeedGetPostThread(ctx, c.xrpc, 1, uri)
+	if err != nil {
+		return nil, err
+	}
+	return out, err
+}
+
+// GetProfile fetches an actor's profile. actor can be a DID or a handle.
+func (c *Client) GetProfile(
+	ctx context.Context, actor string,
+) (*bsky.ActorDefs_ProfileViewDetailed, error) {
+	out, err := bsky.ActorGetProfile(ctx, c.xrpc, actor)
+	if err != nil {
+		return nil, err
+	}
+	return out, err
 }
