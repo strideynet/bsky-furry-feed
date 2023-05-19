@@ -75,7 +75,7 @@ func (fi *FirehoseIngester) Start(ctx context.Context) error {
 				for {
 					select {
 					case <-ctx.Done():
-						fi.log.Info("worker exiting", zap.Int("worker", n))
+						fi.log.Warn("worker exiting", zap.Int("worker", n))
 						return
 					case evt := <-evtChan:
 						// record start time so we can collect
@@ -116,14 +116,14 @@ func (fi *FirehoseIngester) Start(ctx context.Context) error {
 
 		go func() {
 			<-ctx.Done()
-			fi.log.Info("closing websocket subscription")
+			fi.log.Warn("closing websocket subscription")
 			if err := con.Close(); err != nil {
 				fi.log.Error(
 					"error occurred closing websocket",
 					zap.Error(err),
 				)
 			}
-			fi.log.Info("closed websocket subscription")
+			fi.log.Warn("closed websocket subscription")
 		}()
 		// TODO: sometimes stream exits of own accord, we should attempt to
 		// reconnect several times and then return an error to cause the

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -11,7 +13,14 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
+	"time"
 )
+
+var feedRequestMetric = promauto.NewSummaryVec(prometheus.SummaryOpts{
+	Name: "bff_feed_request_duration_seconds",
+	Help: "A very rudimentary way of tracking how many feed skeletons have been requested and how long it takes to serve.",
+}, []string{"feed_name", "status"})
 
 type getFeedSkeletonParams struct {
 	cursor string
@@ -26,6 +35,18 @@ func parseGetFeedSkeletonParams(u *url.URL) (*getFeedSkeletonParams, error) {
 		feed:   q.Get("feed"),
 		limit:  50, // Default value
 	}
+
+	// q.Get("feed"))
+	// at://did:web:feed.furryli.st/app.bsky.feed.generator/furry-chronological
+	feedParam := q.Get("feed")
+	if feedParam == "" {
+		return nil, fmt.Errorf("no feed specified")
+	}
+	splitFeed := strings.Split(feedParam, "/")
+	// extract the final element - we don't really care about the DID and are
+	// happy to serve just based on the name.
+	params.feed = splitFeed[len(splitFeed)-1]
+
 	// TODO: Parse "feed" into name of feed and ignore the hostname
 	limitStr := q.Get("limit")
 	if limitStr != "" {
@@ -58,17 +79,25 @@ func getFeedSkeletonHandler(
 	log *zap.Logger, queries *store.Queries,
 ) (string, http.Handler) {
 	var h http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
 		params, err := parseGetFeedSkeletonParams(r.URL)
 		if err != nil {
 			handleErr(w, log, err)
 			return
 		}
-		log.Info(
+		log.Debug(
 			"get feed skeleton request",
 			zap.String("feed", params.feed),
 			zap.String("cursor", params.cursor),
 			zap.Int("limit", params.limit),
 		)
+
+		// TODO: Feed "router" that directs requests to the correct
+		// implementation.
+		if params.feed != "furry-chronological" {
+			handleErr(w, log, fmt.Errorf("unrecognized feed %q", params.feed))
+			return
+		}
 
 		var posts []store.CandidatePost
 		if params.cursor == "" {
@@ -138,6 +167,10 @@ func getFeedSkeletonHandler(
 		w.WriteHeader(200)
 		encoder := json.NewEncoder(w)
 		_ = encoder.Encode(output)
+
+		feedRequestMetric.
+			WithLabelValues(params.feed, "OK").
+			Observe(time.Since(start).Seconds())
 	}
 	return "/xrpc/app.bsky.feed.getFeedSkeleton", otelhttp.NewHandler(h, "get_feed_skeleton")
 }
