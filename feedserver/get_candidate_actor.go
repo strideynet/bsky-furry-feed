@@ -1,7 +1,6 @@
 package feedserver
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5"
@@ -38,10 +37,7 @@ func getCandidateActorHandler(
 			return
 		}
 		candidateRepository := bff.CandidateActorFromStore(data)
-		w.WriteHeader(200)
-		encoder := json.NewEncoder(w)
-		encoder.SetIndent("", " ")
-		_ = encoder.Encode(candidateRepository)
+		sendJSON(w, candidateRepository)
 	}
 	return "/get_candidate_actor", otelhttp.NewHandler(h, "get_candidate_actor")
 }
