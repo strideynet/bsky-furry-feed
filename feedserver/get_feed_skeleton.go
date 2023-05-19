@@ -1,7 +1,6 @@
 package feedserver
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/prometheus/client_golang/prometheus"
@@ -16,6 +15,8 @@ import (
 	"strings"
 	"time"
 )
+
+var furryChronologicalFeed = "furry-chronological"
 
 var feedRequestMetric = promauto.NewSummaryVec(prometheus.SummaryOpts{
 	Name: "bff_feed_request_duration_seconds",
@@ -36,7 +37,7 @@ func parseGetFeedSkeletonParams(u *url.URL) (*getFeedSkeletonParams, error) {
 		limit:  50, // Default value
 	}
 
-	// q.Get("feed"))
+	// Example of feed param:
 	// at://did:web:feed.furryli.st/app.bsky.feed.generator/furry-chronological
 	feedParam := q.Get("feed")
 	if feedParam == "" {
@@ -47,7 +48,6 @@ func parseGetFeedSkeletonParams(u *url.URL) (*getFeedSkeletonParams, error) {
 	// happy to serve just based on the name.
 	params.feed = splitFeed[len(splitFeed)-1]
 
-	// TODO: Parse "feed" into name of feed and ignore the hostname
 	limitStr := q.Get("limit")
 	if limitStr != "" {
 		limit, err := strconv.Atoi(limitStr)
@@ -94,7 +94,7 @@ func getFeedSkeletonHandler(
 
 		// TODO: Feed "router" that directs requests to the correct
 		// implementation.
-		if params.feed != "furry-chronological" {
+		if params.feed != furryChronologicalFeed {
 			handleErr(w, log, fmt.Errorf("unrecognized feed %q", params.feed))
 			return
 		}
@@ -164,10 +164,7 @@ func getFeedSkeletonHandler(
 			output.Cursor = bluesky.FormatTime(lastPost.CreatedAt.Time)
 		}
 
-		w.WriteHeader(200)
-		encoder := json.NewEncoder(w)
-		_ = encoder.Encode(output)
-
+		sendJSON(w, output)
 		feedRequestMetric.
 			WithLabelValues(params.feed, "OK").
 			Observe(time.Since(start).Seconds())

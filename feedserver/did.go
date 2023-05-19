@@ -6,14 +6,18 @@ import (
 	"net/http"
 )
 
+func serverDID(hostname string) string {
+	return fmt.Sprintf("did:web:%s", hostname)
+}
+
 func didHandler(hostname string) (string, http.Handler) {
 	var h http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		_, _ = w.Write(
 			[]byte(
 				fmt.Sprintf(
-					`{"@context":["https://www.w3.org/ns/did/v1"],"id":"did:web:%s","service":[{"id":"#bsky_fg","type":"BskyFeedGenerator","serviceEndpoint":"https://%s"}]}`,
-					hostname,
+					`{"@context":["https://www.w3.org/ns/did/v1"],"id":"%s","service":[{"id":"#bsky_fg","type":"BskyFeedGenerator","serviceEndpoint":"https://%s"}]}`,
+					serverDID(hostname),
 					hostname,
 				),
 			),
