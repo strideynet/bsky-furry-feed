@@ -13,6 +13,7 @@ func serverDID(hostname string) string {
 func didHandler(hostname string) (string, http.Handler) {
 	var h http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
+		// TODO: Make a struct for this rather than Sprintfing a json string.
 		_, _ = w.Write(
 			[]byte(
 				fmt.Sprintf(
