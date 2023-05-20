@@ -16,7 +16,10 @@ import (
 	"time"
 )
 
-var furryChronologicalFeed = "furry-chronological"
+var (
+	furryNewFeed = "furry-new"
+	furryHotFeed = "furry-hot"
+)
 
 var feedRequestMetric = promauto.NewSummaryVec(prometheus.SummaryOpts{
 	Name: "bff_feed_request_duration_seconds",
@@ -94,7 +97,7 @@ func getFeedSkeletonHandler(
 
 		// TODO: Feed "router" that directs requests to the correct
 		// implementation.
-		if params.feed != furryChronologicalFeed {
+		if params.feed != furryNewFeed {
 			handleErr(w, log, fmt.Errorf("unrecognized feed %q", params.feed))
 			return
 		}
