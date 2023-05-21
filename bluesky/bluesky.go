@@ -4,7 +4,9 @@ import (
 	"context"
 	"github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/api/bsky"
+	"github.com/bluesky-social/indigo/lex/util"
 	"github.com/bluesky-social/indigo/xrpc"
+	"time"
 )
 
 type UnauthClient struct {
@@ -13,7 +15,8 @@ type UnauthClient struct {
 
 type Client struct {
 	*UnauthClient
-	xrpc *xrpc.Client
+	xrpc     *xrpc.Client
+	authInfo *xrpc.AuthInfo
 }
 
 var userAgent = "github.com/strideynet/bluesky-furry-feed"
@@ -74,6 +77,7 @@ func NewClient(auth *xrpc.AuthInfo) *Client {
 			Auth:      auth,
 			UserAgent: &userAgent,
 		},
+		authInfo: auth,
 	}
 }
 
@@ -100,7 +104,7 @@ func (c *Client) GetPostThread(
 	if err != nil {
 		return nil, err
 	}
-	return out, err
+	return out, nil
 }
 
 // GetProfile fetches an actor's profile. actor can be a DID or a handle.
@@ -111,5 +115,36 @@ func (c *Client) GetProfile(
 	if err != nil {
 		return nil, err
 	}
-	return out, err
+	return out, nil
+}
+
+// Follow creates an app.bsky.graph.follow for the user the client is
+// authenticated as.
+func (c *Client) Follow(
+	ctx context.Context, subjectDID string,
+) error {
+	// {
+	// 	"collection":"app.bsky.graph.follow",
+	//	"repo":"did:plc:jdkvwye2lf4mingzk7qdebzc",
+	//	"record":{
+	//		"subject":"did:plc:nb5a2kg3gnrxe5wrw47grzac",
+	//		"createdAt":"2023-05-21T12:47:14.733Z",
+	//		"$type":"app.bsky.graph.follow"
+	//	}
+	// }
+	createRecord := &atproto.RepoCreateRecord_Input{
+		Collection: "app.bsky.graph.follow",
+		Repo:       c.authInfo.Did,
+		Record: &util.LexiconTypeDecoder{
+			Val: &bsky.GraphFollow{
+				CreatedAt: FormatTime(time.Now()),
+				Subject:   subjectDID,
+			},
+		},
+	}
+	_, err := atproto.RepoCreateRecord(ctx, c.xrpc, createRecord)
+	if err != nil {
+		return err
+	}
+	return nil
 }
