@@ -6,6 +6,7 @@ overrides:
        uri: URI
        actor_did: ActorDID
        subject_uri: SubjectURI
+       is_nsfw: IsNSFW
 sql:
   - engine: "postgresql"
     queries: "store/queries/"

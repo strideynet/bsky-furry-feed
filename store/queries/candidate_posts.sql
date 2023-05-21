@@ -5,19 +5,26 @@ VALUES
     ($1, $2, $3, $4);
 
 -- name: ListCandidatePostsForFeed :many
-SELECT *
+SELECT cp.*
 FROM
-    candidate_posts
+    candidate_posts cp
+        LEFT JOIN candidate_actors ca on cp.actor_did = ca.did
+WHERE
+      cp.is_hidden = false
+  AND ca.is_hidden = false
 ORDER BY
-    created_at DESC
+    cp.created_at DESC
 LIMIT $1;
 
 -- name: ListCandidatePostsForFeedWithCursor :many
-SELECT *
+SELECT cp.*
 FROM
-    candidate_posts
+    candidate_posts cp
+        LEFT JOIN candidate_actors ca on cp.actor_did = ca.did
 WHERE
-    created_at < $1
+      cp.is_hidden = false
+  AND ca.is_hidden = false
+  AND cp.created_at < $1
 ORDER BY
-    created_at DESC
+    cp.created_at DESC
 LIMIT $2;

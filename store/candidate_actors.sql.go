@@ -36,7 +36,7 @@ func (q *Queries) CreateCandidateActor(ctx context.Context, arg CreateCandidateA
 }
 
 const getCandidateActorByDID = `-- name: GetCandidateActorByDID :one
-SELECT did, created_at, is_artist, comment
+SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden
 FROM
     candidate_actors
 WHERE
@@ -51,12 +51,14 @@ func (q *Queries) GetCandidateActorByDID(ctx context.Context, did string) (Candi
 		&i.CreatedAt,
 		&i.IsArtist,
 		&i.Comment,
+		&i.IsNSFW,
+		&i.IsHidden,
 	)
 	return i, err
 }
 
 const listCandidateActors = `-- name: ListCandidateActors :many
-SELECT did, created_at, is_artist, comment
+SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden
 FROM
     candidate_actors
 ORDER BY
@@ -77,6 +79,8 @@ func (q *Queries) ListCandidateActors(ctx context.Context) ([]CandidateActor, er
 			&i.CreatedAt,
 			&i.IsArtist,
 			&i.Comment,
+			&i.IsNSFW,
+			&i.IsHidden,
 		); err != nil {
 			return nil, err
 		}

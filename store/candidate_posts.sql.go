@@ -36,11 +36,15 @@ func (q *Queries) CreateCandidatePost(ctx context.Context, arg CreateCandidatePo
 }
 
 const listCandidatePostsForFeed = `-- name: ListCandidatePostsForFeed :many
-SELECT uri, actor_did, created_at, indexed_at
+SELECT cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden
 FROM
-    candidate_posts
+    candidate_posts cp
+        LEFT JOIN candidate_actors ca on cp.actor_did = ca.did
+WHERE
+      cp.is_hidden = false
+  AND ca.is_hidden = false
 ORDER BY
-    created_at DESC
+    cp.created_at DESC
 LIMIT $1
 `
 
@@ -58,6 +62,8 @@ func (q *Queries) ListCandidatePostsForFeed(ctx context.Context, limit int32) ([
 			&i.ActorDID,
 			&i.CreatedAt,
 			&i.IndexedAt,
+			&i.IsNSFW,
+			&i.IsHidden,
 		); err != nil {
 			return nil, err
 		}
@@ -70,13 +76,16 @@ func (q *Queries) ListCandidatePostsForFeed(ctx context.Context, limit int32) ([
 }
 
 const listCandidatePostsForFeedWithCursor = `-- name: ListCandidatePostsForFeedWithCursor :many
-SELECT uri, actor_did, created_at, indexed_at
+SELECT cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden
 FROM
-    candidate_posts
+    candidate_posts cp
+        LEFT JOIN candidate_actors ca on cp.actor_did = ca.did
 WHERE
-    created_at < $1
+      cp.is_hidden = false
+  AND ca.is_hidden = false
+  AND cp.created_at < $1
 ORDER BY
-    created_at DESC
+    cp.created_at DESC
 LIMIT $2
 `
 
@@ -99,6 +108,8 @@ func (q *Queries) ListCandidatePostsForFeedWithCursor(ctx context.Context, arg L
 			&i.ActorDID,
 			&i.CreatedAt,
 			&i.IndexedAt,
+			&i.IsNSFW,
+			&i.IsHidden,
 		); err != nil {
 			return nil, err
 		}

@@ -13,6 +13,8 @@ type CandidateActor struct {
 	CreatedAt pgtype.Timestamptz
 	IsArtist  bool
 	Comment   string
+	IsNSFW    bool
+	IsHidden  bool
 }
 
 type CandidateFollow struct {
@@ -36,4 +38,6 @@ type CandidatePost struct {
 	ActorDID  string
 	CreatedAt pgtype.Timestamptz
 	IndexedAt pgtype.Timestamptz
+	IsNSFW    bool
+	IsHidden  bool
 }
