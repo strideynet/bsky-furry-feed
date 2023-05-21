@@ -17,8 +17,9 @@ import (
 )
 
 var (
-	furryNewFeed = "furry-new"
-	furryHotFeed = "furry-hot"
+	furryNewFeed  = "furry-new"
+	furryHotFeed  = "furry-hot"
+	furryTestFeed = "furry-test"
 )
 
 var feedRequestMetric = promauto.NewSummaryVec(prometheus.SummaryOpts{
@@ -97,7 +98,7 @@ func getFeedSkeletonHandler(
 
 		// TODO: Feed "router" that directs requests to the correct
 		// implementation.
-		if params.feed != furryNewFeed {
+		if params.feed != furryNewFeed && params.feed != furryTestFeed {
 			handleErr(w, log, fmt.Errorf("unrecognized feed %q", params.feed))
 			return
 		}

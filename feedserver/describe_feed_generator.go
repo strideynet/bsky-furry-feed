@@ -29,6 +29,13 @@ func describeFeedGeneratorHandler(
 						furryNewFeed,
 					),
 				},
+				{
+					URI: fmt.Sprintf(
+						"at://%s/app.bsky.feed.generator/%s",
+						serverDID(hostname),
+						furryTestFeed,
+					),
+				},
 			},
 		}
 		sendJSON(w, res)
