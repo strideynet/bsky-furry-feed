@@ -7,8 +7,11 @@ based on people's membership of the furry community!
 
 ## For furries
 
-I haven't had a chance to write any instructions here - reach out on the
-Bluesky furries discord for more information (https://discord.gg/5UNyBtnwKy)
+- Open https://skyfeed.app/, a third-party client
+- Login with an app password from [bsky settings](https://staging.bsky.app/settings/app-passwords)
+- Under `Custom Feeds`, add one with did: `did:web:feed.furryli.st` and Feed ID: `furry-new`
+
+Reach out on the [Bluesky furries discord](https://discord.gg/5UNyBtnwKy) for more information!
 
 ## For developers
 
