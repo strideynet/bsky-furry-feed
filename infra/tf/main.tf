@@ -104,3 +104,12 @@ resource "google_dns_record_set" "furrylist" {
   rrdatas = ["76.76.21.21"]
 }
 
+resource "google_dns_record_set" "_atproto_furrylist" {
+  name         = "_atproto.${google_dns_managed_zone.furrylist.dns_name}"
+  managed_zone = google_dns_managed_zone.furrylist.name
+  type         = "TXT"
+  ttl          = 300
+
+  rrdatas = ["did=did:plc:jdkvwye2lf4mingzk7qdebzc"]
+}
+
