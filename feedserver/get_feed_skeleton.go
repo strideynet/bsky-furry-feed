@@ -9,6 +9,7 @@ import (
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -98,16 +99,23 @@ func getFeedSkeletonHandler(
 
 		// TODO: Feed "router" that directs requests to the correct
 		// implementation.
-		if params.feed != furryNewFeed && params.feed != furryTestFeed {
+		if !slices.Contains([]string{furryNewFeed, furryHotFeed, furryTestFeed}, params.feed) {
 			handleErr(w, log, fmt.Errorf("unrecognized feed %q", params.feed))
 			return
+		}
+
+		list := queries.ListCandidatePostsForFeed
+		listWithCursor := queries.ListCandidatePostsForFeedWithCursor
+		if params.feed == furryHotFeed {
+			list = queries.ListCandidatePostsForFeed
+			listWithCursor = queries.ListCandidatePostsForFeedWithCursor
 		}
 
 		var posts []store.CandidatePost
 		if params.cursor == "" {
 			// TODO: Reintroduce pinned top-post at a later date. This should
 			// only be injected if no cursor has been specified.
-			posts, err = queries.ListCandidatePostsForFeed(
+			posts, err = list(
 				r.Context(),
 				int32(params.limit),
 			)
@@ -129,7 +137,7 @@ func getFeedSkeletonHandler(
 				)
 				return
 			}
-			posts, err = queries.ListCandidatePostsForFeedWithCursor(
+			posts, err = listWithCursor(
 				r.Context(),
 				store.ListCandidatePostsForFeedWithCursorParams{
 					Limit: int32(params.limit),

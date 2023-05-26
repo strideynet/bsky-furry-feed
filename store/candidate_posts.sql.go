@@ -36,7 +36,8 @@ func (q *Queries) CreateCandidatePost(ctx context.Context, arg CreateCandidatePo
 }
 
 const listCandidatePostsForFeed = `-- name: ListCandidatePostsForFeed :many
-SELECT cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden
+SELECT
+    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden
 FROM
     candidate_posts cp
         LEFT JOIN candidate_actors ca on cp.actor_did = ca.did
@@ -76,7 +77,8 @@ func (q *Queries) ListCandidatePostsForFeed(ctx context.Context, limit int32) ([
 }
 
 const listCandidatePostsForFeedWithCursor = `-- name: ListCandidatePostsForFeedWithCursor :many
-SELECT cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden
+SELECT
+    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden
 FROM
     candidate_posts cp
         LEFT JOIN candidate_actors ca on cp.actor_did = ca.did
@@ -96,6 +98,104 @@ type ListCandidatePostsForFeedWithCursorParams struct {
 
 func (q *Queries) ListCandidatePostsForFeedWithCursor(ctx context.Context, arg ListCandidatePostsForFeedWithCursorParams) ([]CandidatePost, error) {
 	rows, err := q.db.Query(ctx, listCandidatePostsForFeedWithCursor, arg.CreatedAt, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CandidatePost
+	for rows.Next() {
+		var i CandidatePost
+		if err := rows.Scan(
+			&i.URI,
+			&i.ActorDID,
+			&i.CreatedAt,
+			&i.IndexedAt,
+			&i.IsNSFW,
+			&i.IsHidden,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCandidatePostsForHotFeed = `-- name: ListCandidatePostsForHotFeed :many
+SELECT
+    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden
+FROM
+    candidate_posts cp
+        LEFT JOIN candidate_actors ca on cp.actor_did = ca.did
+        left join candidate_likes cl on cp.uri = cl.subject_uri
+WHERE
+      cp.is_hidden = false
+  AND ca.is_hidden = false
+GROUP BY
+    cp.uri
+HAVING
+    count(*) > 5
+ORDER BY
+    cp.created_at DESC
+LIMIT $1
+`
+
+func (q *Queries) ListCandidatePostsForHotFeed(ctx context.Context, limit int32) ([]CandidatePost, error) {
+	rows, err := q.db.Query(ctx, listCandidatePostsForHotFeed, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CandidatePost
+	for rows.Next() {
+		var i CandidatePost
+		if err := rows.Scan(
+			&i.URI,
+			&i.ActorDID,
+			&i.CreatedAt,
+			&i.IndexedAt,
+			&i.IsNSFW,
+			&i.IsHidden,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCandidatePostsForHotFeedWithCursor = `-- name: ListCandidatePostsForHotFeedWithCursor :many
+SELECT
+    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden
+FROM
+    candidate_posts cp
+        LEFT JOIN candidate_actors ca on cp.actor_did = ca.did
+        left join candidate_likes cl on cp.uri = cl.subject_uri
+WHERE
+      cp.is_hidden = false
+  AND ca.is_hidden = false
+  AND cp.created_at < $1
+GROUP BY
+    cp.uri
+HAVING
+    count(*) > 5
+ORDER BY
+    cp.created_at DESC
+LIMIT $2
+`
+
+type ListCandidatePostsForHotFeedWithCursorParams struct {
+	CreatedAt pgtype.Timestamptz
+	Limit     int32
+}
+
+func (q *Queries) ListCandidatePostsForHotFeedWithCursor(ctx context.Context, arg ListCandidatePostsForHotFeedWithCursorParams) ([]CandidatePost, error) {
+	rows, err := q.db.Query(ctx, listCandidatePostsForHotFeedWithCursor, arg.CreatedAt, arg.Limit)
 	if err != nil {
 		return nil, err
 	}

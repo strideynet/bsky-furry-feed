@@ -33,6 +33,13 @@ func describeFeedGeneratorHandler(
 					URI: fmt.Sprintf(
 						"at://%s/app.bsky.feed.generator/%s",
 						serverDID(hostname),
+						furryHotFeed,
+					),
+				},
+				{
+					URI: fmt.Sprintf(
+						"at://%s/app.bsky.feed.generator/%s",
+						serverDID(hostname),
 						furryTestFeed,
 					),
 				},
