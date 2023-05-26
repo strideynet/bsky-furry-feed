@@ -45,7 +45,8 @@ FROM
 WHERE
       cp.is_hidden = false
   AND ca.is_hidden = false
-  AND ($1::TIMESTAMPTZ IS NULL OR cp.created_at < $1)
+  AND ($1::TIMESTAMPTZ IS NULL OR
+       cp.created_at < $1)
 GROUP BY
     cp.uri
 HAVING
@@ -93,11 +94,12 @@ SELECT
     cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden
 FROM
     candidate_posts cp
-        LEFT JOIN candidate_actors ca ON cp.actor_did = ca.did
+        INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
 WHERE
       cp.is_hidden = false
   AND ca.is_hidden = false
-  AND ($1::TIMESTAMPTZ IS NULL OR cp.created_at < $1)
+  AND ($1::TIMESTAMPTZ IS NULL OR
+       cp.created_at < $1)
 ORDER BY
     cp.created_at DESC
 LIMIT $2

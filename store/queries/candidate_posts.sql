@@ -9,11 +9,12 @@ SELECT
     cp.*
 FROM
     candidate_posts cp
-        LEFT JOIN candidate_actors ca ON cp.actor_did = ca.did
+        INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
 WHERE
       cp.is_hidden = false
   AND ca.is_hidden = false
-  AND (@cursor_timestamp::TIMESTAMPTZ IS NULL OR cp.created_at < @cursor_timestamp)
+  AND (@cursor_timestamp::TIMESTAMPTZ IS NULL OR
+       cp.created_at < @cursor_timestamp)
 ORDER BY
     cp.created_at DESC
 LIMIT @_limit;
@@ -28,7 +29,8 @@ FROM
 WHERE
       cp.is_hidden = false
   AND ca.is_hidden = false
-  AND (@cursor_timestamp::TIMESTAMPTZ IS NULL OR cp.created_at < @cursor_timestamp)
+  AND (@cursor_timestamp::TIMESTAMPTZ IS NULL OR
+       cp.created_at < @cursor_timestamp)
 GROUP BY
     cp.uri
 HAVING
