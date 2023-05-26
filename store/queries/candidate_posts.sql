@@ -4,7 +4,7 @@ INSERT INTO
 VALUES
     ($1, $2, $3, $4);
 
--- name: ListCandidatePostsForFeed :many
+-- name: GetFurryNewFeed :many
 SELECT
     cp.*
 FROM
@@ -13,25 +13,12 @@ FROM
 WHERE
       cp.is_hidden = false
   AND ca.is_hidden = false
-ORDER BY
-    cp.created_at DESC
-LIMIT $1;
-
--- name: ListCandidatePostsForFeedWithCursor :many
-SELECT
-    cp.*
-FROM
-    candidate_posts cp
-        INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
-WHERE
-      cp.is_hidden = false
-  AND ca.is_hidden = false
-  AND cp.created_at < $1
+  AND ('$1' IS NULL OR cp.created_at < $1)
 ORDER BY
     cp.created_at DESC
 LIMIT $2;
 
--- name: ListCandidatePostsForHotFeed :many
+-- name: GetFurryHotFeed :many
 SELECT
     cp.*
 FROM
@@ -41,31 +28,12 @@ FROM
 WHERE
       cp.is_hidden = false
   AND ca.is_hidden = false
+  AND ('$1' IS NULL OR cp.created_at < $1)
 GROUP BY
     cp.uri
 HAVING
-    count(*) > 5
-ORDER BY
-    cp.created_at DESC
-LIMIT $1;
-
--- name: ListCandidatePostsForHotFeedWithCursor :many
-SELECT
-    cp.*
-FROM
-    candidate_posts cp
-        INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
-        INNER JOIN candidate_likes cl ON cp.uri = cl.subject_uri
-WHERE
-      cp.is_hidden = false
-  AND ca.is_hidden = false
-  AND cp.created_at < $1
-GROUP BY
-    cp.uri
-HAVING
-    count(*) > 5
+    count(*) > 4
 ORDER BY
     cp.created_at DESC
 LIMIT $2;
-
 

@@ -1,9 +1,7 @@
 package feedserver
 
 import (
-	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
@@ -80,72 +78,6 @@ type getFeedSkeletonResponse struct {
 	Feed   []getFeedSkeletonResponsePost `json:"feed"`
 }
 
-func fetchHotFeed(
-	ctx context.Context, queries *store.Queries, cursor string, limit int,
-) ([]store.CandidatePost, error) {
-	if cursor == "" {
-		posts, err := queries.ListCandidatePostsForHotFeed(
-			ctx,
-			int32(limit),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("fetching posts without cursor: %w", err)
-		}
-		return posts, nil
-	}
-	cursorTime, err := bluesky.ParseTime(cursor)
-	if err != nil {
-		return nil, fmt.Errorf("parsing cursor: %w", err)
-	}
-	posts, err := queries.ListCandidatePostsForHotFeedWithCursor(
-		ctx,
-		store.ListCandidatePostsForHotFeedWithCursorParams{
-			Limit: int32(limit),
-			CreatedAt: pgtype.Timestamptz{
-				Valid: true,
-				Time:  cursorTime,
-			},
-		},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("fetching posts with cursor: %w", err)
-	}
-	return posts, nil
-}
-
-func fetchNewFeed(
-	ctx context.Context, queries *store.Queries, cursor string, limit int,
-) ([]store.CandidatePost, error) {
-	if cursor == "" {
-		posts, err := queries.ListCandidatePostsForFeed(
-			ctx,
-			int32(limit),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("fetching posts without cursor: %w", err)
-		}
-		return posts, nil
-	}
-	cursorTime, err := bluesky.ParseTime(cursor)
-	if err != nil {
-		return nil, fmt.Errorf("parsing cursor: %w", err)
-	}
-	posts, err := queries.ListCandidatePostsForFeedWithCursor(
-		ctx,
-		store.ListCandidatePostsForFeedWithCursorParams{
-			Limit: int32(limit),
-			CreatedAt: pgtype.Timestamptz{
-				Valid: true,
-				Time:  cursorTime,
-			},
-		},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("fetching posts with cursor: %w", err)
-	}
-	return posts, nil
-}
-
 func getFeedSkeletonHandler(
 	log *zap.Logger, queries *store.Queries,
 ) (string, http.Handler) {
@@ -168,11 +100,11 @@ func getFeedSkeletonHandler(
 		var posts []store.CandidatePost
 		switch params.feed {
 		case furryNewFeed, furryTestFeed:
-			posts, err = fetchNewFeed(
+			posts, err = getFurryNewFeed(
 				r.Context(), queries, params.cursor, params.limit,
 			)
 		case furryHotFeed:
-			posts, err = fetchHotFeed(
+			posts, err = getFurryHotFeed(
 				r.Context(), queries, params.cursor, params.limit,
 			)
 		default:
