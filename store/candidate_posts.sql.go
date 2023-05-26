@@ -45,23 +45,24 @@ FROM
 WHERE
       cp.is_hidden = false
   AND ca.is_hidden = false
-  AND ('$1' IS NULL OR cp.created_at < $1)
+  AND ($1::TIMESTAMPTZ IS NULL OR cp.created_at < $1)
 GROUP BY
     cp.uri
 HAVING
-    count(*) > 4
+    count(*) >= $2::int
 ORDER BY
     cp.created_at DESC
-LIMIT $2
+LIMIT $3
 `
 
 type GetFurryHotFeedParams struct {
-	CreatedAt pgtype.Timestamptz
-	Limit     int32
+	CursorTimestamp pgtype.Timestamptz
+	LikeThreshold   int32
+	Limit           int32
 }
 
 func (q *Queries) GetFurryHotFeed(ctx context.Context, arg GetFurryHotFeedParams) ([]CandidatePost, error) {
-	rows, err := q.db.Query(ctx, getFurryHotFeed, arg.CreatedAt, arg.Limit)
+	rows, err := q.db.Query(ctx, getFurryHotFeed, arg.CursorTimestamp, arg.LikeThreshold, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -96,19 +97,19 @@ FROM
 WHERE
       cp.is_hidden = false
   AND ca.is_hidden = false
-  AND ('$1' IS NULL OR cp.created_at < $1)
+  AND ($1::TIMESTAMPTZ IS NULL OR cp.created_at < $1)
 ORDER BY
     cp.created_at DESC
 LIMIT $2
 `
 
 type GetFurryNewFeedParams struct {
-	CreatedAt pgtype.Timestamptz
-	Limit     int32
+	CursorTimestamp pgtype.Timestamptz
+	Limit           int32
 }
 
 func (q *Queries) GetFurryNewFeed(ctx context.Context, arg GetFurryNewFeedParams) ([]CandidatePost, error) {
-	rows, err := q.db.Query(ctx, getFurryNewFeed, arg.CreatedAt, arg.Limit)
+	rows, err := q.db.Query(ctx, getFurryNewFeed, arg.CursorTimestamp, arg.Limit)
 	if err != nil {
 		return nil, err
 	}

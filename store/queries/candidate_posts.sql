@@ -13,10 +13,10 @@ FROM
 WHERE
       cp.is_hidden = false
   AND ca.is_hidden = false
-  AND ('$1' IS NULL OR cp.created_at < $1)
+  AND (@cursor_timestamp::TIMESTAMPTZ IS NULL OR cp.created_at < @cursor_timestamp)
 ORDER BY
     cp.created_at DESC
-LIMIT $2;
+LIMIT @_limit;
 
 -- name: GetFurryHotFeed :many
 SELECT
@@ -28,12 +28,12 @@ FROM
 WHERE
       cp.is_hidden = false
   AND ca.is_hidden = false
-  AND ('$1' IS NULL OR cp.created_at < $1)
+  AND (@cursor_timestamp::TIMESTAMPTZ IS NULL OR cp.created_at < @cursor_timestamp)
 GROUP BY
     cp.uri
 HAVING
-    count(*) > 4
+    count(*) >= @like_threshold::int
 ORDER BY
     cp.created_at DESC
-LIMIT $2;
+LIMIT @_limit;
 

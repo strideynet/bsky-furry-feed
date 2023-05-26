@@ -18,14 +18,15 @@ func getFurryHotFeed(
 	ctx context.Context, queries *store.Queries, cursor string, limit int,
 ) ([]store.CandidatePost, error) {
 	params := store.GetFurryHotFeedParams{
-		Limit: int32(limit),
+		Limit:         int32(limit),
+		LikeThreshold: int32(4),
 	}
 	if cursor != "" {
 		cursorTime, err := bluesky.ParseTime(cursor)
 		if err != nil {
 			return nil, fmt.Errorf("parsing cursor: %w", err)
 		}
-		params.CreatedAt = pgtype.Timestamptz{
+		params.CursorTimestamp = pgtype.Timestamptz{
 			Valid: true,
 			Time:  cursorTime,
 		}
@@ -49,7 +50,7 @@ func getFurryNewFeed(
 		if err != nil {
 			return nil, fmt.Errorf("parsing cursor: %w", err)
 		}
-		params.CreatedAt = pgtype.Timestamptz{
+		params.CursorTimestamp = pgtype.Timestamptz{
 			Valid: true,
 			Time:  cursorTime,
 		}
