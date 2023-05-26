@@ -40,7 +40,7 @@ SELECT
     cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden
 FROM
     candidate_posts cp
-        LEFT JOIN candidate_actors ca on cp.actor_did = ca.did
+        LEFT JOIN candidate_actors ca ON cp.actor_did = ca.did
 WHERE
       cp.is_hidden = false
   AND ca.is_hidden = false
@@ -81,7 +81,7 @@ SELECT
     cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden
 FROM
     candidate_posts cp
-        LEFT JOIN candidate_actors ca on cp.actor_did = ca.did
+        INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
 WHERE
       cp.is_hidden = false
   AND ca.is_hidden = false
@@ -128,8 +128,8 @@ SELECT
     cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden
 FROM
     candidate_posts cp
-        LEFT JOIN candidate_actors ca on cp.actor_did = ca.did
-        left join candidate_likes cl on cp.uri = cl.subject_uri
+        INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
+        INNER JOIN candidate_likes cl ON cp.uri = cl.subject_uri
 WHERE
       cp.is_hidden = false
   AND ca.is_hidden = false
@@ -174,8 +174,8 @@ SELECT
     cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden
 FROM
     candidate_posts cp
-        LEFT JOIN candidate_actors ca on cp.actor_did = ca.did
-        left join candidate_likes cl on cp.uri = cl.subject_uri
+        INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
+        INNER JOIN candidate_likes cl ON cp.uri = cl.subject_uri
 WHERE
       cp.is_hidden = false
   AND ca.is_hidden = false

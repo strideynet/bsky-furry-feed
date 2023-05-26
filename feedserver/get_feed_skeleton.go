@@ -1,6 +1,7 @@
 package feedserver
 
 import (
+	"context"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/prometheus/client_golang/prometheus"
@@ -9,7 +10,6 @@ import (
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
-	"golang.org/x/exp/slices"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -80,6 +80,72 @@ type getFeedSkeletonResponse struct {
 	Feed   []getFeedSkeletonResponsePost `json:"feed"`
 }
 
+func fetchHotFeed(
+	ctx context.Context, queries *store.Queries, cursor string, limit int,
+) ([]store.CandidatePost, error) {
+	if cursor == "" {
+		posts, err := queries.ListCandidatePostsForHotFeed(
+			ctx,
+			int32(limit),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("fetching posts without cursor: %w", err)
+		}
+		return posts, nil
+	}
+	cursorTime, err := bluesky.ParseTime(cursor)
+	if err != nil {
+		return nil, fmt.Errorf("parsing cursor: %w", err)
+	}
+	posts, err := queries.ListCandidatePostsForHotFeedWithCursor(
+		ctx,
+		store.ListCandidatePostsForHotFeedWithCursorParams{
+			Limit: int32(limit),
+			CreatedAt: pgtype.Timestamptz{
+				Valid: true,
+				Time:  cursorTime,
+			},
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("fetching posts with cursor: %w", err)
+	}
+	return posts, nil
+}
+
+func fetchNewFeed(
+	ctx context.Context, queries *store.Queries, cursor string, limit int,
+) ([]store.CandidatePost, error) {
+	if cursor == "" {
+		posts, err := queries.ListCandidatePostsForFeed(
+			ctx,
+			int32(limit),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("fetching posts without cursor: %w", err)
+		}
+		return posts, nil
+	}
+	cursorTime, err := bluesky.ParseTime(cursor)
+	if err != nil {
+		return nil, fmt.Errorf("parsing cursor: %w", err)
+	}
+	posts, err := queries.ListCandidatePostsForFeedWithCursor(
+		ctx,
+		store.ListCandidatePostsForFeedWithCursorParams{
+			Limit: int32(limit),
+			CreatedAt: pgtype.Timestamptz{
+				Valid: true,
+				Time:  cursorTime,
+			},
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("fetching posts with cursor: %w", err)
+	}
+	return posts, nil
+}
+
 func getFeedSkeletonHandler(
 	log *zap.Logger, queries *store.Queries,
 ) (string, http.Handler) {
@@ -99,65 +165,32 @@ func getFeedSkeletonHandler(
 
 		// TODO: Feed "router" that directs requests to the correct
 		// implementation.
-		if !slices.Contains([]string{furryNewFeed, furryHotFeed, furryTestFeed}, params.feed) {
-			handleErr(w, log, fmt.Errorf("unrecognized feed %q", params.feed))
+		var posts []store.CandidatePost
+		switch params.feed {
+		case furryNewFeed, furryTestFeed:
+			posts, err = fetchNewFeed(
+				r.Context(), queries, params.cursor, params.limit,
+			)
+		case furryHotFeed:
+			posts, err = fetchHotFeed(
+				r.Context(), queries, params.cursor, params.limit,
+			)
+		default:
+			err = fmt.Errorf("unrecognized feed")
+		}
+		if err != nil {
+			handleErr(
+				w,
+				log,
+				fmt.Errorf("fetching feed %q: %w", params.feed, err),
+			)
 			return
 		}
 
-		list := queries.ListCandidatePostsForFeed
-		listWithCursor := queries.ListCandidatePostsForFeedWithCursor
-		if params.feed == furryHotFeed {
-			list = queries.ListCandidatePostsForFeed
-			listWithCursor = queries.ListCandidatePostsForFeedWithCursor
-		}
-
-		var posts []store.CandidatePost
-		if params.cursor == "" {
-			// TODO: Reintroduce pinned top-post at a later date. This should
-			// only be injected if no cursor has been specified.
-			posts, err = list(
-				r.Context(),
-				int32(params.limit),
-			)
-			if err != nil {
-				handleErr(
-					w,
-					log,
-					fmt.Errorf("fetching candidate posts without cursor: %w", err),
-				)
-				return
-			}
-		} else {
-			cursorTime, err := bluesky.ParseTime(params.cursor)
-			if err != nil {
-				handleErr(
-					w,
-					log,
-					fmt.Errorf("parsing cursor time: %w", err),
-				)
-				return
-			}
-			posts, err = listWithCursor(
-				r.Context(),
-				store.ListCandidatePostsForFeedWithCursorParams{
-					Limit: int32(params.limit),
-					CreatedAt: pgtype.Timestamptz{
-						Valid: true,
-						Time:  cursorTime,
-					},
-				},
-			)
-			if err != nil {
-				handleErr(
-					w,
-					log,
-					fmt.Errorf("fetching candidate posts with cursor: %w", err),
-				)
-				return
-			}
-		}
-
 		// Convert the selected posts to the getFeedSkeleton format
+		//
+		// TODO: Reintroduce pinned top-post at a later date. This should
+		// only be injected if no cursor has been specified.
 		output := getFeedSkeletonResponse{
 			Feed: []getFeedSkeletonResponsePost{},
 		}
