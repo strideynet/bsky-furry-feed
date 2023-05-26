@@ -15,12 +15,6 @@ import (
 	"time"
 )
 
-var (
-	furryNewFeed  = "furry-new"
-	furryHotFeed  = "furry-hot"
-	furryTestFeed = "furry-test"
-)
-
 var feedRequestMetric = promauto.NewSummaryVec(prometheus.SummaryOpts{
 	Name: "bff_feed_request_duration_seconds",
 	Help: "A very rudimentary way of tracking how many feed skeletons have been requested and how long it takes to serve.",

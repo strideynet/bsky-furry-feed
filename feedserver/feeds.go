@@ -8,6 +8,12 @@ import (
 	"github.com/strideynet/bsky-furry-feed/store"
 )
 
+var (
+	furryNewFeed  = "furry-new"
+	furryHotFeed  = "furry-hot"
+	furryTestFeed = "furry-test"
+)
+
 func getFurryHotFeed(
 	ctx context.Context, queries *store.Queries, cursor string, limit int,
 ) ([]store.CandidatePost, error) {
