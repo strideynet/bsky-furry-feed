@@ -14,11 +14,18 @@ func handleErr(w http.ResponseWriter, log *zap.Logger, err error) {
 	w.Write([]byte(fmt.Sprintf("failed to handle request: %s", err)))
 }
 
-func sendJSON(w http.ResponseWriter, data any) {
-	w.Header().Add("Content-Type", "application/json")
-	w.WriteHeader(200)
-	encoder := json.NewEncoder(w)
-	_ = encoder.Encode(data)
+func jsonHandler(log *zap.Logger, h func(r *http.Request) (any, error)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		respBody, err := h(r)
+		if err != nil {
+			handleErr(w, log, err)
+			return
+		}
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(200)
+		encoder := json.NewEncoder(w)
+		_ = encoder.Encode(respBody)
+	}
 }
 
 func New(
@@ -30,8 +37,7 @@ func New(
 	mux := &http.ServeMux{}
 	mux.Handle(didHandler(hostname))
 	mux.Handle(getFeedSkeletonHandler(log, queries))
-	mux.Handle(getCandidateActorHandler(log, queries))
-	mux.Handle(describeFeedGeneratorHandler(hostname))
+	mux.Handle(describeFeedGeneratorHandler(log, hostname))
 	mux.Handle(rootHandler(log))
 
 	return &http.Server{

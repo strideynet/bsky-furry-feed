@@ -3,6 +3,7 @@ package feedserver
 import (
 	"fmt"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.uber.org/zap"
 	"net/http"
 )
 
@@ -16,9 +17,10 @@ type describeFeedGeneratorResponse struct {
 }
 
 func describeFeedGeneratorHandler(
+	log *zap.Logger,
 	hostname string,
 ) (string, http.Handler) {
-	var h http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+	h := jsonHandler(log, func(r *http.Request) (any, error) {
 		res := describeFeedGeneratorResponse{
 			DID: serverDID(hostname),
 			Feeds: []describeFeedGeneratorResponseFeed{
@@ -45,7 +47,7 @@ func describeFeedGeneratorHandler(
 				},
 			},
 		}
-		sendJSON(w, res)
-	}
+		return res, nil
+	})
 	return "/xrpc/app.bsky.feed.describeFeedGenerator", otelhttp.NewHandler(h, "describe_feed_generator")
 }

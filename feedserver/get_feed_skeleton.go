@@ -75,12 +75,11 @@ type getFeedSkeletonResponse struct {
 func getFeedSkeletonHandler(
 	log *zap.Logger, queries *store.Queries,
 ) (string, http.Handler) {
-	var h http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+	h := jsonHandler(log, func(r *http.Request) (any, error) {
 		start := time.Now()
 		params, err := parseGetFeedSkeletonParams(r.URL)
 		if err != nil {
-			handleErr(w, log, err)
-			return
+			return nil, err
 		}
 		log.Debug(
 			"get feed skeleton request",
@@ -105,12 +104,7 @@ func getFeedSkeletonHandler(
 			err = fmt.Errorf("unrecognized feed")
 		}
 		if err != nil {
-			handleErr(
-				w,
-				log,
-				fmt.Errorf("fetching feed %q: %w", params.feed, err),
-			)
-			return
+			return nil, fmt.Errorf("fetching feed %q: %w", params.feed, err)
 		}
 
 		// Convert the selected posts to the getFeedSkeleton format
@@ -135,10 +129,10 @@ func getFeedSkeletonHandler(
 			output.Cursor = bluesky.FormatTime(lastPost.CreatedAt.Time)
 		}
 
-		sendJSON(w, output)
 		feedRequestMetric.
 			WithLabelValues(params.feed, "OK").
 			Observe(time.Since(start).Seconds())
-	}
+		return output, nil
+	})
 	return "/xrpc/app.bsky.feed.getFeedSkeleton", otelhttp.NewHandler(h, "get_feed_skeleton")
 }
