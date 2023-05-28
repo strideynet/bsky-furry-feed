@@ -63,13 +63,16 @@ func (q *Queries) GetCandidateActorByDID(ctx context.Context, did string) (Candi
 const listCandidateActors = `-- name: ListCandidateActors :many
 SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden, status
 FROM
-    candidate_actors
+    candidate_actors ca
+WHERE
+    ($1::actor_status IS NULL OR
+     ca.status = $1)
 ORDER BY
     did
 `
 
-func (q *Queries) ListCandidateActors(ctx context.Context) ([]CandidateActor, error) {
-	rows, err := q.db.Query(ctx, listCandidateActors)
+func (q *Queries) ListCandidateActors(ctx context.Context, status NullActorStatus) ([]CandidateActor, error) {
+	rows, err := q.db.Query(ctx, listCandidateActors, status)
 	if err != nil {
 		return nil, err
 	}

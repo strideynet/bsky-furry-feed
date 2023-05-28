@@ -10,18 +10,8 @@ import (
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
-	"os"
-	"strings"
 	"time"
 )
-
-type stateFile struct {
-	previouslyRejected map[string]string
-}
-
-// TODO: Have a `login` and `logout` command that persists auth state to disk.
-var username = os.Getenv("BSKY_USERNAME")
-var password = os.Getenv("BSKY_PASSWORD")
 
 const furryBeaconURI = "at://did:plc:kvazxresct77kgepxl7e6ay3/app.bsky.feed.post/3juew7w5lyd2n"
 
@@ -66,7 +56,9 @@ func scanCmd(log *zap.Logger, env *environment) *cli.Command {
 
 			queries := store.New(conn)
 
-			existingActors, err := queries.ListCandidateActors(cctx.Context)
+			existingActors, err := queries.ListCandidateActors(
+				cctx.Context, store.NullActorStatus{},
+			)
 			if err != nil {
 				return fmt.Errorf("listing candidate actors: %w", err)
 			}
@@ -83,9 +75,7 @@ func scanCmd(log *zap.Logger, env *environment) *cli.Command {
 			if err != nil {
 				return fmt.Errorf("authenticating: %w", err)
 			}
-
 			client := bluesky.NewClient(bluesky.AuthInfoFromCreateSession(out))
-			// TODO: Inject existing repositories/reject history as exclude actors
 			prospectActors, err := postRepliesScanSource(
 				cctx.Context, log, client, furryBeaconURI, excludeActorDIDs,
 			)
@@ -100,69 +90,28 @@ func scanCmd(log *zap.Logger, env *environment) *cli.Command {
 					return fmt.Errorf("getting profile: %w, err")
 				}
 
-				displayName := "none"
+				displayName := ""
 				if profile.DisplayName != nil {
 					displayName = *profile.DisplayName
 				}
-				desc := "none"
-				if profile.Description != nil {
-					desc = *profile.Description
-				}
 
-				fmt.Printf("---\n%s (%s)\n", displayName, profile.Handle)
-				fmt.Printf("link: https://bsky.app/profile/%s\n", profile.Did)
-				fmt.Printf("desc:\n%s\n", desc)
-				fmt.Printf("(a)dd, (r)eject, (s)kip, (q)uit: ")
-				action := ""
-				_, err = fmt.Scanln(&action)
+				params := store.CreateCandidateActorParams{
+					DID:     profile.Did,
+					Comment: fmt.Sprintf("%s (%s)", displayName, profile.Handle),
+					CreatedAt: pgtype.Timestamptz{
+						Time:  time.Now(),
+						Valid: true,
+					},
+					Status: store.ActorStatusPending,
+				}
+				err = queries.CreateCandidateActor(cctx.Context, params)
 				if err != nil {
-					return fmt.Errorf("scanning user input: %w", err)
+					return fmt.Errorf("creating candidate actor: %w", err)
 				}
 
-				switch strings.ToLower(action) {
-				case "skip", "s":
-					continue
-				case "quit", "q":
-					return nil
-				case "reject", "r":
-					fmt.Println("rejecting...")
-				case "add", "a":
-					params := store.CreateCandidateActorParams{
-						DID:     profile.Did,
-						Comment: fmt.Sprintf("%s (%s)", displayName, profile.Handle),
-						CreatedAt: pgtype.Timestamptz{
-							Time:  time.Now(),
-							Valid: true,
-						},
-						Status: store.ActorStatusApproved,
-					}
-					fmt.Printf("is this account an artist [y/n]: ")
-
-					isArtist := ""
-					_, err = fmt.Scanln(&isArtist)
-					if err != nil {
-						return fmt.Errorf("scanning user input: %w", err)
-					}
-					switch strings.ToLower(isArtist) {
-					case "y":
-						params.IsArtist = true
-					case "n":
-						params.IsArtist = false
-					default:
-						return fmt.Errorf("expected y or n but got %q", isArtist)
-					}
-
-					err := queries.CreateCandidateActor(cctx.Context, params)
-					if err != nil {
-						return fmt.Errorf("creating candidate actor: %w", err)
-					}
-
-					fmt.Println("successfully added")
-				default:
-					return fmt.Errorf("expected y or n but got %q", action)
-				}
+				log.Info("added to queue", zap.String("did", profile.Did))
 			}
-			log.Info("all prospective actors handled")
+			log.Info("all scanned handled")
 
 			return nil
 		},

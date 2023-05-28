@@ -43,7 +43,7 @@ func dbCandidateActorsList(log *zap.Logger, env *environment) *cli.Command {
 			defer conn.Close(cctx.Context)
 
 			db := store.New(conn)
-			repos, err := db.ListCandidateActors(cctx.Context)
+			repos, err := db.ListCandidateActors(cctx.Context, store.NullActorStatus{})
 			if err != nil {
 				return err
 			}

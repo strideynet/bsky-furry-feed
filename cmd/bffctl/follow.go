@@ -22,7 +22,10 @@ func followCmd(log *zap.Logger, env *environment) *cli.Command {
 
 			queries := store.New(conn)
 
-			subjects, err := queries.ListCandidateActors(cctx.Context)
+			subjects, err := queries.ListCandidateActors(cctx.Context, store.NullActorStatus{
+				ActorStatus: store.ActorStatusApproved,
+				Valid:       true,
+			})
 			if err != nil {
 				return fmt.Errorf("listing candidate actors: %w", err)
 			}

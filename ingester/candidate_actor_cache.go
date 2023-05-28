@@ -64,7 +64,10 @@ func (crc *CandidateActorCache) GetByDID(
 
 func (crc *CandidateActorCache) Fill(ctx context.Context) error {
 	crc.log.Info("starting cache fill")
-	data, err := crc.queries.ListCandidateActors(ctx)
+	data, err := crc.queries.ListCandidateActors(ctx, store.NullActorStatus{
+		ActorStatus: store.ActorStatusApproved,
+		Valid:       true,
+	})
 	if err != nil {
 		return fmt.Errorf("listing candidate actors: %w", err)
 	}

@@ -24,6 +24,10 @@ var environments = map[string]environment{
 	},
 }
 
+// TODO: Have a `login` and `logout` command that persists auth state to disk.
+var username = os.Getenv("BSKY_USERNAME")
+var password = os.Getenv("BSKY_PASSWORD")
+
 func main() {
 	log, _ := zap.NewDevelopment()
 	var env = &environment{}
@@ -53,6 +57,7 @@ func main() {
 			findDIDCmd(log),
 			followCmd(log, env),
 			scanCmd(log, env),
+			queueCmd(log, env),
 		},
 	}
 	if err := app.Run(os.Args); err != nil {

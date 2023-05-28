@@ -1,7 +1,10 @@
 -- name: ListCandidateActors :many
 SELECT *
 FROM
-    candidate_actors
+    candidate_actors ca
+WHERE
+    (sqlc.narg(status)::actor_status IS NULL OR
+     ca.status = @status)
 ORDER BY
     did;
 
