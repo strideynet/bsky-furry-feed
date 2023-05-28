@@ -134,6 +134,7 @@ func scanCmd(log *zap.Logger, env *environment) *cli.Command {
 							Time:  time.Now(),
 							Valid: true,
 						},
+						Status: store.ActorStatusApproved,
 					}
 					fmt.Printf("is this account an artist [y/n]: ")
 

@@ -151,6 +151,9 @@ func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncS
 	if candidateActor == nil {
 		return nil
 	}
+	if candidateActor.Status != store.ActorStatusApproved {
+		return nil
+	}
 	// TODO: Find a way to use tail-based sampling so that we can capture this trace
 	// before candidateActor is run and ensure we always capture candidateActor
 	// traces.

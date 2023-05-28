@@ -6,10 +6,11 @@ import (
 )
 
 type CandidateActor struct {
-	DID       string    `json:"did"`
-	CreatedAt time.Time `json:"created_at"`
-	IsArtist  bool      `json:"is_artist"`
-	Comment   string    `json:"comment"`
+	DID       string            `json:"did"`
+	CreatedAt time.Time         `json:"created_at"`
+	IsArtist  bool              `json:"is_artist"`
+	Comment   string            `json:"comment"`
+	Status    store.ActorStatus `json:"status"`
 }
 
 func CandidateActorFromStore(cr store.CandidateActor) CandidateActor {
@@ -18,5 +19,6 @@ func CandidateActorFromStore(cr store.CandidateActor) CandidateActor {
 		CreatedAt: cr.CreatedAt.Time,
 		IsArtist:  cr.IsArtist,
 		Comment:   cr.Comment,
+		Status:    cr.Status,
 	}
 }

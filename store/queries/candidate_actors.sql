@@ -7,9 +7,9 @@ ORDER BY
 
 -- name: CreateCandidateActor :exec
 INSERT INTO
-    candidate_actors (did, created_at, is_artist, comment)
+    candidate_actors (did, created_at, is_artist, comment, status)
 VALUES
-    ($1, $2, $3, $4);
+    ($1, $2, $3, $4, $5);
 
 -- name: GetCandidateActorByDID :one
 SELECT *

@@ -12,7 +12,7 @@ FROM
         INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
 WHERE
       cp.is_hidden = false
-  AND ca.is_hidden = false
+  AND ca.status = 'approved'
   AND (@cursor_timestamp::TIMESTAMPTZ IS NULL OR
        cp.created_at < @cursor_timestamp)
 ORDER BY
@@ -28,7 +28,7 @@ FROM
         INNER JOIN candidate_likes cl ON cp.uri = cl.subject_uri
 WHERE
       cp.is_hidden = false
-  AND ca.is_hidden = false
+  AND ca.status = 'approved'
   AND (@cursor_timestamp::TIMESTAMPTZ IS NULL OR
        cp.created_at < @cursor_timestamp)
 GROUP BY

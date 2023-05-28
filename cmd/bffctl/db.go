@@ -150,6 +150,7 @@ func dbCandidateActorsAddCmd(log *zap.Logger, env *environment) *cli.Command {
 				},
 				IsArtist: isArtist,
 				Comment:  fmt.Sprintf("%s (%s)", name, handle),
+				Status:   store.ActorStatusApproved,
 			}
 			log.Info("adding candidate actor",
 				zap.Any("data", params),

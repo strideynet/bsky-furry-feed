@@ -13,9 +13,9 @@ import (
 
 const createCandidateActor = `-- name: CreateCandidateActor :exec
 INSERT INTO
-    candidate_actors (did, created_at, is_artist, comment)
+    candidate_actors (did, created_at, is_artist, comment, status)
 VALUES
-    ($1, $2, $3, $4)
+    ($1, $2, $3, $4, $5)
 `
 
 type CreateCandidateActorParams struct {
@@ -23,6 +23,7 @@ type CreateCandidateActorParams struct {
 	CreatedAt pgtype.Timestamptz
 	IsArtist  bool
 	Comment   string
+	Status    ActorStatus
 }
 
 func (q *Queries) CreateCandidateActor(ctx context.Context, arg CreateCandidateActorParams) error {
@@ -31,12 +32,13 @@ func (q *Queries) CreateCandidateActor(ctx context.Context, arg CreateCandidateA
 		arg.CreatedAt,
 		arg.IsArtist,
 		arg.Comment,
+		arg.Status,
 	)
 	return err
 }
 
 const getCandidateActorByDID = `-- name: GetCandidateActorByDID :one
-SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden
+SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden, status
 FROM
     candidate_actors
 WHERE
@@ -53,12 +55,13 @@ func (q *Queries) GetCandidateActorByDID(ctx context.Context, did string) (Candi
 		&i.Comment,
 		&i.IsNSFW,
 		&i.IsHidden,
+		&i.Status,
 	)
 	return i, err
 }
 
 const listCandidateActors = `-- name: ListCandidateActors :many
-SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden
+SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden, status
 FROM
     candidate_actors
 ORDER BY
@@ -81,6 +84,7 @@ func (q *Queries) ListCandidateActors(ctx context.Context) ([]CandidateActor, er
 			&i.Comment,
 			&i.IsNSFW,
 			&i.IsHidden,
+			&i.Status,
 		); err != nil {
 			return nil, err
 		}
