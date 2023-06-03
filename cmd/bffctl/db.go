@@ -105,7 +105,6 @@ func dbCandidateActorsSeedCmd(log *zap.Logger, env *environment) *cli.Command {
 
 func dbCandidateActorsAddCmd(log *zap.Logger, env *environment) *cli.Command {
 	handle := ""
-	name := ""
 	isArtist := false
 	return &cli.Command{
 		Name:  "add",
@@ -115,11 +114,6 @@ func dbCandidateActorsAddCmd(log *zap.Logger, env *environment) *cli.Command {
 				Name:        "handle",
 				Required:    true,
 				Destination: &handle,
-			},
-			&cli.StringFlag{
-				Name:        "name",
-				Required:    true,
-				Destination: &name,
 			},
 			&cli.BoolFlag{
 				Name:        "artist",
@@ -149,7 +143,7 @@ func dbCandidateActorsAddCmd(log *zap.Logger, env *environment) *cli.Command {
 					Valid: true,
 				},
 				IsArtist: isArtist,
-				Comment:  fmt.Sprintf("%s (%s)", name, handle),
+				Comment:  handle,
 				Status:   store.ActorStatusApproved,
 			}
 			log.Info("adding candidate actor",
