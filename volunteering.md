@@ -7,7 +7,7 @@ help out so I can focus on keeping the feed running and adding features.
 In both cases, I'm looking for individuals who are happy working with a large
 amount of ownership over their own work.
 
-Please get in touch on discord @strideynet#0001 or Telegram to enquire
+Please get in touch on Discord (`@strideynet#0001`) or Telegram (`@strideynet`) to enquire
 
 ## Trust and Safety Lead
 
