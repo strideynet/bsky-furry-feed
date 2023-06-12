@@ -13,9 +13,9 @@ import (
 
 const createCandidatePost = `-- name: CreateCandidatePost :exec
 INSERT INTO
-    candidate_posts (uri, actor_did, created_at, indexed_at)
+    candidate_posts (uri, actor_did, created_at, indexed_at, tags)
 VALUES
-    ($1, $2, $3, $4)
+    ($1, $2, $3, $4, $5)
 `
 
 type CreateCandidatePostParams struct {
@@ -23,6 +23,7 @@ type CreateCandidatePostParams struct {
 	ActorDID  string
 	CreatedAt pgtype.Timestamptz
 	IndexedAt pgtype.Timestamptz
+	Tags      []string
 }
 
 func (q *Queries) CreateCandidatePost(ctx context.Context, arg CreateCandidatePostParams) error {
@@ -31,13 +32,14 @@ func (q *Queries) CreateCandidatePost(ctx context.Context, arg CreateCandidatePo
 		arg.ActorDID,
 		arg.CreatedAt,
 		arg.IndexedAt,
+		arg.Tags,
 	)
 	return err
 }
 
 const getFurryHotFeed = `-- name: GetFurryHotFeed :many
 SELECT
-    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden
+    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden, cp.tags
 FROM
     candidate_posts cp
         INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
@@ -78,6 +80,7 @@ func (q *Queries) GetFurryHotFeed(ctx context.Context, arg GetFurryHotFeedParams
 			&i.IndexedAt,
 			&i.IsNSFW,
 			&i.IsHidden,
+			&i.Tags,
 		); err != nil {
 			return nil, err
 		}
@@ -91,7 +94,7 @@ func (q *Queries) GetFurryHotFeed(ctx context.Context, arg GetFurryHotFeedParams
 
 const getFurryNewFeed = `-- name: GetFurryNewFeed :many
 SELECT
-    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden
+    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden, cp.tags
 FROM
     candidate_posts cp
         INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
@@ -126,6 +129,58 @@ func (q *Queries) GetFurryNewFeed(ctx context.Context, arg GetFurryNewFeedParams
 			&i.IndexedAt,
 			&i.IsNSFW,
 			&i.IsHidden,
+			&i.Tags,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getFurryNewFeedWithTag = `-- name: GetFurryNewFeedWithTag :many
+SELECT
+    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden, cp.tags
+FROM
+    candidate_posts cp
+        INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
+WHERE
+      cp.is_hidden = false
+  AND ca.status = 'approved'
+  AND $1::STRING = ANY(cp.tags)
+  AND ($2::TIMESTAMPTZ IS NULL OR
+       cp.created_at < $2)
+ORDER BY
+    cp.created_at DESC
+LIMIT $3
+`
+
+type GetFurryNewFeedWithTagParams struct {
+	Tag             string
+	CursorTimestamp pgtype.Timestamptz
+	Limit           int32
+}
+
+func (q *Queries) GetFurryNewFeedWithTag(ctx context.Context, arg GetFurryNewFeedWithTagParams) ([]CandidatePost, error) {
+	rows, err := q.db.Query(ctx, getFurryNewFeedWithTag, arg.Tag, arg.CursorTimestamp, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CandidatePost
+	for rows.Next() {
+		var i CandidatePost
+		if err := rows.Scan(
+			&i.URI,
+			&i.ActorDID,
+			&i.CreatedAt,
+			&i.IndexedAt,
+			&i.IsNSFW,
+			&i.IsHidden,
+			&i.Tags,
 		); err != nil {
 			return nil, err
 		}

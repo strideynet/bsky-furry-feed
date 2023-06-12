@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	bff "github.com/strideynet/bsky-furry-feed"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -76,6 +77,7 @@ func getFeedSkeletonHandler(
 	log *zap.Logger, queries *store.Queries,
 ) (string, http.Handler) {
 	h := jsonHandler(log, func(r *http.Request) (any, error) {
+		ctx := r.Context()
 		start := time.Now()
 		params, err := parseGetFeedSkeletonParams(r.URL)
 		if err != nil {
@@ -94,11 +96,15 @@ func getFeedSkeletonHandler(
 		switch params.feed {
 		case furryNewFeed, furryTestFeed:
 			posts, err = getFurryNewFeed(
-				r.Context(), queries, params.cursor, params.limit,
+				ctx, queries, params.cursor, params.limit,
 			)
 		case furryHotFeed:
 			posts, err = getFurryHotFeed(
-				r.Context(), queries, params.cursor, params.limit,
+				ctx, queries, params.cursor, params.limit,
+			)
+		case furryFursuitFeed:
+			posts, err = getFurryNewFeedWithTag(
+				ctx, queries, params.cursor, params.limit, bff.TagFursuitMedia,
 			)
 		default:
 			err = fmt.Errorf("unrecognized feed")

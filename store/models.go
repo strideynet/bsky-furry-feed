@@ -88,4 +88,5 @@ type CandidatePost struct {
 	IndexedAt pgtype.Timestamptz
 	IsNSFW    bool
 	IsHidden  bool
+	Tags      []string
 }

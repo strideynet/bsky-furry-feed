@@ -20,30 +20,29 @@ func describeFeedGeneratorHandler(
 	log *zap.Logger,
 	hostname string,
 ) (string, http.Handler) {
+	feedURI := func(feedName string) string {
+		return fmt.Sprintf(
+			"at://%s/app.bsky.feed.generator/%s",
+			serverDID(hostname),
+			feedName,
+		)
+	}
+
 	h := jsonHandler(log, func(r *http.Request) (any, error) {
 		res := describeFeedGeneratorResponse{
 			DID: serverDID(hostname),
 			Feeds: []describeFeedGeneratorResponseFeed{
 				{
-					URI: fmt.Sprintf(
-						"at://%s/app.bsky.feed.generator/%s",
-						serverDID(hostname),
-						furryNewFeed,
-					),
+					URI: feedURI(furryNewFeed),
 				},
 				{
-					URI: fmt.Sprintf(
-						"at://%s/app.bsky.feed.generator/%s",
-						serverDID(hostname),
-						furryHotFeed,
-					),
+					URI: feedURI(furryHotFeed),
 				},
 				{
-					URI: fmt.Sprintf(
-						"at://%s/app.bsky.feed.generator/%s",
-						serverDID(hostname),
-						furryTestFeed,
-					),
+					URI: feedURI(furryTestFeed),
+				},
+				{
+					URI: feedURI(furryFursuitFeed),
 				},
 			},
 		}

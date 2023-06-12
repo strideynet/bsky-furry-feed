@@ -9,9 +9,10 @@ import (
 )
 
 var (
-	furryNewFeed  = "furry-new"
-	furryHotFeed  = "furry-hot"
-	furryTestFeed = "furry-test"
+	furryNewFeed     = "furry-new"
+	furryHotFeed     = "furry-hot"
+	furryTestFeed    = "furry-test"
+	furryFursuitFeed = "furry-fursuit"
 )
 
 func getFurryHotFeed(
@@ -57,6 +58,31 @@ func getFurryNewFeed(
 	}
 
 	posts, err := queries.GetFurryNewFeed(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("executing sql: %w", err)
+	}
+	return posts, nil
+}
+
+func getFurryNewFeedWithTag(
+	ctx context.Context, queries *store.Queries, cursor string, limit int, tag string,
+) ([]store.CandidatePost, error) {
+	params := store.GetFurryNewFeedWithTagParams{
+		Limit: int32(limit),
+		Tag:   tag,
+	}
+	if cursor != "" {
+		cursorTime, err := bluesky.ParseTime(cursor)
+		if err != nil {
+			return nil, fmt.Errorf("parsing cursor: %w", err)
+		}
+		params.CursorTimestamp = pgtype.Timestamptz{
+			Valid: true,
+			Time:  cursorTime,
+		}
+	}
+
+	posts, err := queries.GetFurryNewFeedWithTag(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("executing sql: %w", err)
 	}
