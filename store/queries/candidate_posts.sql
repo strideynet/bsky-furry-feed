@@ -48,7 +48,7 @@ FROM
 WHERE
       cp.is_hidden = false
   AND ca.status = 'approved'
-  AND @tag::STRING = ANY(cp.tags)
+  AND @tag::TEXT = ANY(cp.tags)
   AND (@cursor_timestamp::TIMESTAMPTZ IS NULL OR
        cp.created_at < @cursor_timestamp)
 ORDER BY

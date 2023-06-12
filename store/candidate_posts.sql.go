@@ -150,7 +150,7 @@ FROM
 WHERE
       cp.is_hidden = false
   AND ca.status = 'approved'
-  AND $1::STRING = ANY(cp.tags)
+  AND $1::TEXT = ANY(cp.tags)
   AND ($2::TIMESTAMPTZ IS NULL OR
        cp.created_at < $2)
 ORDER BY
