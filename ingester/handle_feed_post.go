@@ -5,11 +5,31 @@ import (
 	"fmt"
 	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/jackc/pgx/v5/pgtype"
+	bff "github.com/strideynet/bsky-furry-feed"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.uber.org/zap"
+	"strings"
 	"time"
 )
+
+func hasImage(data *bsky.FeedPost) bool {
+	return data.Embed != nil && data.Embed.EmbedImages != nil && len(data.Embed.EmbedImages.Images) > 0
+}
+
+func hasKeyword(data *bsky.FeedPost, keywords ...string) bool {
+	text := strings.ToLower(data.Text)
+	for _, keyword := range keywords {
+		if strings.Contains(text, keyword) {
+			return true
+		}
+	}
+	return false
+}
+
+func isFursuitMedia(data *bsky.FeedPost) bool {
+	return hasImage(data) && hasKeyword(data, "#fursuitfriday", "#fursuit")
+}
 
 func (fi *FirehoseIngester) handleFeedPostCreate(
 	ctx context.Context,
@@ -25,6 +45,13 @@ func (fi *FirehoseIngester) handleFeedPostCreate(
 		if err != nil {
 			return fmt.Errorf("parsing post time: %w", err)
 		}
+
+		// TODO: Break this out in a more extensible way
+		tags := []string{}
+		if isFursuitMedia(data) {
+			tags = append(tags, bff.TagFursuitMedia)
+		}
+
 		err = fi.queries.CreateCandidatePost(
 			ctx,
 			store.CreateCandidatePostParams{
@@ -38,6 +65,7 @@ func (fi *FirehoseIngester) handleFeedPostCreate(
 					Time:  time.Now(),
 					Valid: true,
 				},
+				Tags: tags,
 			},
 		)
 		if err != nil {
