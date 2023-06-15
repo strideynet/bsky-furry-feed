@@ -33,9 +33,16 @@ func New(
 	queries *store.Queries,
 	hostname string,
 	listenAddr string,
-) *http.Server {
+) (*http.Server, error) {
 	mux := &http.ServeMux{}
-	mux.Handle(didHandler(hostname))
+
+	didName, didHandler, err := didHandler(hostname)
+
+	if err != nil {
+		return nil, err
+	}
+
+	mux.Handle(didName, didHandler)
 	mux.Handle(getFeedSkeletonHandler(log, queries))
 	mux.Handle(describeFeedGeneratorHandler(log, hostname))
 	mux.Handle(rootHandler(log))
@@ -43,5 +50,5 @@ func New(
 	return &http.Server{
 		Addr:    listenAddr,
 		Handler: mux,
-	}
+	}, nil
 }

@@ -1,28 +1,45 @@
 package feedserver
 
 import (
+	"encoding/json"
 	"fmt"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"net/http"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 func serverDID(hostname string) string {
 	return fmt.Sprintf("did:web:%s", hostname)
 }
 
-func didHandler(hostname string) (string, http.Handler) {
+func generateDIDJSON(hostname string) ([]byte, error) {
+	type Object map[string]any
+
+	did := Object{
+		"@context": []string{"https://www.w3.org/ns/did/v1"},
+		"id":       serverDID(hostname),
+		"service": []Object{{
+			"id":              "#bsky_fg",
+			"type":            "BskyFeedGenerator",
+			"serviceEndpoint": fmt.Sprintf("https://%s", hostname),
+		}},
+	}
+
+	return json.Marshal(did)
+}
+
+func didHandler(hostname string) (string, http.Handler, error) {
+	did, err := generateDIDJSON(hostname)
+
+	if err != nil {
+		return "", nil, fmt.Errorf("could not generate did.json: %v", err)
+	}
+
 	var h http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
-		// TODO: Make a struct for this rather than Sprintfing a json string.
-		_, _ = w.Write(
-			[]byte(
-				fmt.Sprintf(
-					`{"@context":["https://www.w3.org/ns/did/v1"],"id":"%s","service":[{"id":"#bsky_fg","type":"BskyFeedGenerator","serviceEndpoint":"https://%s"}]}`,
-					serverDID(hostname),
-					hostname,
-				),
-			),
-		)
+
+		_, _ = w.Write(did)
 	}
-	return "/.well-known/did.json", otelhttp.NewHandler(h, "get_well_known_did")
+
+	return "/.well-known/did.json", otelhttp.NewHandler(h, "get_well_known_did"), nil
 }
