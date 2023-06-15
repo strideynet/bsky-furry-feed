@@ -98,3 +98,23 @@ func (q *Queries) ListCandidateActors(ctx context.Context, status NullActorStatu
 	}
 	return items, nil
 }
+
+const updateCandidateActor = `-- name: UpdateCandidateActor :exec
+UPDATE candidate_actors ca
+SET
+    status=COALESCE($1, ca.is_artist),
+    is_artist=COALESCE($2, ca.is_artist)
+WHERE
+    did = $3
+`
+
+type UpdateCandidateActorParams struct {
+	Status   NullActorStatus
+	IsArtist pgtype.Bool
+	DID      string
+}
+
+func (q *Queries) UpdateCandidateActor(ctx context.Context, arg UpdateCandidateActorParams) error {
+	_, err := q.db.Exec(ctx, updateCandidateActor, arg.Status, arg.IsArtist, arg.DID)
+	return err
+}

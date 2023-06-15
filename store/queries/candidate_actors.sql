@@ -14,6 +14,15 @@ INSERT INTO
 VALUES
     ($1, $2, $3, $4, $5);
 
+-- name: UpdateCandidateActor :exec
+UPDATE candidate_actors ca
+SET
+    status=COALESCE(sqlc.narg(status), ca.is_artist),
+    is_artist=COALESCE(sqlc.narg(is_artist), ca.is_artist)
+WHERE
+    did = sqlc.arg(did);
+
+
 -- name: GetCandidateActorByDID :one
 SELECT *
 FROM
