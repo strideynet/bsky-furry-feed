@@ -134,12 +134,17 @@ func runE(log *zap.Logger) error {
 		hostname = "feed.furryli.st"
 	}
 	listenAddr := ":1337"
-	srv := feedserver.New(
+	srv, err := feedserver.New(
 		log.Named("feed_server"),
 		queries,
 		hostname,
 		listenAddr,
 	)
+
+	if err != nil {
+		return fmt.Errorf("creating feed server: %w", err)
+	}
+
 	eg.Go(func() error {
 		log.Info("feed server listening", zap.String("addr", srv.Addr))
 		go func() {
