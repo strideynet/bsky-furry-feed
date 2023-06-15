@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/jackc/pgx/v5"
-	"github.com/strideynet/bsky-furry-feed/bluesky"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
@@ -33,30 +33,10 @@ func queueCmd(log *zap.Logger, env *environment) *cli.Command {
 			if err != nil {
 				return fmt.Errorf("listing candidate actors: %w", err)
 			}
-			// Exclude actors that we already know about.
-			// TODO: a map is going to be more performant here
-			excludeActorDIDs := []string{}
-			for _, actor := range existingActors {
-				excludeActorDIDs = append(excludeActorDIDs, actor.DID)
-			}
-
-			out, err := bluesky.NewUnauthClient().CreateSession(
-				cctx.Context, username, password,
-			)
-			if err != nil {
-				return fmt.Errorf("authenticating: %w", err)
-			}
-
-			client := bluesky.NewClient(bluesky.AuthInfoFromCreateSession(out))
 
 			for _, actor := range prospectActors {
-				profile, err := client.GetProfile(cctx.Context, actor.DID)
-				if err != nil {
-					return fmt.Errorf("getting profile: %w, err")
-				}
-				fmt.Printf("---\n%s (%s)\n", displayName, profile.Handle)
-				fmt.Printf("link: https://bsky.app/profile/%s\n", profile.Did)
-				fmt.Printf("desc:\n%s\n", desc)
+				fmt.Printf("---\n%s\n", actor.Comment)
+				fmt.Printf("link: https://bsky.app/profile/%s\n", actor.DID)
 				fmt.Printf("(a)dd, (r)eject, (s)kip, (q)uit: ")
 				action := ""
 				_, err = fmt.Scanln(&action)
@@ -71,10 +51,30 @@ func queueCmd(log *zap.Logger, env *environment) *cli.Command {
 					return nil
 				case "reject", "r":
 					fmt.Println("rejecting...")
+					params := store.UpdateCandidateActorParams{
+						DID: actor.DID,
+						Status: store.NullActorStatus{
+							Valid:       true,
+							ActorStatus: store.ActorStatusNone,
+						},
+					}
+					err := queries.UpdateCandidateActor(cctx.Context, params)
+					if err != nil {
+						return fmt.Errorf("creating candidate actor: %w", err)
+					}
+
+					fmt.Println("successfully rejected")
 				case "add", "a":
 					params := store.UpdateCandidateActorParams{
-						DID:    profile.Did,
-						Status: store.ActorStatusApproved,
+						DID: actor.DID,
+						Status: store.NullActorStatus{
+							Valid:       true,
+							ActorStatus: store.ActorStatusApproved,
+						},
+						IsArtist: pgtype.Bool{
+							Valid: true,
+							// Actual value will be filled below.
+						},
 					}
 					fmt.Printf("is this account an artist [y/n]: ")
 
@@ -85,9 +85,9 @@ func queueCmd(log *zap.Logger, env *environment) *cli.Command {
 					}
 					switch strings.ToLower(isArtist) {
 					case "y":
-						params.IsArtist = true
+						params.IsArtist.Bool = true
 					case "n":
-						params.IsArtist = false
+						params.IsArtist.Bool = false
 					default:
 						return fmt.Errorf("expected y or n but got %q", isArtist)
 					}

@@ -102,7 +102,7 @@ func (q *Queries) ListCandidateActors(ctx context.Context, status NullActorStatu
 const updateCandidateActor = `-- name: UpdateCandidateActor :exec
 UPDATE candidate_actors ca
 SET
-    status=COALESCE($1, ca.is_artist),
+    status=COALESCE($1, ca.status),
     is_artist=COALESCE($2, ca.is_artist)
 WHERE
     did = $3

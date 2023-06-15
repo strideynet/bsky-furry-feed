@@ -17,7 +17,7 @@ VALUES
 -- name: UpdateCandidateActor :exec
 UPDATE candidate_actors ca
 SET
-    status=COALESCE(sqlc.narg(status), ca.is_artist),
+    status=COALESCE(sqlc.narg(status), ca.status),
     is_artist=COALESCE(sqlc.narg(is_artist), ca.is_artist)
 WHERE
     did = sqlc.arg(did);
