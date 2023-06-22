@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 	"net/http"
 	"sync"
@@ -42,6 +43,8 @@ type FirehoseIngester struct {
 	subscribeURL    string
 	workerCount     int
 	workItemTimeout time.Duration
+
+	furryFeeds []string
 }
 
 func NewFirehoseIngester(
@@ -53,8 +56,13 @@ func NewFirehoseIngester(
 		queries: queries,
 
 		subscribeURL:    "wss://bsky.social/xrpc/com.atproto.sync.subscribeRepos",
-		workerCount:     5,
+		workerCount:     6,
 		workItemTimeout: time.Second * 30,
+		furryFeeds: []string{
+			"at://did:plc:jdkvwye2lf4mingzk7qdebzc/app.bsky.feed.generator/furry-new",
+			"at://did:plc:jdkvwye2lf4mingzk7qdebzc/app.bsky.feed.generator/furry-hot",
+			"at://did:plc:jdkvwye2lf4mingzk7qdebzc/app.bsky.feed.generator/furry-fursuit",
+		},
 	}
 }
 
@@ -146,11 +154,6 @@ func (fi *FirehoseIngester) Start(ctx context.Context) error {
 }
 
 func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncSubscribeRepos_Commit) error {
-	// Dispose of events from non-candidate actors
-	candidateActor := fi.crc.GetByDID(evt.Repo)
-	if candidateActor == nil {
-		return nil
-	}
 	// TODO: Find a way to use tail-based sampling so that we can capture this trace
 	// before candidateActor is run and ensure we always capture candidateActor
 	// traces.
@@ -189,12 +192,23 @@ func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncS
 
 		uri := fmt.Sprintf("at://%s/%s", evt.Repo, op.Path)
 		log = log.With(zap.String("record.uri", uri))
-		if err := fi.handleRecordCreate(ctx, log, evt.Repo, uri, record); err != nil {
+		if err := fi.handleRecordCreate(
+			ctx, log, evt.Repo, uri, record,
+		); err != nil {
 			return fmt.Errorf("handling record create: %w", err)
 		}
 	}
 
 	return nil
+}
+
+func (fi *FirehoseIngester) isFurryFeedLike(record typegen.CBORMarshaler) bool {
+	like, ok := record.(*bsky.FeedLike)
+	if !ok {
+		return false
+	}
+
+	return slices.Contains(fi.furryFeeds, like.Subject.Uri)
 }
 
 func (fi *FirehoseIngester) handleRecordCreate(
@@ -206,8 +220,31 @@ func (fi *FirehoseIngester) handleRecordCreate(
 ) error {
 	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_record_create")
 	defer span.End()
-	log.Debug("handling record create", zap.Any("record", record))
 
+	actor := fi.crc.GetByDID(repoDID)
+	if actor == nil {
+		// If it's an unknown actor, and they've just liked the feed, add em to
+		// the candidate actor store with pending status. Otherwise, ignore
+		// them.
+		if !fi.isFurryFeedLike(record) {
+			return nil
+		}
+		log.Info("unknown actor liked feed, adding to db as pending", zap.String("did", repoDID))
+		var err error
+		actor, err = fi.crc.CreatePendingCandidateActor(ctx, repoDID)
+		if err != nil {
+			return fmt.Errorf("creating pending candidate actor: %w", err)
+		}
+	}
+
+	// Only collect events from actors we care about e.g those that are
+	// approved or pending. Collecting pending actor's data means as soon as
+	// they are approved, their data can contribute to the feeds immediately.
+	if !(actor.Status == store.ActorStatusApproved || actor.Status == store.ActorStatusPending) {
+		return nil
+	}
+
+	log.Debug("handling record create", zap.Any("record", record))
 	switch data := record.(type) {
 	case *bsky.FeedPost:
 		err := fi.handleFeedPostCreate(ctx, log, repoDID, recordUri, data)

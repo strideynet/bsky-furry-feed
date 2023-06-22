@@ -74,7 +74,7 @@ func dbCandidateActorsSeedCmd(log *zap.Logger, env *environment) *cli.Command {
 					zap.String("did", did),
 					zap.Any("data", candidate),
 				)
-				err := db.CreateCandidateActor(
+				_, err := db.CreateCandidateActor(
 					cctx.Context,
 					store.CreateCandidateActorParams{
 						DID: did,
@@ -149,7 +149,7 @@ func dbCandidateActorsAddCmd(log *zap.Logger, env *environment) *cli.Command {
 			log.Info("adding candidate actor",
 				zap.Any("data", params),
 			)
-			err = db.CreateCandidateActor(
+			_, err = db.CreateCandidateActor(
 				cctx.Context,
 				params,
 			)

@@ -58,7 +58,7 @@ func queueCmd(log *zap.Logger, env *environment) *cli.Command {
 							ActorStatus: store.ActorStatusNone,
 						},
 					}
-					err := queries.UpdateCandidateActor(cctx.Context, params)
+					_, err := queries.UpdateCandidateActor(cctx.Context, params)
 					if err != nil {
 						return fmt.Errorf("creating candidate actor: %w", err)
 					}
@@ -92,7 +92,7 @@ func queueCmd(log *zap.Logger, env *environment) *cli.Command {
 						return fmt.Errorf("expected y or n but got %q", isArtist)
 					}
 
-					err := queries.UpdateCandidateActor(cctx.Context, params)
+					_, err := queries.UpdateCandidateActor(cctx.Context, params)
 					if err != nil {
 						return fmt.Errorf("creating candidate actor: %w", err)
 					}

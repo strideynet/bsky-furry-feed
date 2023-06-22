@@ -11,11 +11,12 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createCandidateActor = `-- name: CreateCandidateActor :exec
+const createCandidateActor = `-- name: CreateCandidateActor :one
 INSERT INTO
     candidate_actors (did, created_at, is_artist, comment, status)
 VALUES
     ($1, $2, $3, $4, $5)
+RETURNING did, created_at, is_artist, comment, is_nsfw, is_hidden, status
 `
 
 type CreateCandidateActorParams struct {
@@ -26,15 +27,25 @@ type CreateCandidateActorParams struct {
 	Status    ActorStatus
 }
 
-func (q *Queries) CreateCandidateActor(ctx context.Context, arg CreateCandidateActorParams) error {
-	_, err := q.db.Exec(ctx, createCandidateActor,
+func (q *Queries) CreateCandidateActor(ctx context.Context, arg CreateCandidateActorParams) (CandidateActor, error) {
+	row := q.db.QueryRow(ctx, createCandidateActor,
 		arg.DID,
 		arg.CreatedAt,
 		arg.IsArtist,
 		arg.Comment,
 		arg.Status,
 	)
-	return err
+	var i CandidateActor
+	err := row.Scan(
+		&i.DID,
+		&i.CreatedAt,
+		&i.IsArtist,
+		&i.Comment,
+		&i.IsNSFW,
+		&i.IsHidden,
+		&i.Status,
+	)
+	return i, err
 }
 
 const getCandidateActorByDID = `-- name: GetCandidateActorByDID :one
@@ -99,13 +110,14 @@ func (q *Queries) ListCandidateActors(ctx context.Context, status NullActorStatu
 	return items, nil
 }
 
-const updateCandidateActor = `-- name: UpdateCandidateActor :exec
+const updateCandidateActor = `-- name: UpdateCandidateActor :one
 UPDATE candidate_actors ca
 SET
     status=COALESCE($1, ca.status),
     is_artist=COALESCE($2, ca.is_artist)
 WHERE
     did = $3
+RETURNING did, created_at, is_artist, comment, is_nsfw, is_hidden, status
 `
 
 type UpdateCandidateActorParams struct {
@@ -114,7 +126,17 @@ type UpdateCandidateActorParams struct {
 	DID      string
 }
 
-func (q *Queries) UpdateCandidateActor(ctx context.Context, arg UpdateCandidateActorParams) error {
-	_, err := q.db.Exec(ctx, updateCandidateActor, arg.Status, arg.IsArtist, arg.DID)
-	return err
+func (q *Queries) UpdateCandidateActor(ctx context.Context, arg UpdateCandidateActorParams) (CandidateActor, error) {
+	row := q.db.QueryRow(ctx, updateCandidateActor, arg.Status, arg.IsArtist, arg.DID)
+	var i CandidateActor
+	err := row.Scan(
+		&i.DID,
+		&i.CreatedAt,
+		&i.IsArtist,
+		&i.Comment,
+		&i.IsNSFW,
+		&i.IsHidden,
+		&i.Status,
+	)
+	return i, err
 }
