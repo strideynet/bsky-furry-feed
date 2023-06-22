@@ -3,6 +3,7 @@ package ingester
 import (
 	"context"
 	"fmt"
+	"github.com/jackc/pgx/v5/pgtype"
 	bff "github.com/strideynet/bsky-furry-feed"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.uber.org/zap"
@@ -62,11 +63,10 @@ func (crc *CandidateActorCache) GetByDID(
 	return nil
 }
 
-func (crc *CandidateActorCache) Fill(ctx context.Context) error {
-	crc.log.Info("starting cache fill")
+func (crc *CandidateActorCache) Sync(ctx context.Context) error {
+	crc.log.Info("starting cache sync")
 	data, err := crc.queries.ListCandidateActors(ctx, store.NullActorStatus{
-		ActorStatus: store.ActorStatusApproved,
-		Valid:       true,
+		Valid: false,
 	})
 	if err != nil {
 		return fmt.Errorf("listing candidate actors: %w", err)
@@ -80,7 +80,7 @@ func (crc *CandidateActorCache) Fill(ctx context.Context) error {
 	crc.mu.Lock()
 	defer crc.mu.Unlock()
 	crc.cached = mapped
-	crc.log.Info("finished cache fill", zap.Int("count", len(mapped)))
+	crc.log.Info("finished cache sync", zap.Int("count", len(mapped)))
 	return nil
 }
 
@@ -95,10 +95,35 @@ func (crc *CandidateActorCache) Start(ctx context.Context) error {
 			// TODO: If this fails enough times, we should bail out, this allows
 			// a process restart to potentially rectify the situation.
 			ctx, cancel := context.WithTimeout(ctx, crc.refreshTimeout)
-			if err := crc.Fill(ctx); err != nil {
+			if err := crc.Sync(ctx); err != nil {
 				crc.log.Error("failed to fill cache", zap.Error(err))
 			}
 			cancel()
 		}
 	}
+}
+
+func (crc *CandidateActorCache) CreatePendingCandidateActor(ctx context.Context, did string) (*bff.CandidateActor, error) {
+	ctx, span := tracer.Start(ctx, "candidate_actor_cache.create_pending_candidate_actor")
+	defer span.End()
+	params := store.CreateCandidateActorParams{
+		DID:     did,
+		Comment: "added by system",
+		CreatedAt: pgtype.Timestamptz{
+			Time:  time.Now(),
+			Valid: true,
+		},
+		Status: store.ActorStatusPending,
+	}
+	ca, err := crc.queries.CreateCandidateActor(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("creating candidate actor: %w", err)
+	}
+	crc.log.Info("added new pending actor")
+
+	crc.mu.Lock()
+	defer crc.mu.Unlock()
+	converted := bff.CandidateActorFromStore(ca)
+	crc.cached[ca.DID] = converted
+	return &converted, nil
 }

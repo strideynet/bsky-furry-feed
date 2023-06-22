@@ -104,7 +104,7 @@ func scanCmd(log *zap.Logger, env *environment) *cli.Command {
 					},
 					Status: store.ActorStatusPending,
 				}
-				err = queries.CreateCandidateActor(cctx.Context, params)
+				_, err = queries.CreateCandidateActor(cctx.Context, params)
 				if err != nil {
 					return fmt.Errorf("creating candidate actor: %w", err)
 				}
