@@ -19,7 +19,8 @@ RETURNING *;
 UPDATE candidate_actors ca
 SET
     status=COALESCE(sqlc.narg(status), ca.status),
-    is_artist=COALESCE(sqlc.narg(is_artist), ca.is_artist)
+    is_artist=COALESCE(sqlc.narg(is_artist), ca.is_artist),
+    comment=COALESCE(sqlc.narg(comment), ca.comment)
 WHERE
     did = sqlc.arg(did)
 RETURNING *;

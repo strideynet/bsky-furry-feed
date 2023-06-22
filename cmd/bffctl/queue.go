@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
@@ -23,6 +24,14 @@ func queueCmd(log *zap.Logger, env *environment) *cli.Command {
 
 			queries := store.New(conn)
 
+			out, err := bluesky.NewUnauthClient().CreateSession(
+				cctx.Context, username, password,
+			)
+			if err != nil {
+				return fmt.Errorf("authenticating: %w", err)
+			}
+			client := bluesky.NewClient(bluesky.AuthInfoFromCreateSession(out))
+
 			prospectActors, err := queries.ListCandidateActors(
 				cctx.Context,
 				store.NullActorStatus{
@@ -35,7 +44,18 @@ func queueCmd(log *zap.Logger, env *environment) *cli.Command {
 			}
 
 			for _, actor := range prospectActors {
-				fmt.Printf("---\n%s\n", actor.Comment)
+				profile, err := client.GetProfile(cctx.Context, actor.DID)
+				if err != nil {
+					return fmt.Errorf("getting profile: %w, err")
+				}
+
+				displayName := ""
+				if profile.DisplayName != nil {
+					displayName = *profile.DisplayName
+				}
+				comment := fmt.Sprintf("%s (%s)", displayName, profile.Handle)
+
+				fmt.Printf("---\n%s\n", comment)
 				fmt.Printf("link: https://bsky.app/profile/%s\n", actor.DID)
 				fmt.Printf("(a)dd, (r)eject, (s)kip, (q)uit: ")
 				action := ""
@@ -75,6 +95,10 @@ func queueCmd(log *zap.Logger, env *environment) *cli.Command {
 							Valid: true,
 							// Actual value will be filled below.
 						},
+						Comment: pgtype.Text{
+							Valid:  true,
+							String: comment,
+						},
 					}
 					fmt.Printf("is this account an artist [y/n]: ")
 
@@ -96,8 +120,12 @@ func queueCmd(log *zap.Logger, env *environment) *cli.Command {
 					if err != nil {
 						return fmt.Errorf("creating candidate actor: %w", err)
 					}
-
 					fmt.Println("successfully added")
+					err = client.Follow(cctx.Context, actor.DID)
+					if err != nil {
+						return fmt.Errorf("following actor: %w", err)
+					}
+					fmt.Println("successfully followed")
 				default:
 					return fmt.Errorf("expected y or n but got %q", action)
 				}

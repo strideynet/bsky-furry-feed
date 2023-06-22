@@ -114,20 +114,27 @@ const updateCandidateActor = `-- name: UpdateCandidateActor :one
 UPDATE candidate_actors ca
 SET
     status=COALESCE($1, ca.status),
-    is_artist=COALESCE($2, ca.is_artist)
+    is_artist=COALESCE($2, ca.is_artist),
+    comment=COALESCE($3, ca.comment)
 WHERE
-    did = $3
+    did = $4
 RETURNING did, created_at, is_artist, comment, is_nsfw, is_hidden, status
 `
 
 type UpdateCandidateActorParams struct {
 	Status   NullActorStatus
 	IsArtist pgtype.Bool
+	Comment  pgtype.Text
 	DID      string
 }
 
 func (q *Queries) UpdateCandidateActor(ctx context.Context, arg UpdateCandidateActorParams) (CandidateActor, error) {
-	row := q.db.QueryRow(ctx, updateCandidateActor, arg.Status, arg.IsArtist, arg.DID)
+	row := q.db.QueryRow(ctx, updateCandidateActor,
+		arg.Status,
+		arg.IsArtist,
+		arg.Comment,
+		arg.DID,
+	)
 	var i CandidateActor
 	err := row.Scan(
 		&i.DID,
