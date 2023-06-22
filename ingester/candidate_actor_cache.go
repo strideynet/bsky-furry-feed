@@ -104,9 +104,11 @@ func (crc *CandidateActorCache) Start(ctx context.Context) error {
 }
 
 func (crc *CandidateActorCache) CreatePendingCandidateActor(ctx context.Context, did string) (*bff.CandidateActor, error) {
+	ctx, span := tracer.Start(ctx, "candidate_actor_cache.create_pending_candidate_actor")
+	defer span.End()
 	params := store.CreateCandidateActorParams{
 		DID:     did,
-		Comment: "automatically added",
+		Comment: "added by system",
 		CreatedAt: pgtype.Timestamptz{
 			Time:  time.Now(),
 			Valid: true,
@@ -117,7 +119,7 @@ func (crc *CandidateActorCache) CreatePendingCandidateActor(ctx context.Context,
 	if err != nil {
 		return nil, fmt.Errorf("creating candidate actor: %w", err)
 	}
-	crc.log.Info("added new pending actor", zap.String("did", ca.DID))
+	crc.log.Info("added new pending actor")
 
 	crc.mu.Lock()
 	defer crc.mu.Unlock()
