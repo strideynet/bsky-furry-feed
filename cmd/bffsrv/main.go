@@ -61,9 +61,16 @@ func tracerProvider(ctx context.Context, url string) (*tracesdk.TracerProvider, 
 		return nil, fmt.Errorf("creating resource attributes: %w", err)
 	}
 
-	tp := tracesdk.NewTracerProvider(
+	tpOpts := []tracesdk.TracerProviderOption{
 		tracesdk.WithBatcher(exp),
 		tracesdk.WithResource(r),
+	}
+	if inProduction {
+		tpOpts = append(tpOpts, tracesdk.WithSampler(tracesdk.TraceIDRatioBased(0.001)))
+	}
+
+	tp := tracesdk.NewTracerProvider(
+		tpOpts...,
 	)
 	otel.SetTracerProvider(tp)
 	// TODO: Tracer shutdown
