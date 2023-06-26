@@ -106,6 +106,14 @@ func getFeedSkeletonHandler(
 			posts, err = getFurryNewFeedWithTag(
 				ctx, queries, params.cursor, params.limit, bff.TagFursuitMedia,
 			)
+		case furryArtFeed:
+			posts, err = getFurryNewFeedWithTag(
+				ctx, queries, params.cursor, params.limit, bff.TagArt,
+			)
+		case furryNSFWFeed:
+			posts, err = getFurryNewFeedWithTag(
+				ctx, queries, params.cursor, params.limit, bff.TagNSFW,
+			)
 		default:
 			err = fmt.Errorf("unrecognized feed")
 		}

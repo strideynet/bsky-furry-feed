@@ -30,9 +30,8 @@ func generateDIDJSON(hostname string) ([]byte, error) {
 
 func didHandler(hostname string) (string, http.Handler, error) {
 	did, err := generateDIDJSON(hostname)
-
 	if err != nil {
-		return "", nil, fmt.Errorf("could not generate did.json: %v", err)
+		return "", nil, fmt.Errorf("generating did json: %w", err)
 	}
 
 	var h http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {

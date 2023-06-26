@@ -31,6 +31,14 @@ func isFursuitMedia(data *bsky.FeedPost) bool {
 	return hasImage(data) && hasKeyword(data, "#fursuitfriday", "#fursuit")
 }
 
+func isArt(data *bsky.FeedPost) bool {
+	return hasImage(data) && hasKeyword(data, "#art")
+}
+
+func isNSFW(data *bsky.FeedPost) bool {
+	return hasKeyword(data, "#nsfw")
+}
+
 func (fi *FirehoseIngester) handleFeedPostCreate(
 	ctx context.Context,
 	log *zap.Logger,
@@ -50,6 +58,12 @@ func (fi *FirehoseIngester) handleFeedPostCreate(
 		tags := []string{}
 		if isFursuitMedia(data) {
 			tags = append(tags, bff.TagFursuitMedia)
+		}
+		if isArt(data) {
+			tags = append(tags, bff.TagArt)
+		}
+		if isNSFW(data) {
+			tags = append(tags, bff.TagNSFW)
 		}
 
 		err = fi.queries.CreateCandidatePost(
