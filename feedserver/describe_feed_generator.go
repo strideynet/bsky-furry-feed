@@ -32,6 +32,7 @@ func describeFeedGeneratorHandler(
 		res := describeFeedGeneratorResponse{
 			DID: serverDID(hostname),
 			Feeds: []describeFeedGeneratorResponseFeed{
+				// TODO: Iterate over some central feed registry
 				{
 					URI: feedURI(furryNewFeed),
 				},
@@ -43,6 +44,12 @@ func describeFeedGeneratorHandler(
 				},
 				{
 					URI: feedURI(furryFursuitFeed),
+				},
+				{
+					URI: feedURI(furryArtFeed),
+				},
+				{
+					URI: feedURI(furryNSFWFeed),
 				},
 			},
 		}
