@@ -62,6 +62,8 @@ func NewFirehoseIngester(
 			"at://did:plc:jdkvwye2lf4mingzk7qdebzc/app.bsky.feed.generator/furry-new",
 			"at://did:plc:jdkvwye2lf4mingzk7qdebzc/app.bsky.feed.generator/furry-hot",
 			"at://did:plc:jdkvwye2lf4mingzk7qdebzc/app.bsky.feed.generator/furry-fursuit",
+			"at://did:plc:jdkvwye2lf4mingzk7qdebzc/app.bsky.feed.generator/furry-art",
+			"at://did:plc:jdkvwye2lf4mingzk7qdebzc/app.bsky.feed.generator/furry-nsfw",
 		},
 	}
 }
