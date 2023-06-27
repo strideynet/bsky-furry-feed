@@ -2,6 +2,7 @@ package feedserver
 
 import (
 	"fmt"
+	"github.com/strideynet/bsky-furry-feed/feed"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
 	"net/http"
@@ -19,6 +20,7 @@ type describeFeedGeneratorResponse struct {
 func describeFeedGeneratorHandler(
 	log *zap.Logger,
 	hostname string,
+	registry feed.Registry,
 ) (string, http.Handler) {
 	feedURI := func(feedName string) string {
 		return fmt.Sprintf(
@@ -28,30 +30,17 @@ func describeFeedGeneratorHandler(
 		)
 	}
 
+	feeds := []describeFeedGeneratorResponseFeed{}
+	for _, id := range registry.IDs() {
+		feeds = append(feeds, describeFeedGeneratorResponseFeed{
+			URI: feedURI(id),
+		})
+	}
+
 	h := jsonHandler(log, func(r *http.Request) (any, error) {
 		res := describeFeedGeneratorResponse{
-			DID: serverDID(hostname),
-			Feeds: []describeFeedGeneratorResponseFeed{
-				// TODO: Iterate over some central feed registry
-				{
-					URI: feedURI(furryNewFeed),
-				},
-				{
-					URI: feedURI(furryHotFeed),
-				},
-				{
-					URI: feedURI(furryTestFeed),
-				},
-				{
-					URI: feedURI(furryFursuitFeed),
-				},
-				{
-					URI: feedURI(furryArtFeed),
-				},
-				{
-					URI: feedURI(furryNSFWFeed),
-				},
-			},
+			DID:   serverDID(hostname),
+			Feeds: feeds,
 		}
 		return res, nil
 	})

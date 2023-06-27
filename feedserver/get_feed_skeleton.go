@@ -104,7 +104,7 @@ func getFeedSkeletonHandler(
 			)
 		case furryFursuitFeed:
 			posts, err = getFurryNewFeedWithTag(
-				ctx, queries, params.cursor, params.limit, bff.TagFursuitMedia,
+				ctx, queries, params.cursor, params.limit, ,
 			)
 		case furryArtFeed:
 			posts, err = getFurryNewFeedWithTag(
