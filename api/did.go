@@ -1,4 +1,4 @@
-package feedserver
+package api
 
 import (
 	"encoding/json"

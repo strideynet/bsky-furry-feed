@@ -4,7 +4,8 @@ import (
 	"context"
 	"fmt"
 	texporter "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace"
-	"github.com/strideynet/bsky-furry-feed/feedserver"
+	"github.com/strideynet/bsky-furry-feed/api"
+	"github.com/strideynet/bsky-furry-feed/feed"
 	"github.com/strideynet/bsky-furry-feed/ingester"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.opentelemetry.io/contrib/detectors/gcp"
@@ -134,6 +135,8 @@ func runE(log *zap.Logger) error {
 		return fi.Start(ctx)
 	})
 
+	feedService := feed.ServiceWithDefaultFeeds(queries)
+
 	// Setup the public HTTP/XRPC server
 	// TODO: Make these externally configurable
 	hostname := "dev-feed.ottr.sh"
@@ -141,11 +144,11 @@ func runE(log *zap.Logger) error {
 		hostname = "feed.furryli.st"
 	}
 	listenAddr := ":1337"
-	srv, err := feedserver.New(
-		log.Named("feed_server"),
-		queries,
+	srv, err := api.New(
+		log.Named("api"),
 		hostname,
 		listenAddr,
+		feedService,
 	)
 
 	if err != nil {
