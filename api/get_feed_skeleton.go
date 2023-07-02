@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/feed"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
@@ -102,7 +101,7 @@ func getFeedSkeletonHandler(
 			// created at the same time, a cursor based on just the created_at
 			// may lead to them being omitted.
 			lastPost := posts[len(posts)-1]
-			output.Cursor = bluesky.FormatTime(lastPost.CreatedAt.Time)
+			output.Cursor = lastPost.Cursor
 		}
 
 		return output, nil
