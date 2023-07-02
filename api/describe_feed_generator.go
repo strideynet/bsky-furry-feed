@@ -1,4 +1,4 @@
-package feedserver
+package api
 
 import (
 	"fmt"
@@ -20,7 +20,7 @@ type describeFeedGeneratorResponse struct {
 func describeFeedGeneratorHandler(
 	log *zap.Logger,
 	hostname string,
-	registry feed.Registry,
+	registry *feed.Service,
 ) (string, http.Handler) {
 	feedURI := func(feedName string) string {
 		return fmt.Sprintf(

@@ -1,25 +1,16 @@
-package feedserver
+package api
 
 import (
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-	bff "github.com/strideynet/bsky-furry-feed"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
-	"github.com/strideynet/bsky-furry-feed/store"
+	"github.com/strideynet/bsky-furry-feed/feed"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
 )
-
-var feedRequestMetric = promauto.NewSummaryVec(prometheus.SummaryOpts{
-	Name: "bff_feed_request_duration_seconds",
-	Help: "A very rudimentary way of tracking how many feed skeletons have been requested and how long it takes to serve.",
-}, []string{"feed_name", "status"})
 
 type getFeedSkeletonParams struct {
 	cursor string
@@ -74,11 +65,11 @@ type getFeedSkeletonResponse struct {
 }
 
 func getFeedSkeletonHandler(
-	log *zap.Logger, queries *store.Queries,
+	log *zap.Logger, registry *feed.Service,
 ) (string, http.Handler) {
 	h := jsonHandler(log, func(r *http.Request) (any, error) {
 		ctx := r.Context()
-		start := time.Now()
+
 		params, err := parseGetFeedSkeletonParams(r.URL)
 		if err != nil {
 			return nil, err
@@ -90,41 +81,12 @@ func getFeedSkeletonHandler(
 			zap.Int("limit", params.limit),
 		)
 
-		// TODO: Feed "router" that directs requests to the correct
-		// implementation.
-		var posts []store.CandidatePost
-		switch params.feed {
-		case furryNewFeed, furryTestFeed:
-			posts, err = getFurryNewFeed(
-				ctx, queries, params.cursor, params.limit,
-			)
-		case furryHotFeed:
-			posts, err = getFurryHotFeed(
-				ctx, queries, params.cursor, params.limit,
-			)
-		case furryFursuitFeed:
-			posts, err = getFurryNewFeedWithTag(
-				ctx, queries, params.cursor, params.limit, ,
-			)
-		case furryArtFeed:
-			posts, err = getFurryNewFeedWithTag(
-				ctx, queries, params.cursor, params.limit, bff.TagArt,
-			)
-		case furryNSFWFeed:
-			posts, err = getFurryNewFeedWithTag(
-				ctx, queries, params.cursor, params.limit, bff.TagNSFW,
-			)
-		default:
-			err = fmt.Errorf("unrecognized feed")
-		}
+		posts, err := registry.GetFeedPosts(ctx, params.feed, params.cursor, params.limit)
 		if err != nil {
 			return nil, fmt.Errorf("fetching feed %q: %w", params.feed, err)
 		}
 
 		// Convert the selected posts to the getFeedSkeleton format
-		//
-		// TODO: Reintroduce pinned top-post at a later date. This should
-		// only be injected if no cursor has been specified.
 		output := getFeedSkeletonResponse{
 			Feed: []getFeedSkeletonResponsePost{},
 		}
@@ -133,7 +95,7 @@ func getFeedSkeletonHandler(
 				Post: p.URI,
 			})
 		}
-		// Generate cursor if there are any posts, otherwise we can return an
+		// GetFeedPosts cursor if there are any posts, otherwise we can return an
 		// empty cursor, which indicates we are at the "end" of the feed.
 		if len(posts) > 0 {
 			// TODO: More sophisticated cursor. Right now, if multiple posts are
@@ -143,9 +105,6 @@ func getFeedSkeletonHandler(
 			output.Cursor = bluesky.FormatTime(lastPost.CreatedAt.Time)
 		}
 
-		feedRequestMetric.
-			WithLabelValues(params.feed, "OK").
-			Observe(time.Since(start).Seconds())
 		return output, nil
 	})
 	return "/xrpc/app.bsky.feed.getFeedSkeleton", otelhttp.NewHandler(h, "get_feed_skeleton")

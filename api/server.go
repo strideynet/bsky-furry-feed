@@ -1,10 +1,9 @@
-package feedserver
+package api
 
 import (
 	"encoding/json"
 	"fmt"
 	"github.com/strideynet/bsky-furry-feed/feed"
-	"github.com/strideynet/bsky-furry-feed/store"
 	"go.uber.org/zap"
 	"net/http"
 )
@@ -31,10 +30,9 @@ func jsonHandler(log *zap.Logger, h func(r *http.Request) (any, error)) http.Han
 
 func New(
 	log *zap.Logger,
-	queries *store.Queries,
 	hostname string,
 	listenAddr string,
-	feedRegistry feed.Registry,
+	feedRegistry *feed.Service,
 ) (*http.Server, error) {
 	mux := &http.ServeMux{}
 
@@ -43,7 +41,7 @@ func New(
 		return nil, fmt.Errorf("creating did handler: %w", err)
 	}
 	mux.Handle(didEndpointPath, didHandler)
-	mux.Handle(getFeedSkeletonHandler(log, queries))
+	mux.Handle(getFeedSkeletonHandler(log, feedRegistry))
 	mux.Handle(describeFeedGeneratorHandler(log, hostname, feedRegistry))
 	mux.Handle(rootHandler(log))
 

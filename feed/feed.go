@@ -4,10 +4,18 @@ import (
 	"context"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	bff "github.com/strideynet/bsky-furry-feed"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
+	"time"
 )
+
+var feedRequestMetric = promauto.NewSummaryVec(prometheus.SummaryOpts{
+	Name: "bff_feed_request_duration_seconds",
+	Help: "A very rudimentary way of tracking how many feed skeletons have been requested and how long it takes to serve.",
+}, []string{"feed_name", "status"})
 
 type Meta struct {
 	// ID is the rkey that is used to identify the Feed in generation requests.
@@ -22,22 +30,49 @@ type feed struct {
 
 type GenerateFunc func(ctx context.Context, queries *store.Queries, cursor string, limit int) ([]store.CandidatePost, error)
 
-type Registry map[string]*feed
+type Service struct {
+	// TODO: Locking on feeds to avoid data races
+	feeds   map[string]*feed
+	queries *store.Queries
+}
 
-func (r Registry) Register(m Meta, generateFunc GenerateFunc) {
-	r[m.ID] = &feed{
+func (s *Service) Register(m Meta, generateFunc GenerateFunc) {
+	if s.feeds == nil {
+		s.feeds = map[string]*feed{}
+	}
+	s.feeds[m.ID] = &feed{
 		meta:     m,
 		generate: generateFunc,
 	}
 }
 
 // IDs returns a slice of the IDs of feeds which are eligible for generation.
-func (r Registry) IDs() []string {
-	ids := make([]string, len(r))
-	for _, f := range r {
+func (s *Service) IDs() []string {
+	ids := make([]string, len(s.feeds))
+	for _, f := range s.feeds {
 		ids = append(ids, f.meta.ID)
 	}
 	return nil
+}
+
+func (s *Service) GetFeedPosts(ctx context.Context, feedKey string, cursor string, limit int) (posts []store.CandidatePost, err error) {
+	start := time.Now()
+	defer func() {
+		status := "OK"
+		if err != nil {
+			status = "ERR"
+		}
+		feedRequestMetric.
+			WithLabelValues(feedKey, status).
+			Observe(time.Since(start).Seconds())
+	}()
+
+	f, ok := s.feeds[feedKey]
+	if !ok {
+		return nil, fmt.Errorf("unrecognized feed")
+	}
+
+	return f.generate(ctx, s.queries, cursor, limit)
 }
 
 func newGenerator() GenerateFunc {
@@ -114,12 +149,14 @@ func hotGenerator() GenerateFunc {
 	}
 }
 
-// RegistryWithDefaultFeeds instantiates a registry with all the standard
+// ServiceWithDefaultFeeds instantiates a registry with all the standard
 // bksy-furry-feed feeds.
 // TODO: This really doesn't belong here, ideally, these feeds would be defined
 // elsewhere to make this more pluggable. A refactor idea for the future :)
-func RegistryWithDefaultFeeds() Registry {
-	r := Registry{}
+func ServiceWithDefaultFeeds(queries *store.Queries) *Service {
+	r := &Service{
+		queries: queries,
+	}
 
 	newGen := newGenerator()
 	r.Register(Meta{ID: "furry-new"}, newGen)
