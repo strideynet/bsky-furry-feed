@@ -221,7 +221,7 @@ func scoreBasedGenerator(gravity float64, postAgeOffset time.Duration) GenerateF
 					break
 				}
 			}
-			fmt.Printf("found index: %d %s\n", foundIndex, posts[foundIndex].URI)
+			fmt.Printf("found index: %d %s %d\n", foundIndex, posts[foundIndex].URI, len(posts))
 			if foundIndex == -1 {
 				// cant find post, indicate to client to start again
 				return nil, nil
@@ -234,6 +234,8 @@ func scoreBasedGenerator(gravity float64, postAgeOffset time.Duration) GenerateF
 			}
 			posts = posts[startFrom:]
 		}
+
+		posts = posts[:limit]
 
 		return posts, nil
 	}
@@ -248,7 +250,7 @@ func ServiceWithDefaultFeeds(queries *store.Queries) *Service {
 		queries: queries,
 	}
 
-	r.Register(Meta{ID: "furry-new"}, scoreBasedGenerator(2, time.Hour*1))
+	r.Register(Meta{ID: "furry-new"}, newGenerator())
 	r.Register(Meta{ID: "furry-hot"}, hotGenerator())
 	r.Register(Meta{ID: "furry-fursuit"}, newWithTagGenerator(bff.TagFursuitMedia))
 	r.Register(Meta{ID: "furry-art"}, newWithTagGenerator(bff.TagArt))
