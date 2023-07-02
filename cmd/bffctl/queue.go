@@ -57,7 +57,7 @@ func queueCmd(log *zap.Logger, env *environment) *cli.Command {
 
 				fmt.Printf(
 					"---\n[%d/%d] %s\n",
-					i,
+					i+1,
 					len(prospectActors),
 					comment,
 				)
