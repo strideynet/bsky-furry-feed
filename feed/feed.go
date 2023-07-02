@@ -221,9 +221,18 @@ func scoreBasedGenerator(gravity float64, postAgeOffset time.Duration) GenerateF
 					break
 				}
 			}
-			if foundIndex != -1 {
-				posts = posts[foundIndex:]
+			fmt.Printf("found index: %d %s\n", foundIndex, posts[foundIndex].URI)
+			if foundIndex == -1 {
+				// cant find post, indicate to client to start again
+				return nil, nil
 			}
+			startFrom := foundIndex + 1
+			if startFrom == len(posts) {
+				// the cursor is pointing at the last post, indicate end
+				// reached
+				return nil, nil
+			}
+			posts = posts[startFrom:]
 		}
 
 		return posts, nil
@@ -239,7 +248,7 @@ func ServiceWithDefaultFeeds(queries *store.Queries) *Service {
 		queries: queries,
 	}
 
-	r.Register(Meta{ID: "furry-new"}, newGenerator())
+	r.Register(Meta{ID: "furry-new"}, scoreBasedGenerator(2, time.Hour*1))
 	r.Register(Meta{ID: "furry-hot"}, hotGenerator())
 	r.Register(Meta{ID: "furry-fursuit"}, newWithTagGenerator(bff.TagFursuitMedia))
 	r.Register(Meta{ID: "furry-art"}, newWithTagGenerator(bff.TagArt))
