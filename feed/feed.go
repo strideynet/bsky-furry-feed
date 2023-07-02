@@ -166,13 +166,8 @@ func hotGenerator() GenerateFunc {
 	}
 }
 
-func scoreBasedGenerator() GenerateFunc {
+func scoreBasedGenerator(gravity float64, postAgeOffset time.Duration) GenerateFunc {
 	return func(ctx context.Context, queries *store.Queries, cursor string, limit int) ([]Post, error) {
-		if cursor != "" {
-			// right now we dont handle pagination
-			return nil, nil
-		}
-
 		rows, err := queries.GetPostsWithLikes(ctx, 500)
 		if err != nil {
 			return nil, fmt.Errorf("executing sql: %w", err)
@@ -185,8 +180,6 @@ func scoreBasedGenerator() GenerateFunc {
 			Age   time.Duration
 		}
 
-		const gravity = 2
-		const postAgeOffset = time.Hour * 2
 		scorePost := func(likes int64, age time.Duration) float64 {
 			return float64(likes) / math.Pow(age.Hours()+float64(postAgeOffset), gravity)
 		}
@@ -197,7 +190,7 @@ func scoreBasedGenerator() GenerateFunc {
 			scoredPosts = append(scoredPosts, scoredPost{
 				Post: Post{
 					URI:    p.URI,
-					Cursor: "interim",
+					Cursor: p.URI,
 				},
 				Likes: p.Likes,
 				Age:   age,
@@ -218,6 +211,21 @@ func scoreBasedGenerator() GenerateFunc {
 			posts = append(posts, p.Post)
 		}
 
+		if cursor != "" {
+			// This pagination is extremely rough and doesn't account for posts
+			// moving back and forth past one another.
+			foundIndex := -1
+			for i, p := range posts {
+				if p.Cursor == cursor {
+					foundIndex = i
+					break
+				}
+			}
+			if foundIndex != -1 {
+				posts = posts[foundIndex:]
+			}
+		}
+
 		return posts, nil
 	}
 }
@@ -236,7 +244,7 @@ func ServiceWithDefaultFeeds(queries *store.Queries) *Service {
 	r.Register(Meta{ID: "furry-fursuit"}, newWithTagGenerator(bff.TagFursuitMedia))
 	r.Register(Meta{ID: "furry-art"}, newWithTagGenerator(bff.TagArt))
 	r.Register(Meta{ID: "furry-nsfw"}, newWithTagGenerator(bff.TagNSFW))
-	r.Register(Meta{ID: "furry-test"}, scoreBasedGenerator())
+	r.Register(Meta{ID: "furry-test"}, scoreBasedGenerator(2, time.Hour*1))
 
 	return r
 }
