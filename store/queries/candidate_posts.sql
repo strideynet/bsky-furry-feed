@@ -48,9 +48,29 @@ FROM
 WHERE
       cp.is_hidden = false
   AND ca.status = 'approved'
-  AND @tag::TEXT = ANY(cp.tags)
+  AND @tag::TEXT = ANY (cp.tags)
   AND (@cursor_timestamp::TIMESTAMPTZ IS NULL OR
        cp.created_at < @cursor_timestamp)
 ORDER BY
     cp.created_at DESC
 LIMIT @_limit;
+
+-- name: GetPostsWithLikes :many
+SELECT
+    cp.*,
+    (SELECT
+         COUNT(*)
+     FROM
+         candidate_likes cl
+     WHERE
+         cl.subject_uri = cp.uri) AS likes
+FROM
+    candidate_posts cp
+        INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
+WHERE
+      cp.is_hidden = false
+  AND ca.status = 'approved'
+ORDER BY
+    cp.created_at DESC
+LIMIT @_limit;
+

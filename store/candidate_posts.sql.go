@@ -150,7 +150,7 @@ FROM
 WHERE
       cp.is_hidden = false
   AND ca.status = 'approved'
-  AND $1::TEXT = ANY(cp.tags)
+  AND $1::TEXT = ANY (cp.tags)
   AND ($2::TIMESTAMPTZ IS NULL OR
        cp.created_at < $2)
 ORDER BY
@@ -181,6 +181,66 @@ func (q *Queries) GetFurryNewFeedWithTag(ctx context.Context, arg GetFurryNewFee
 			&i.IsNSFW,
 			&i.IsHidden,
 			&i.Tags,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPostsWithLikes = `-- name: GetPostsWithLikes :many
+SELECT
+    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden, cp.tags,
+    (SELECT
+         COUNT(*)
+     FROM
+         candidate_likes cl
+     WHERE
+         cl.subject_uri = cp.uri) AS likes
+FROM
+    candidate_posts cp
+        INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
+WHERE
+      cp.is_hidden = false
+  AND ca.status = 'approved'
+ORDER BY
+    cp.created_at DESC
+LIMIT $1
+`
+
+type GetPostsWithLikesRow struct {
+	URI       string
+	ActorDID  string
+	CreatedAt pgtype.Timestamptz
+	IndexedAt pgtype.Timestamptz
+	IsNSFW    bool
+	IsHidden  bool
+	Tags      []string
+	Likes     int64
+}
+
+func (q *Queries) GetPostsWithLikes(ctx context.Context, Limit int32) ([]GetPostsWithLikesRow, error) {
+	rows, err := q.db.Query(ctx, getPostsWithLikes, Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPostsWithLikesRow
+	for rows.Next() {
+		var i GetPostsWithLikesRow
+		if err := rows.Scan(
+			&i.URI,
+			&i.ActorDID,
+			&i.CreatedAt,
+			&i.IndexedAt,
+			&i.IsNSFW,
+			&i.IsHidden,
+			&i.Tags,
+			&i.Likes,
 		); err != nil {
 			return nil, err
 		}

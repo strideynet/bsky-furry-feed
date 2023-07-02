@@ -9,6 +9,8 @@ import (
 	bff "github.com/strideynet/bsky-furry-feed"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
+	"golang.org/x/exp/slices"
+	"math"
 	"time"
 )
 
@@ -28,7 +30,12 @@ type feed struct {
 	generate GenerateFunc
 }
 
-type GenerateFunc func(ctx context.Context, queries *store.Queries, cursor string, limit int) ([]store.CandidatePost, error)
+type Post struct {
+	URI    string
+	Cursor string
+}
+
+type GenerateFunc func(ctx context.Context, queries *store.Queries, cursor string, limit int) ([]Post, error)
 
 type Service struct {
 	// TODO: Locking on feeds to avoid data races
@@ -55,7 +62,7 @@ func (s *Service) IDs() []string {
 	return nil
 }
 
-func (s *Service) GetFeedPosts(ctx context.Context, feedKey string, cursor string, limit int) (posts []store.CandidatePost, err error) {
+func (s *Service) GetFeedPosts(ctx context.Context, feedKey string, cursor string, limit int) (posts []Post, err error) {
 	start := time.Now()
 	defer func() {
 		status := "OK"
@@ -74,9 +81,19 @@ func (s *Service) GetFeedPosts(ctx context.Context, feedKey string, cursor strin
 
 	return f.generate(ctx, s.queries, cursor, limit)
 }
+func PostsFromStorePosts(storePosts []store.CandidatePost) []Post {
+	posts := make([]Post, 0, len(storePosts))
+	for _, p := range storePosts {
+		posts = append(posts, Post{
+			URI:    p.URI,
+			Cursor: bluesky.FormatTime(p.CreatedAt.Time),
+		})
+	}
+	return posts
+}
 
 func newGenerator() GenerateFunc {
-	return func(ctx context.Context, queries *store.Queries, cursor string, limit int) ([]store.CandidatePost, error) {
+	return func(ctx context.Context, queries *store.Queries, cursor string, limit int) ([]Post, error) {
 		params := store.GetFurryNewFeedParams{
 			Limit: int32(limit),
 		}
@@ -95,12 +112,12 @@ func newGenerator() GenerateFunc {
 		if err != nil {
 			return nil, fmt.Errorf("executing sql: %w", err)
 		}
-		return posts, nil
+		return PostsFromStorePosts(posts), nil
 	}
 }
 
 func newWithTagGenerator(tag string) GenerateFunc {
-	return func(ctx context.Context, queries *store.Queries, cursor string, limit int) ([]store.CandidatePost, error) {
+	return func(ctx context.Context, queries *store.Queries, cursor string, limit int) ([]Post, error) {
 		params := store.GetFurryNewFeedWithTagParams{
 			Limit: int32(limit),
 			Tag:   tag,
@@ -120,12 +137,12 @@ func newWithTagGenerator(tag string) GenerateFunc {
 		if err != nil {
 			return nil, fmt.Errorf("executing sql: %w", err)
 		}
-		return posts, nil
+		return PostsFromStorePosts(posts), nil
 	}
 }
 
 func hotGenerator() GenerateFunc {
-	return func(ctx context.Context, queries *store.Queries, cursor string, limit int) ([]store.CandidatePost, error) {
+	return func(ctx context.Context, queries *store.Queries, cursor string, limit int) ([]Post, error) {
 		params := store.GetFurryHotFeedParams{
 			Limit:         int32(limit),
 			LikeThreshold: int32(4),
@@ -145,6 +162,62 @@ func hotGenerator() GenerateFunc {
 		if err != nil {
 			return nil, fmt.Errorf("executing sql: %w", err)
 		}
+		return PostsFromStorePosts(posts), nil
+	}
+}
+
+func scoreBasedGenerator() GenerateFunc {
+	return func(ctx context.Context, queries *store.Queries, cursor string, limit int) ([]Post, error) {
+		if cursor != "" {
+			// right now we dont handle pagination
+			return nil, nil
+		}
+
+		rows, err := queries.GetPostsWithLikes(ctx, 500)
+		if err != nil {
+			return nil, fmt.Errorf("executing sql: %w", err)
+		}
+
+		type scoredPost struct {
+			Post
+			Score float64
+			Likes int64
+			Age   time.Duration
+		}
+
+		const gravity = 2
+		const postAgeOffset = time.Hour * 2
+		scorePost := func(likes int64, age time.Duration) float64 {
+			return float64(likes) / math.Pow(age.Hours()+float64(postAgeOffset), gravity)
+		}
+
+		scoredPosts := make([]scoredPost, 0, len(rows))
+		for _, p := range rows {
+			age := time.Since(p.IndexedAt.Time)
+			scoredPosts = append(scoredPosts, scoredPost{
+				Post: Post{
+					URI:    p.URI,
+					Cursor: "interim",
+				},
+				Likes: p.Likes,
+				Age:   age,
+				Score: scorePost(p.Likes, age),
+			})
+		}
+
+		slices.SortStableFunc(scoredPosts, func(a, b scoredPost) bool {
+			return a.Score > b.Score
+		})
+
+		// Strip points info so we can return this in the expected type.
+		posts := make([]Post, 0, len(rows))
+		for _, p := range scoredPosts {
+			// Debugs the post scoring - we'll leave this commented for now
+			// until we make an endpoint to expose this.
+			// fmt.Printf("%s - age: %s likes: %d score: %e\n", p.Post.URI, p.Age, p.Likes, p.Score)
+			posts = append(posts, p.Post)
+		}
+
 		return posts, nil
 	}
 }
@@ -158,13 +231,12 @@ func ServiceWithDefaultFeeds(queries *store.Queries) *Service {
 		queries: queries,
 	}
 
-	newGen := newGenerator()
-	r.Register(Meta{ID: "furry-new"}, newGen)
+	r.Register(Meta{ID: "furry-new"}, scoreBasedGenerator())
 	r.Register(Meta{ID: "furry-hot"}, hotGenerator())
 	r.Register(Meta{ID: "furry-fursuit"}, newWithTagGenerator(bff.TagFursuitMedia))
 	r.Register(Meta{ID: "furry-art"}, newWithTagGenerator(bff.TagArt))
 	r.Register(Meta{ID: "furry-nsfw"}, newWithTagGenerator(bff.TagNSFW))
-	r.Register(Meta{ID: "furry-test"}, newGen)
+	r.Register(Meta{ID: "furry-test"}, scoreBasedGenerator())
 
 	return r
 }
