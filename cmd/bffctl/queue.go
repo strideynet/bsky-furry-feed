@@ -43,7 +43,7 @@ func queueCmd(log *zap.Logger, env *environment) *cli.Command {
 				return fmt.Errorf("listing candidate actors: %w", err)
 			}
 
-			for _, actor := range prospectActors {
+			for i, actor := range prospectActors {
 				profile, err := client.GetProfile(cctx.Context, actor.DID)
 				if err != nil {
 					return fmt.Errorf("getting profile: %w, err")
@@ -55,7 +55,12 @@ func queueCmd(log *zap.Logger, env *environment) *cli.Command {
 				}
 				comment := fmt.Sprintf("%s (%s)", displayName, profile.Handle)
 
-				fmt.Printf("---\n%s\n", comment)
+				fmt.Printf(
+					"---\n[%d/%d] %s\n",
+					i,
+					len(prospectActors),
+					comment,
+				)
 				fmt.Printf("link: https://bsky.app/profile/%s\n", actor.DID)
 				fmt.Printf("(a)dd, (r)eject, (s)kip, (q)uit: ")
 				action := ""
@@ -116,16 +121,18 @@ func queueCmd(log *zap.Logger, env *environment) *cli.Command {
 						return fmt.Errorf("expected y or n but got %q", isArtist)
 					}
 
+					log.Info("adding")
 					_, err := queries.UpdateCandidateActor(cctx.Context, params)
 					if err != nil {
 						return fmt.Errorf("creating candidate actor: %w", err)
 					}
-					fmt.Println("successfully added")
+					log.Info("successfully added")
+					log.Info("following")
 					err = client.Follow(cctx.Context, actor.DID)
 					if err != nil {
 						return fmt.Errorf("following actor: %w", err)
 					}
-					fmt.Println("successfully followed")
+					log.Info("successfully followed")
 				default:
 					return fmt.Errorf("expected y or n but got %q", action)
 				}

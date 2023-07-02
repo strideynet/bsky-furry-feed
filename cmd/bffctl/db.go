@@ -106,6 +106,7 @@ func dbCandidateActorsSeedCmd(log *zap.Logger, env *environment) *cli.Command {
 func dbCandidateActorsAddCmd(log *zap.Logger, env *environment) *cli.Command {
 	handle := ""
 	isArtist := false
+	shouldFollow := false
 	return &cli.Command{
 		Name:  "add",
 		Usage: "Adds a new candidate actor",
@@ -119,6 +120,11 @@ func dbCandidateActorsAddCmd(log *zap.Logger, env *environment) *cli.Command {
 				Name:        "artist",
 				Destination: &isArtist,
 			},
+			&cli.BoolFlag{
+				Name:        "follow",
+				Destination: &shouldFollow,
+				Usage:       "follows the actor after adding them",
+			},
 		},
 		Action: func(cctx *cli.Context) error {
 			conn, err := pgx.Connect(cctx.Context, env.dbURL)
@@ -127,7 +133,14 @@ func dbCandidateActorsAddCmd(log *zap.Logger, env *environment) *cli.Command {
 			}
 			defer conn.Close(cctx.Context)
 
-			client := bluesky.NewUnauthClient()
+			unuathClient, err := bluesky.NewUnauthClient().CreateSession(
+				cctx.Context, username, password,
+			)
+			if err != nil {
+				return fmt.Errorf("authenticating: %w", err)
+			}
+			client := bluesky.NewClient(bluesky.AuthInfoFromCreateSession(unuathClient))
+
 			did, err := client.ResolveHandle(cctx.Context, handle)
 			if err != nil {
 				return fmt.Errorf("resolving handle: %w", err)
@@ -163,8 +176,13 @@ func dbCandidateActorsAddCmd(log *zap.Logger, env *environment) *cli.Command {
 					return err
 				}
 			}
-			log.Info("added candidate actor")
-
+			log.Info("successfully added")
+			if shouldFollow {
+				if err := client.Follow(cctx.Context, did.Did); err != nil {
+					return fmt.Errorf("following actor: %w", err)
+				}
+				log.Info("successfully followed")
+			}
 			return nil
 		},
 	}
