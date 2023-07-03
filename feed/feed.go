@@ -256,7 +256,7 @@ func ServiceWithDefaultFeeds(queries *store.Queries) *Service {
 	r.Register(Meta{ID: "furry-fursuit"}, newWithTagGenerator(bff.TagFursuitMedia))
 	r.Register(Meta{ID: "furry-art"}, newWithTagGenerator(bff.TagArt))
 	r.Register(Meta{ID: "furry-nsfw"}, newWithTagGenerator(bff.TagNSFW))
-	r.Register(Meta{ID: "furry-test"}, scoreBasedGenerator(2, time.Hour*2))
+	r.Register(Meta{ID: "furry-test"}, scoreBasedGenerator(1.75, time.Hour*2))
 
 	return r
 }
