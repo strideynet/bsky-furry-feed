@@ -23,6 +23,8 @@ func (c *DirectConnectorConfig) poolConfig() (*pgxpool.Config, error) {
 type CloudSQLConnectorConfig struct {
 	Instance string
 	Database string
+	// TODO: Determine user from the app default service credentials
+	Username string
 }
 
 func (c *CloudSQLConnectorConfig) poolConfig(ctx context.Context) (*pgxpool.Config, error) {
@@ -30,8 +32,7 @@ func (c *CloudSQLConnectorConfig) poolConfig(ctx context.Context) (*pgxpool.Conf
 	if err != nil {
 		return nil, fmt.Errorf("creating cloud sql dialer: %w", err)
 	}
-	// TODO: Determine user from the app default service credentials
-	pgxCfg, err := pgxpool.ParseConfig(fmt.Sprintf("user=849144245446-compute@developer database=%s", c.Database))
+	pgxCfg, err := pgxpool.ParseConfig(fmt.Sprintf("user=%s database=%s", c.Username, c.Database))
 	if err != nil {
 		return nil, fmt.Errorf("parsing cloud sql config: %w", err)
 	}

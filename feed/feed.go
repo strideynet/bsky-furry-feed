@@ -11,6 +11,7 @@ import (
 	"github.com/strideynet/bsky-furry-feed/store"
 	"golang.org/x/exp/slices"
 	"math"
+	"strings"
 	"time"
 )
 
@@ -168,7 +169,26 @@ func hotGenerator() GenerateFunc {
 
 func scoreBasedGenerator(gravity float64, postAgeOffset time.Duration) GenerateFunc {
 	return func(ctx context.Context, queries *store.Queries, cursor string, limit int) ([]Post, error) {
-		rows, err := queries.GetPostsWithLikes(ctx, 500)
+		cursorTime := time.Now().UTC()
+		if cursor != "" {
+			parts := strings.Split(cursor, "|")
+			if len(parts) != 2 {
+				return nil, fmt.Errorf("unexpected number of parts in cursor: %d", len(parts))
+			}
+			parsedTime, err := bluesky.ParseTime(parts[0])
+			if err != nil {
+				return nil, fmt.Errorf("parsing cursor time: %w", err)
+			}
+			cursorTime = parsedTime
+		}
+
+		rows, err := queries.GetPostsWithLikes(ctx, store.GetPostsWithLikesParams{
+			Limit: 500,
+			CursorTimestamp: pgtype.Timestamptz{
+				Time:  cursorTime,
+				Valid: true,
+			},
+		})
 		if err != nil {
 			return nil, fmt.Errorf("executing sql: %w", err)
 		}
@@ -178,6 +198,11 @@ func scoreBasedGenerator(gravity float64, postAgeOffset time.Duration) GenerateF
 			Score float64
 			Likes int64
 			Age   time.Duration
+		}
+
+		cursorTimeString := bluesky.FormatTime(cursorTime)
+		makeCursor := func(uri string) string {
+			return fmt.Sprintf("%s|%s", cursorTimeString, uri)
 		}
 
 		scorePost := func(likes int64, age time.Duration) float64 {
@@ -190,7 +215,7 @@ func scoreBasedGenerator(gravity float64, postAgeOffset time.Duration) GenerateF
 			scoredPosts = append(scoredPosts, scoredPost{
 				Post: Post{
 					URI:    p.URI,
-					Cursor: p.URI,
+					Cursor: makeCursor(p.URI),
 				},
 				Likes: p.Likes,
 				Age:   age,
@@ -211,8 +236,8 @@ func scoreBasedGenerator(gravity float64, postAgeOffset time.Duration) GenerateF
 		}
 
 		if cursor != "" {
-			// This pagination is extremely rough and doesn't account for posts
-			// moving back and forth past one another.
+			// This pagination is extremely rough - we search through the list
+			// for the current post in the cursor and then start from there.
 			foundIndex := -1
 			for i, p := range posts {
 				if p.Cursor == cursor {
@@ -222,15 +247,14 @@ func scoreBasedGenerator(gravity float64, postAgeOffset time.Duration) GenerateF
 			}
 			if foundIndex == -1 {
 				// cant find post, indicate to client to start again
-				return nil, nil
+				return nil, fmt.Errorf("could not find cursor post")
 			}
-			startFrom := foundIndex + 1
-			if startFrom == len(posts) {
+			if foundIndex+1 == len(posts) {
 				// the cursor is pointing at the last post, indicate end
-				// reached
+				// reached by returning empty
 				return nil, nil
 			}
-			posts = posts[startFrom:]
+			posts = posts[foundIndex+1:]
 		}
 
 		posts = posts[:limit]
@@ -249,11 +273,11 @@ func ServiceWithDefaultFeeds(queries *store.Queries) *Service {
 	}
 
 	r.Register(Meta{ID: "furry-new"}, newGenerator())
-	r.Register(Meta{ID: "furry-hot"}, hotGenerator())
+	r.Register(Meta{ID: "furry-hot"}, scoreBasedGenerator(1.85, time.Hour*2))
 	r.Register(Meta{ID: "furry-fursuit"}, newWithTagGenerator(bff.TagFursuitMedia))
 	r.Register(Meta{ID: "furry-art"}, newWithTagGenerator(bff.TagArt))
 	r.Register(Meta{ID: "furry-nsfw"}, newWithTagGenerator(bff.TagNSFW))
-	r.Register(Meta{ID: "furry-test"}, scoreBasedGenerator(1.85, time.Hour*2))
+	r.Register(Meta{ID: "furry-test"}, scoreBasedGenerator(1.5, time.Hour*2))
 
 	return r
 }

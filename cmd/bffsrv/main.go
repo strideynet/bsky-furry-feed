@@ -23,9 +23,28 @@ import (
 
 var tracer = otel.Tracer("bffsrv")
 
-// TODO: Better, more granular, configuration.
+// TODO: Better, more granular, env configuration.
 // A `inGCP` would make more sense rather than `isProduction`
-var inProduction = os.Getenv("ENV") == "production"
+type mode string
+
+var (
+	productionMode mode = "production"
+	feedDevMode    mode = "feedDev"
+	devMode        mode = "dev"
+)
+
+func getMode() (mode, error) {
+	switch os.Getenv("ENV") {
+	case "production":
+		return productionMode, nil
+	case "feedDev":
+		return feedDevMode, nil
+	case "dev":
+		return devMode, nil
+	default:
+		return "", fmt.Errorf("unrecognized mode: %s", os.Getenv("ENV"))
+	}
+}
 
 func main() {
 	log, _ := zap.NewProduction()
@@ -35,10 +54,10 @@ func main() {
 	}
 }
 
-func tracerProvider(ctx context.Context, url string) (*tracesdk.TracerProvider, error) {
+func tracerProvider(ctx context.Context, url string, mode mode) (*tracesdk.TracerProvider, error) {
 	var exp tracesdk.SpanExporter
 	var err error
-	if inProduction {
+	if mode == productionMode {
 		exp, err = texporter.New()
 		if err != nil {
 			return nil, fmt.Errorf("creating gcp trace exporter: %w", err)
@@ -66,7 +85,7 @@ func tracerProvider(ctx context.Context, url string) (*tracesdk.TracerProvider, 
 		tracesdk.WithBatcher(exp),
 		tracesdk.WithResource(r),
 	}
-	if inProduction {
+	if mode == productionMode {
 		tpOpts = append(tpOpts, tracesdk.WithSampler(tracesdk.TraceIDRatioBased(0.001)))
 	}
 
@@ -80,28 +99,48 @@ func tracerProvider(ctx context.Context, url string) (*tracesdk.TracerProvider, 
 }
 
 func runE(log *zap.Logger) error {
+	mode, err := getMode()
+	if err != nil {
+		return err
+	}
+
+	log.Info("starting", zap.String("mode", string(mode)))
+
 	ctx, cancel := signal.NotifyContext(context.Background(), unix.SIGINT)
 	defer cancel()
 
 	log.Info("setting up services")
-	_, err := tracerProvider(
+	_, err = tracerProvider(
 		ctx,
 		"http://localhost:14268/api/traces",
+		mode,
 	)
 	if err != nil {
 		return fmt.Errorf("creating tracer provider: %w", err)
 	}
 
 	var storeConfig store.Config
-	if inProduction {
+	switch mode {
+	case productionMode:
 		storeConfig.CloudSQL = &store.CloudSQLConnectorConfig{
 			Instance: "bsky-furry-feed:us-east1:main-us-east",
 			Database: "bff",
+			// TODO: Fetch this from an env var or from adc
+			Username: "849144245446-compute@developer",
 		}
-	} else {
+	case feedDevMode:
+		storeConfig.CloudSQL = &store.CloudSQLConnectorConfig{
+			Instance: "bsky-furry-feed:us-east1:main-us-east",
+			Database: "bff",
+			// TODO: Fetch this from an env var or from adc
+			Username: "noah@noahstride.co.uk",
+		}
+	case devMode:
 		storeConfig.Direct = &store.DirectConnectorConfig{
 			URI: "postgres://bff:bff@localhost:5432/bff?sslmode=disable",
 		}
+	default:
+		return fmt.Errorf("unhandled mode: %s", mode)
 	}
 	queries, queriesClose, err := storeConfig.Connect(ctx)
 	if err != nil {
@@ -127,20 +166,22 @@ func runE(log *zap.Logger) error {
 		return crc.Start(ctx)
 	})
 
-	// Setup ingester
-	fi := ingester.NewFirehoseIngester(
-		log.Named("firehose_ingester"), queries, crc,
-	)
-	eg.Go(func() error {
-		return fi.Start(ctx)
-	})
+	// Setup ingester if not running in feed developer mode
+	if mode != feedDevMode {
+		fi := ingester.NewFirehoseIngester(
+			log.Named("firehose_ingester"), queries, crc,
+		)
+		eg.Go(func() error {
+			return fi.Start(ctx)
+		})
+	}
 
 	feedService := feed.ServiceWithDefaultFeeds(queries)
 
 	// Setup the public HTTP/XRPC server
 	// TODO: Make these externally configurable
 	hostname := "dev-feed.ottr.sh"
-	if inProduction {
+	if mode == productionMode {
 		hostname = "feed.furryli.st"
 	}
 	listenAddr := ":1337"
@@ -150,7 +191,6 @@ func runE(log *zap.Logger) error {
 		listenAddr,
 		feedService,
 	)
-
 	if err != nil {
 		return fmt.Errorf("creating feed server: %w", err)
 	}

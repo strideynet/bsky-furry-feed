@@ -200,17 +200,26 @@ SELECT
      FROM
          candidate_likes cl
      WHERE
-         cl.subject_uri = cp.uri) AS likes
+           cl.subject_uri = cp.uri
+       AND ($1::TIMESTAMPTZ IS NULL OR
+            cl.indexed_at < $1)) AS likes
 FROM
     candidate_posts cp
         INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
 WHERE
       cp.is_hidden = false
   AND ca.status = 'approved'
+  AND ($1::TIMESTAMPTZ IS NULL OR
+       cp.indexed_at < $1)
 ORDER BY
-    cp.created_at DESC
-LIMIT $1
+    cp.indexed_at DESC
+LIMIT $2
 `
+
+type GetPostsWithLikesParams struct {
+	CursorTimestamp pgtype.Timestamptz
+	Limit           int32
+}
 
 type GetPostsWithLikesRow struct {
 	URI       string
@@ -223,8 +232,8 @@ type GetPostsWithLikesRow struct {
 	Likes     int64
 }
 
-func (q *Queries) GetPostsWithLikes(ctx context.Context, Limit int32) ([]GetPostsWithLikesRow, error) {
-	rows, err := q.db.Query(ctx, getPostsWithLikes, Limit)
+func (q *Queries) GetPostsWithLikes(ctx context.Context, arg GetPostsWithLikesParams) ([]GetPostsWithLikesRow, error) {
+	rows, err := q.db.Query(ctx, getPostsWithLikes, arg.CursorTimestamp, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
