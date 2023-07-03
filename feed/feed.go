@@ -221,7 +221,6 @@ func scoreBasedGenerator(gravity float64, postAgeOffset time.Duration) GenerateF
 					break
 				}
 			}
-			fmt.Printf("found index: %d %s %d\n", foundIndex, posts[foundIndex].URI, len(posts))
 			if foundIndex == -1 {
 				// cant find post, indicate to client to start again
 				return nil, nil
