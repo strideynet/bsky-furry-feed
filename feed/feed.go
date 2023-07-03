@@ -277,7 +277,13 @@ func ServiceWithDefaultFeeds(queries *store.Queries) *Service {
 	r.Register(Meta{ID: "furry-fursuit"}, newWithTagGenerator(bff.TagFursuitMedia))
 	r.Register(Meta{ID: "furry-art"}, newWithTagGenerator(bff.TagArt))
 	r.Register(Meta{ID: "furry-nsfw"}, newWithTagGenerator(bff.TagNSFW))
-	r.Register(Meta{ID: "furry-test"}, scoreBasedGenerator(1.5, time.Hour*2))
+	r.Register(Meta{ID: "furry-test"}, func(_ context.Context, _ *store.Queries, _ string, limit int) ([]Post, error) {
+		return []Post{
+			{
+				URI: "at://did:plc:dllwm3fafh66ktjofzxhylwk/app.bsky.feed.post/3jznh32lq6s2c",
+			},
+		}, nil
+	})
 
 	return r
 }
