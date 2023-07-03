@@ -204,10 +204,12 @@ func scoreBasedGenerator(gravity float64, postAgeOffset time.Duration) GenerateF
 
 		// Strip points info so we can return this in the expected type.
 		posts := make([]Post, 0, len(rows))
-		for _, p := range scoredPosts {
-			// Debugs the post scoring - we'll leave this commented for now
-			// until we make an endpoint to expose this.
-			// fmt.Printf("%s - age: %s likes: %d score: %e\n", p.Post.URI, p.Age, p.Likes, p.Score)
+		for i, p := range scoredPosts {
+			// Debugs the post scoring for top ten - we need to add an endpoint
+			// for this.
+			if i < 10 {
+				fmt.Printf("%s - age: %s likes: %d score: %e\n", p.Post.URI, p.Age, p.Likes, p.Score)
+			}
 			posts = append(posts, p.Post)
 		}
 
@@ -254,7 +256,7 @@ func ServiceWithDefaultFeeds(queries *store.Queries) *Service {
 	r.Register(Meta{ID: "furry-fursuit"}, newWithTagGenerator(bff.TagFursuitMedia))
 	r.Register(Meta{ID: "furry-art"}, newWithTagGenerator(bff.TagArt))
 	r.Register(Meta{ID: "furry-nsfw"}, newWithTagGenerator(bff.TagNSFW))
-	r.Register(Meta{ID: "furry-test"}, scoreBasedGenerator(2, time.Hour*1))
+	r.Register(Meta{ID: "furry-test"}, scoreBasedGenerator(2, time.Minute*30))
 
 	return r
 }
