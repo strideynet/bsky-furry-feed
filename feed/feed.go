@@ -181,7 +181,7 @@ func scoreBasedGenerator(gravity float64, postAgeOffset time.Duration) GenerateF
 		}
 
 		scorePost := func(likes int64, age time.Duration) float64 {
-			return float64(likes) / math.Pow(age.Hours()+float64(postAgeOffset), gravity)
+			return float64(likes) / math.Pow(age.Hours()+postAgeOffset.Hours(), gravity)
 		}
 
 		scoredPosts := make([]scoredPost, 0, len(rows))
