@@ -183,7 +183,7 @@ func scoreBasedGenerator(gravity float64, postAgeOffset time.Duration) GenerateF
 		}
 
 		rows, err := queries.GetPostsWithLikes(ctx, store.GetPostsWithLikesParams{
-			Limit: 500,
+			Limit: 1000,
 			CursorTimestamp: pgtype.Timestamptz{
 				Time:  cursorTime,
 				Valid: true,
