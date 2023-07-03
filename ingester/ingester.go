@@ -213,6 +213,17 @@ func (fi *FirehoseIngester) isFurryFeedLike(record typegen.CBORMarshaler) bool {
 	return slices.Contains(fi.furryFeeds, like.Subject.Uri)
 }
 
+func (fi *FirehoseIngester) isFurryFeedFollow(record typegen.CBORMarshaler) bool {
+	follow, ok := record.(*bsky.GraphFollow)
+	if !ok {
+		return false
+	}
+
+	// TODO: Make this not hard coded
+	// https://bsky.app/profile/furryli.st
+	return follow.Subject == "did:plc:jdkvwye2lf4mingzk7qdebzc"
+}
+
 func (fi *FirehoseIngester) handleRecordCreate(
 	ctx context.Context,
 	log *zap.Logger,
@@ -225,13 +236,20 @@ func (fi *FirehoseIngester) handleRecordCreate(
 
 	actor := fi.crc.GetByDID(repoDID)
 	if actor == nil {
-		// If it's an unknown actor, and they've just liked the feed, add em to
+		feedLike := fi.isFurryFeedLike(record)
+		feedFollow := fi.isFurryFeedFollow(record)
+		// If it's an unknown actor, and they've interacted, add em to
 		// the candidate actor store with pending status. Otherwise, ignore
 		// them.
-		if !fi.isFurryFeedLike(record) {
+		if !(feedLike || feedFollow) {
 			return nil
 		}
-		log.Info("unknown actor liked feed, adding to db as pending", zap.String("did", repoDID))
+		log.Info(
+			"unknown actor interacted, adding to db as pending",
+			zap.String("did", repoDID),
+			zap.Bool("feed_like", feedLike),
+			zap.Bool("feed_follow", feedFollow),
+		)
 		var err error
 		actor, err = fi.crc.CreatePendingCandidateActor(ctx, repoDID)
 		if err != nil {

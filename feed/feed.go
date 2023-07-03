@@ -207,9 +207,6 @@ func scoreBasedGenerator(gravity float64, postAgeOffset time.Duration) GenerateF
 		for _, p := range scoredPosts {
 			// Debugs the post scoring for top ten - we need to add an endpoint
 			// for this.
-			//if i < 10 {
-			//	fmt.Printf("%s - age: %s likes: %d score: %e\n", p.Post.URI, p.Age, p.Likes, p.Score)
-			//}
 			posts = append(posts, p.Post)
 		}
 
