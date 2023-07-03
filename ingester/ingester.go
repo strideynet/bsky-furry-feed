@@ -255,12 +255,13 @@ func (fi *FirehoseIngester) handleRecordCreate(
 		if err != nil {
 			return fmt.Errorf("creating pending candidate actor: %w", err)
 		}
+
+		return nil
 	}
 
 	// Only collect events from actors we care about e.g those that are
-	// approved or pending. Collecting pending actor's data means as soon as
-	// they are approved, their data can contribute to the feeds immediately.
-	if !(actor.Status == store.ActorStatusApproved || actor.Status == store.ActorStatusPending) {
+	// approved.
+	if !(actor.Status == store.ActorStatusApproved) {
 		return nil
 	}
 
