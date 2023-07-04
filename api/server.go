@@ -11,7 +11,7 @@ import (
 func handleErr(w http.ResponseWriter, log *zap.Logger, err error) {
 	log.Error("failed to handle request", zap.Error(err))
 	w.WriteHeader(500)
-	w.Write([]byte(fmt.Sprintf("failed to handle request: %s", err)))
+	_, _ = w.Write([]byte(fmt.Sprintf("failed to handle request: %s", err)))
 }
 
 func jsonHandler(log *zap.Logger, h func(r *http.Request) (any, error)) http.HandlerFunc {

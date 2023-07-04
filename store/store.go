@@ -58,6 +58,10 @@ func (c *Config) Connect(ctx context.Context) (*Queries, func(), error) {
 	case c.Direct != nil:
 		pgxCfg, err = c.Direct.poolConfig()
 	}
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to connect to db: %w", err)
+	}
+
 	pool, err := pgxpool.NewWithConfig(ctx, pgxCfg)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create pool: %w", err)

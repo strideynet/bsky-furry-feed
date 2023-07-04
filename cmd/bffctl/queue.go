@@ -46,7 +46,7 @@ func queueCmd(log *zap.Logger, env *environment) *cli.Command {
 			for i, actor := range prospectActors {
 				profile, err := client.GetProfile(cctx.Context, actor.DID)
 				if err != nil {
-					return fmt.Errorf("getting profile: %w, err")
+					return fmt.Errorf("getting profile: %w", err)
 				}
 
 				displayName := ""

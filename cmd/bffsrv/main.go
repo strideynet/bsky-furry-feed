@@ -21,8 +21,6 @@ import (
 	"os/signal"
 )
 
-var tracer = otel.Tracer("bffsrv")
-
 // TODO: Better, more granular, env configuration.
 // A `inGCP` would make more sense rather than `isProduction`
 type mode string

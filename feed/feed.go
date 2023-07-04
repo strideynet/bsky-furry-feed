@@ -60,7 +60,7 @@ func (s *Service) IDs() []string {
 	for _, f := range s.feeds {
 		ids = append(ids, f.meta.ID)
 	}
-	return nil
+	return ids
 }
 
 func (s *Service) GetFeedPosts(ctx context.Context, feedKey string, cursor string, limit int) (posts []Post, err error) {
@@ -135,31 +135,6 @@ func newWithTagGenerator(tag string) GenerateFunc {
 		}
 
 		posts, err := queries.GetFurryNewFeedWithTag(ctx, params)
-		if err != nil {
-			return nil, fmt.Errorf("executing sql: %w", err)
-		}
-		return PostsFromStorePosts(posts), nil
-	}
-}
-
-func hotGenerator() GenerateFunc {
-	return func(ctx context.Context, queries *store.Queries, cursor string, limit int) ([]Post, error) {
-		params := store.GetFurryHotFeedParams{
-			Limit:         int32(limit),
-			LikeThreshold: int32(4),
-		}
-		if cursor != "" {
-			cursorTime, err := bluesky.ParseTime(cursor)
-			if err != nil {
-				return nil, fmt.Errorf("parsing cursor: %w", err)
-			}
-			params.CursorTimestamp = pgtype.Timestamptz{
-				Valid: true,
-				Time:  cursorTime,
-			}
-		}
-
-		posts, err := queries.GetFurryHotFeed(ctx, params)
 		if err != nil {
 			return nil, fmt.Errorf("executing sql: %w", err)
 		}

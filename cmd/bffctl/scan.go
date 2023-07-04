@@ -87,7 +87,7 @@ func scanCmd(log *zap.Logger, env *environment) *cli.Command {
 			for actor := range prospectActors {
 				profile, err := client.GetProfile(cctx.Context, actor)
 				if err != nil {
-					return fmt.Errorf("getting profile: %w, err")
+					return fmt.Errorf("getting profile: %w", err)
 				}
 
 				displayName := ""

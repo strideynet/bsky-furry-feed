@@ -250,9 +250,7 @@ func (fi *FirehoseIngester) handleRecordCreate(
 			zap.Bool("feed_like", feedLike),
 			zap.Bool("feed_follow", feedFollow),
 		)
-		var err error
-		actor, err = fi.crc.CreatePendingCandidateActor(ctx, repoDID)
-		if err != nil {
+		if _, err := fi.crc.CreatePendingCandidateActor(ctx, repoDID); err != nil {
 			return fmt.Errorf("creating pending candidate actor: %w", err)
 		}
 
