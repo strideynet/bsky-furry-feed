@@ -6,9 +6,9 @@ require (
 	cloud.google.com/go/cloudsqlconn v1.2.4
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace v1.13.1
 	github.com/bluesky-social/indigo v0.0.0-20230510211720-da6d879e182c
+	github.com/bufbuild/connect-go v1.9.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/jackc/pgx/v5 v5.3.1
-	github.com/oklog/run v1.1.0
 	github.com/prometheus/client_golang v1.14.0
 	github.com/urfave/cli/v2 v2.25.1
 	github.com/whyrusleeping/cbor-gen v0.0.0-20230331140348-1f892b517e70
@@ -18,6 +18,10 @@ require (
 	go.opentelemetry.io/otel/exporters/jaeger v1.15.0
 	go.opentelemetry.io/otel/sdk v1.15.1
 	go.uber.org/zap v1.24.0
+	golang.org/x/exp v0.0.0-20230510235704-dd950f8aeaea
+	golang.org/x/sync v0.1.0
+	golang.org/x/sys v0.8.0
+	google.golang.org/protobuf v1.31.0
 )
 
 require (
@@ -97,11 +101,8 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.7.0 // indirect
-	golang.org/x/exp v0.0.0-20230510235704-dd950f8aeaea // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/oauth2 v0.8.0 // indirect
-	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
@@ -109,7 +110,6 @@ require (
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
 	google.golang.org/grpc v1.55.0 // indirect
-	google.golang.org/protobuf v1.30.0 // indirect
 	gorm.io/gorm v1.24.7-0.20230306060331-85eaf9eeda11 // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect
 )
