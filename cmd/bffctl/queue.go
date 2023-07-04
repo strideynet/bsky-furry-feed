@@ -61,6 +61,11 @@ func queueCmd(log *zap.Logger, env *environment) *cli.Command {
 					len(prospectActors),
 					comment,
 				)
+				if profile.Description != nil {
+					fmt.Println()
+					fmt.Println(*profile.Description)
+					fmt.Println()
+				}
 				fmt.Printf("link: https://bsky.app/profile/%s\n", actor.DID)
 				fmt.Printf("(a)dd, (r)eject, (s)kip, (q)uit: ")
 				action := ""
