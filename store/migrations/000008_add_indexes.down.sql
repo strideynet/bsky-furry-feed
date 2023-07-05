@@ -1,1 +1,1 @@
-CREATE INDEX candidate_likes_subject_uri_idx;
+DROP INDEX candidate_likes_subject_uri_idx;
