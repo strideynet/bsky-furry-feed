@@ -1,7 +1,29 @@
 import React, {useState} from 'react'
 import ReactDOM from 'react-dom/client'
-import App from './App.tsx'
+import {
+  RouterProvider,
+  Router,
+  Route,
+  RootRoute,
+} from '@tanstack/router'
 import {ColorScheme, ColorSchemeProvider, MantineProvider} from "@mantine/core";
+
+import App, {HomePage} from './App.tsx'
+
+// TODO: Pull routing into seperate file!
+const rootRoute = new RootRoute({
+  component: App,
+})
+
+const indexRoute = new Route({
+  getParentRoute: () => rootRoute,
+  path: '/',
+  component: HomePage,
+})
+
+const routeTree = rootRoute.addChildren([indexRoute])
+
+const router = new Router({ routeTree })
 
 const Root = () => {
   const [colorScheme, setColorScheme] = useState<ColorScheme>('light');
@@ -14,7 +36,7 @@ const Root = () => {
       toggleColorScheme={toggleColorScheme}
     >
       <MantineProvider withGlobalStyles withNormalizeCSS>
-        <App/>
+        <RouterProvider router={router} />
       </MantineProvider>
     </ColorSchemeProvider>
   </React.StrictMode>

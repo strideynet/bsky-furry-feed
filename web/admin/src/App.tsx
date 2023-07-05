@@ -13,6 +13,7 @@ import {
   useMantineColorScheme, useMantineTheme
 } from "@mantine/core";
 import {IconMoonStars, IconSun} from "@tabler/icons-react";
+import {Outlet} from "@tanstack/router";
 
 interface session {
   did: string
@@ -121,10 +122,14 @@ const App = () => {
           main: {backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[8] : theme.colors.gray[0]},
         })}
       >
-        Content
+        < Outlet />
       </AppShell>
     </>
   )
+}
+
+export const HomePage = () => {
+  return <Text>Home!</Text>
 }
 
 export default App
