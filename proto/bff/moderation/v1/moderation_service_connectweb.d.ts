@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { GetCandidateActorRequest, GetCandidateActorResponse, ListCandidateActorsRequest, ListCandidateActorsResponse, ListCandidateFollowsRequest, ListCandidateFollowsResponse, ListCandidateLikesRequest, ListCandidateLikesResponse, ListCandidatePostsRequest, ListCandidatePostsResponse, PingRequest, PingResponse } from "./moderation_service_pb.js";
+import { GetApprovalQueueRequest, GetApprovalQueueResponse, PingRequest, PingResponse, ProcessApprovalQueueRequest, ProcessApprovalQueueResponse } from "./moderation_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -22,48 +22,21 @@ export declare const ModerationService: {
       readonly kind: MethodKind.Unary,
     },
     /**
-     * @generated from rpc bff.moderation.v1.ModerationService.GetCandidateActor
+     * @generated from rpc bff.moderation.v1.ModerationService.GetApprovalQueue
      */
-    readonly getCandidateActor: {
-      readonly name: "GetCandidateActor",
-      readonly I: typeof GetCandidateActorRequest,
-      readonly O: typeof GetCandidateActorResponse,
+    readonly getApprovalQueue: {
+      readonly name: "GetApprovalQueue",
+      readonly I: typeof GetApprovalQueueRequest,
+      readonly O: typeof GetApprovalQueueResponse,
       readonly kind: MethodKind.Unary,
     },
     /**
-     * @generated from rpc bff.moderation.v1.ModerationService.ListCandidateActors
+     * @generated from rpc bff.moderation.v1.ModerationService.ProcessApprovalQueue
      */
-    readonly listCandidateActors: {
-      readonly name: "ListCandidateActors",
-      readonly I: typeof ListCandidateActorsRequest,
-      readonly O: typeof ListCandidateActorsResponse,
-      readonly kind: MethodKind.Unary,
-    },
-    /**
-     * @generated from rpc bff.moderation.v1.ModerationService.ListCandidatePosts
-     */
-    readonly listCandidatePosts: {
-      readonly name: "ListCandidatePosts",
-      readonly I: typeof ListCandidatePostsRequest,
-      readonly O: typeof ListCandidatePostsResponse,
-      readonly kind: MethodKind.Unary,
-    },
-    /**
-     * @generated from rpc bff.moderation.v1.ModerationService.ListCandidateLikes
-     */
-    readonly listCandidateLikes: {
-      readonly name: "ListCandidateLikes",
-      readonly I: typeof ListCandidateLikesRequest,
-      readonly O: typeof ListCandidateLikesResponse,
-      readonly kind: MethodKind.Unary,
-    },
-    /**
-     * @generated from rpc bff.moderation.v1.ModerationService.ListCandidateFollows
-     */
-    readonly listCandidateFollows: {
-      readonly name: "ListCandidateFollows",
-      readonly I: typeof ListCandidateFollowsRequest,
-      readonly O: typeof ListCandidateFollowsResponse,
+    readonly processApprovalQueue: {
+      readonly name: "ProcessApprovalQueue",
+      readonly I: typeof ProcessApprovalQueueRequest,
+      readonly O: typeof ProcessApprovalQueueResponse,
       readonly kind: MethodKind.Unary,
     },
   }

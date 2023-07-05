@@ -8,11 +8,8 @@ option go_package = "github.com/strideynet/bsky-furry-feed/proto/bff/moderation/
 
 service ModerationService {
   rpc Ping(PingRequest) returns (PingResponse) {}
-  rpc GetCandidateActor(GetCandidateActorRequest) returns (GetCandidateActorResponse) {}
-  rpc ListCandidateActors(ListCandidateActorsRequest) returns (ListCandidateActorsResponse) {}
-  rpc ListCandidatePosts(ListCandidatePostsRequest) returns (ListCandidatePostsResponse) {}
-  rpc ListCandidateLikes(ListCandidateLikesRequest) returns (ListCandidateLikesResponse) {}
-  rpc ListCandidateFollows(ListCandidateFollowsRequest) returns (ListCandidateFollowsResponse) {}
+  rpc GetApprovalQueue(GetApprovalQueueRequest) returns (GetApprovalQueueResponse) {}
+  rpc ProcessApprovalQueue(ProcessApprovalQueueRequest) returns (ProcessApprovalQueueResponse) {}
 }
 
 message PingRequest {}
@@ -22,44 +19,31 @@ message PingResponse {}
 message CandidateActor {
   string did = 1;
   bool is_hidden = 2;
-  bool is_nsfw = 3;
-  bool is_artist = 4;
-  string comment = 5;
+  bool is_artist = 3;
+  string comment = 4;
 }
 
-message GetCandidateActorRequest {
+message GetApprovalQueueRequest {}
+
+message GetApprovalQueueResponse {
+  // queue_entry is the candidate actor that needs to be processed by a mod.
+  // process the queue entry using the ProcessApprovalQueueEntry RPC.
+  CandidateActor queue_entry = 1;
+  // queue_entries_remaining indicates how many queue entries are left including
+  // the one returned in this response.
+  int32 queue_entries_remaining = 2;
+}
+
+enum ApprovalQueueAction {
+  APPROVAL_QUEUE_ACTION_UNSPECIFIED = 0;
+  APPROVAL_QUEUE_ACTION_APPROVE = 1;
+  APPROVAL_QUEUE_ACTION_REJECT = 2;
+}
+
+message ProcessApprovalQueueRequest {
   string did = 1;
+  ApprovalQueueAction action = 2;
+  bool is_artist = 3;
 }
 
-message GetCandidateActorResponse {
-  CandidateActor candidate_actor = 1;
-}
-
-message CandidatePost {
-  string uri = 1;
-  string actor_did = 2;
-  google.protobuf.Timestamp created_at = 3;
-  google.protobuf.Timestamp indexed_at = 4;
-  bool is_nsfw = 5;
-  bool is_hidden = 6;
-}
-
-message ListCandidatePostsRequest {
-  string actor_did = 1;
-}
-
-message ListCandidatePostsResponse {
-  repeated CandidatePost candidate_posts = 1;
-}
-
-message ListCandidateActorsRequest {}
-
-message ListCandidateActorsResponse {}
-
-message ListCandidateLikesRequest {}
-
-message ListCandidateLikesResponse {}
-
-message ListCandidateFollowsRequest {}
-
-message ListCandidateFollowsResponse {}
+message ProcessApprovalQueueResponse {}

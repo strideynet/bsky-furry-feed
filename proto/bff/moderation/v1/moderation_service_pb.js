@@ -3,7 +3,19 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { proto3, Timestamp } from "@bufbuild/protobuf";
+import { proto3 } from "@bufbuild/protobuf";
+
+/**
+ * @generated from enum bff.moderation.v1.ApprovalQueueAction
+ */
+export const ApprovalQueueAction = proto3.makeEnum(
+  "bff.moderation.v1.ApprovalQueueAction",
+  [
+    {no: 0, name: "APPROVAL_QUEUE_ACTION_UNSPECIFIED", localName: "UNSPECIFIED"},
+    {no: 1, name: "APPROVAL_QUEUE_ACTION_APPROVE", localName: "APPROVE"},
+    {no: 2, name: "APPROVAL_QUEUE_ACTION_REJECT", localName: "REJECT"},
+  ],
+);
 
 /**
  * @generated from message bff.moderation.v1.PingRequest
@@ -29,112 +41,47 @@ export const CandidateActor = proto3.makeMessageType(
   () => [
     { no: 1, name: "did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "is_hidden", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 3, name: "is_nsfw", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 4, name: "is_artist", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 5, name: "comment", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "is_artist", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "comment", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ],
 );
 
 /**
- * @generated from message bff.moderation.v1.GetCandidateActorRequest
+ * @generated from message bff.moderation.v1.GetApprovalQueueRequest
  */
-export const GetCandidateActorRequest = proto3.makeMessageType(
-  "bff.moderation.v1.GetCandidateActorRequest",
+export const GetApprovalQueueRequest = proto3.makeMessageType(
+  "bff.moderation.v1.GetApprovalQueueRequest",
+  [],
+);
+
+/**
+ * @generated from message bff.moderation.v1.GetApprovalQueueResponse
+ */
+export const GetApprovalQueueResponse = proto3.makeMessageType(
+  "bff.moderation.v1.GetApprovalQueueResponse",
+  () => [
+    { no: 1, name: "queue_entry", kind: "message", T: CandidateActor },
+    { no: 2, name: "queue_entries_remaining", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ],
+);
+
+/**
+ * @generated from message bff.moderation.v1.ProcessApprovalQueueRequest
+ */
+export const ProcessApprovalQueueRequest = proto3.makeMessageType(
+  "bff.moderation.v1.ProcessApprovalQueueRequest",
   () => [
     { no: 1, name: "did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "action", kind: "enum", T: proto3.getEnumType(ApprovalQueueAction) },
+    { no: 3, name: "is_artist", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ],
 );
 
 /**
- * @generated from message bff.moderation.v1.GetCandidateActorResponse
+ * @generated from message bff.moderation.v1.ProcessApprovalQueueResponse
  */
-export const GetCandidateActorResponse = proto3.makeMessageType(
-  "bff.moderation.v1.GetCandidateActorResponse",
-  () => [
-    { no: 1, name: "candidate_actor", kind: "message", T: CandidateActor },
-  ],
-);
-
-/**
- * @generated from message bff.moderation.v1.CandidatePost
- */
-export const CandidatePost = proto3.makeMessageType(
-  "bff.moderation.v1.CandidatePost",
-  () => [
-    { no: 1, name: "uri", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "actor_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "created_at", kind: "message", T: Timestamp },
-    { no: 4, name: "indexed_at", kind: "message", T: Timestamp },
-    { no: 5, name: "is_nsfw", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 6, name: "is_hidden", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-  ],
-);
-
-/**
- * @generated from message bff.moderation.v1.ListCandidatePostsRequest
- */
-export const ListCandidatePostsRequest = proto3.makeMessageType(
-  "bff.moderation.v1.ListCandidatePostsRequest",
-  () => [
-    { no: 1, name: "actor_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ],
-);
-
-/**
- * @generated from message bff.moderation.v1.ListCandidatePostsResponse
- */
-export const ListCandidatePostsResponse = proto3.makeMessageType(
-  "bff.moderation.v1.ListCandidatePostsResponse",
-  () => [
-    { no: 1, name: "candidate_posts", kind: "message", T: CandidatePost, repeated: true },
-  ],
-);
-
-/**
- * @generated from message bff.moderation.v1.ListCandidateActorsRequest
- */
-export const ListCandidateActorsRequest = proto3.makeMessageType(
-  "bff.moderation.v1.ListCandidateActorsRequest",
-  [],
-);
-
-/**
- * @generated from message bff.moderation.v1.ListCandidateActorsResponse
- */
-export const ListCandidateActorsResponse = proto3.makeMessageType(
-  "bff.moderation.v1.ListCandidateActorsResponse",
-  [],
-);
-
-/**
- * @generated from message bff.moderation.v1.ListCandidateLikesRequest
- */
-export const ListCandidateLikesRequest = proto3.makeMessageType(
-  "bff.moderation.v1.ListCandidateLikesRequest",
-  [],
-);
-
-/**
- * @generated from message bff.moderation.v1.ListCandidateLikesResponse
- */
-export const ListCandidateLikesResponse = proto3.makeMessageType(
-  "bff.moderation.v1.ListCandidateLikesResponse",
-  [],
-);
-
-/**
- * @generated from message bff.moderation.v1.ListCandidateFollowsRequest
- */
-export const ListCandidateFollowsRequest = proto3.makeMessageType(
-  "bff.moderation.v1.ListCandidateFollowsRequest",
-  [],
-);
-
-/**
- * @generated from message bff.moderation.v1.ListCandidateFollowsResponse
- */
-export const ListCandidateFollowsResponse = proto3.makeMessageType(
-  "bff.moderation.v1.ListCandidateFollowsResponse",
+export const ProcessApprovalQueueResponse = proto3.makeMessageType(
+  "bff.moderation.v1.ProcessApprovalQueueResponse",
   [],
 );
 

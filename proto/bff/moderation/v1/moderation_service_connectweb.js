@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { GetCandidateActorRequest, GetCandidateActorResponse, ListCandidateActorsRequest, ListCandidateActorsResponse, ListCandidateFollowsRequest, ListCandidateFollowsResponse, ListCandidateLikesRequest, ListCandidateLikesResponse, ListCandidatePostsRequest, ListCandidatePostsResponse, PingRequest, PingResponse } from "./moderation_service_pb.js";
+import { GetApprovalQueueRequest, GetApprovalQueueResponse, PingRequest, PingResponse, ProcessApprovalQueueRequest, ProcessApprovalQueueResponse } from "./moderation_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -22,48 +22,21 @@ export const ModerationService = {
       kind: MethodKind.Unary,
     },
     /**
-     * @generated from rpc bff.moderation.v1.ModerationService.GetCandidateActor
+     * @generated from rpc bff.moderation.v1.ModerationService.GetApprovalQueue
      */
-    getCandidateActor: {
-      name: "GetCandidateActor",
-      I: GetCandidateActorRequest,
-      O: GetCandidateActorResponse,
+    getApprovalQueue: {
+      name: "GetApprovalQueue",
+      I: GetApprovalQueueRequest,
+      O: GetApprovalQueueResponse,
       kind: MethodKind.Unary,
     },
     /**
-     * @generated from rpc bff.moderation.v1.ModerationService.ListCandidateActors
+     * @generated from rpc bff.moderation.v1.ModerationService.ProcessApprovalQueue
      */
-    listCandidateActors: {
-      name: "ListCandidateActors",
-      I: ListCandidateActorsRequest,
-      O: ListCandidateActorsResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * @generated from rpc bff.moderation.v1.ModerationService.ListCandidatePosts
-     */
-    listCandidatePosts: {
-      name: "ListCandidatePosts",
-      I: ListCandidatePostsRequest,
-      O: ListCandidatePostsResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * @generated from rpc bff.moderation.v1.ModerationService.ListCandidateLikes
-     */
-    listCandidateLikes: {
-      name: "ListCandidateLikes",
-      I: ListCandidateLikesRequest,
-      O: ListCandidateLikesResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * @generated from rpc bff.moderation.v1.ModerationService.ListCandidateFollows
-     */
-    listCandidateFollows: {
-      name: "ListCandidateFollows",
-      I: ListCandidateFollowsRequest,
-      O: ListCandidateFollowsResponse,
+    processApprovalQueue: {
+      name: "ProcessApprovalQueue",
+      I: ProcessApprovalQueueRequest,
+      O: ProcessApprovalQueueResponse,
       kind: MethodKind.Unary,
     },
   }

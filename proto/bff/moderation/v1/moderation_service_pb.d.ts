@@ -3,8 +3,28 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage, Timestamp } from "@bufbuild/protobuf";
+import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3 } from "@bufbuild/protobuf";
+
+/**
+ * @generated from enum bff.moderation.v1.ApprovalQueueAction
+ */
+export declare enum ApprovalQueueAction {
+  /**
+   * @generated from enum value: APPROVAL_QUEUE_ACTION_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: APPROVAL_QUEUE_ACTION_APPROVE = 1;
+   */
+  APPROVE = 1,
+
+  /**
+   * @generated from enum value: APPROVAL_QUEUE_ACTION_REJECT = 2;
+   */
+  REJECT = 2,
+}
 
 /**
  * @generated from message bff.moderation.v1.PingRequest
@@ -59,17 +79,12 @@ export declare class CandidateActor extends Message<CandidateActor> {
   isHidden: boolean;
 
   /**
-   * @generated from field: bool is_nsfw = 3;
-   */
-  isNsfw: boolean;
-
-  /**
-   * @generated from field: bool is_artist = 4;
+   * @generated from field: bool is_artist = 3;
    */
   isArtist: boolean;
 
   /**
-   * @generated from field: string comment = 5;
+   * @generated from field: string comment = 4;
    */
   comment: string;
 
@@ -89,261 +104,109 @@ export declare class CandidateActor extends Message<CandidateActor> {
 }
 
 /**
- * @generated from message bff.moderation.v1.GetCandidateActorRequest
+ * @generated from message bff.moderation.v1.GetApprovalQueueRequest
  */
-export declare class GetCandidateActorRequest extends Message<GetCandidateActorRequest> {
+export declare class GetApprovalQueueRequest extends Message<GetApprovalQueueRequest> {
+  constructor(data?: PartialMessage<GetApprovalQueueRequest>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "bff.moderation.v1.GetApprovalQueueRequest";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetApprovalQueueRequest;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetApprovalQueueRequest;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetApprovalQueueRequest;
+
+  static equals(a: GetApprovalQueueRequest | PlainMessage<GetApprovalQueueRequest> | undefined, b: GetApprovalQueueRequest | PlainMessage<GetApprovalQueueRequest> | undefined): boolean;
+}
+
+/**
+ * @generated from message bff.moderation.v1.GetApprovalQueueResponse
+ */
+export declare class GetApprovalQueueResponse extends Message<GetApprovalQueueResponse> {
+  /**
+   * queue_entry is the candidate actor that needs to be processed by a mod.
+   * process the queue entry using the ProcessApprovalQueueEntry RPC.
+   *
+   * @generated from field: bff.moderation.v1.CandidateActor queue_entry = 1;
+   */
+  queueEntry?: CandidateActor;
+
+  /**
+   * queue_entries_remaining indicates how many queue entries are left including
+   * the one returned in this response.
+   *
+   * @generated from field: int32 queue_entries_remaining = 2;
+   */
+  queueEntriesRemaining: number;
+
+  constructor(data?: PartialMessage<GetApprovalQueueResponse>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "bff.moderation.v1.GetApprovalQueueResponse";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetApprovalQueueResponse;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetApprovalQueueResponse;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetApprovalQueueResponse;
+
+  static equals(a: GetApprovalQueueResponse | PlainMessage<GetApprovalQueueResponse> | undefined, b: GetApprovalQueueResponse | PlainMessage<GetApprovalQueueResponse> | undefined): boolean;
+}
+
+/**
+ * @generated from message bff.moderation.v1.ProcessApprovalQueueRequest
+ */
+export declare class ProcessApprovalQueueRequest extends Message<ProcessApprovalQueueRequest> {
   /**
    * @generated from field: string did = 1;
    */
   did: string;
 
-  constructor(data?: PartialMessage<GetCandidateActorRequest>);
-
-  static readonly runtime: typeof proto3;
-  static readonly typeName = "bff.moderation.v1.GetCandidateActorRequest";
-  static readonly fields: FieldList;
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCandidateActorRequest;
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCandidateActorRequest;
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCandidateActorRequest;
-
-  static equals(a: GetCandidateActorRequest | PlainMessage<GetCandidateActorRequest> | undefined, b: GetCandidateActorRequest | PlainMessage<GetCandidateActorRequest> | undefined): boolean;
-}
-
-/**
- * @generated from message bff.moderation.v1.GetCandidateActorResponse
- */
-export declare class GetCandidateActorResponse extends Message<GetCandidateActorResponse> {
   /**
-   * @generated from field: bff.moderation.v1.CandidateActor candidate_actor = 1;
+   * @generated from field: bff.moderation.v1.ApprovalQueueAction action = 2;
    */
-  candidateActor?: CandidateActor;
-
-  constructor(data?: PartialMessage<GetCandidateActorResponse>);
-
-  static readonly runtime: typeof proto3;
-  static readonly typeName = "bff.moderation.v1.GetCandidateActorResponse";
-  static readonly fields: FieldList;
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCandidateActorResponse;
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCandidateActorResponse;
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCandidateActorResponse;
-
-  static equals(a: GetCandidateActorResponse | PlainMessage<GetCandidateActorResponse> | undefined, b: GetCandidateActorResponse | PlainMessage<GetCandidateActorResponse> | undefined): boolean;
-}
-
-/**
- * @generated from message bff.moderation.v1.CandidatePost
- */
-export declare class CandidatePost extends Message<CandidatePost> {
-  /**
-   * @generated from field: string uri = 1;
-   */
-  uri: string;
+  action: ApprovalQueueAction;
 
   /**
-   * @generated from field: string actor_did = 2;
+   * @generated from field: bool is_artist = 3;
    */
-  actorDid: string;
+  isArtist: boolean;
 
-  /**
-   * @generated from field: google.protobuf.Timestamp created_at = 3;
-   */
-  createdAt?: Timestamp;
-
-  /**
-   * @generated from field: google.protobuf.Timestamp indexed_at = 4;
-   */
-  indexedAt?: Timestamp;
-
-  /**
-   * @generated from field: bool is_nsfw = 5;
-   */
-  isNsfw: boolean;
-
-  /**
-   * @generated from field: bool is_hidden = 6;
-   */
-  isHidden: boolean;
-
-  constructor(data?: PartialMessage<CandidatePost>);
+  constructor(data?: PartialMessage<ProcessApprovalQueueRequest>);
 
   static readonly runtime: typeof proto3;
-  static readonly typeName = "bff.moderation.v1.CandidatePost";
+  static readonly typeName = "bff.moderation.v1.ProcessApprovalQueueRequest";
   static readonly fields: FieldList;
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CandidatePost;
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ProcessApprovalQueueRequest;
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CandidatePost;
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ProcessApprovalQueueRequest;
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CandidatePost;
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ProcessApprovalQueueRequest;
 
-  static equals(a: CandidatePost | PlainMessage<CandidatePost> | undefined, b: CandidatePost | PlainMessage<CandidatePost> | undefined): boolean;
+  static equals(a: ProcessApprovalQueueRequest | PlainMessage<ProcessApprovalQueueRequest> | undefined, b: ProcessApprovalQueueRequest | PlainMessage<ProcessApprovalQueueRequest> | undefined): boolean;
 }
 
 /**
- * @generated from message bff.moderation.v1.ListCandidatePostsRequest
+ * @generated from message bff.moderation.v1.ProcessApprovalQueueResponse
  */
-export declare class ListCandidatePostsRequest extends Message<ListCandidatePostsRequest> {
-  /**
-   * @generated from field: string actor_did = 1;
-   */
-  actorDid: string;
-
-  constructor(data?: PartialMessage<ListCandidatePostsRequest>);
+export declare class ProcessApprovalQueueResponse extends Message<ProcessApprovalQueueResponse> {
+  constructor(data?: PartialMessage<ProcessApprovalQueueResponse>);
 
   static readonly runtime: typeof proto3;
-  static readonly typeName = "bff.moderation.v1.ListCandidatePostsRequest";
+  static readonly typeName = "bff.moderation.v1.ProcessApprovalQueueResponse";
   static readonly fields: FieldList;
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListCandidatePostsRequest;
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ProcessApprovalQueueResponse;
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListCandidatePostsRequest;
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ProcessApprovalQueueResponse;
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListCandidatePostsRequest;
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ProcessApprovalQueueResponse;
 
-  static equals(a: ListCandidatePostsRequest | PlainMessage<ListCandidatePostsRequest> | undefined, b: ListCandidatePostsRequest | PlainMessage<ListCandidatePostsRequest> | undefined): boolean;
-}
-
-/**
- * @generated from message bff.moderation.v1.ListCandidatePostsResponse
- */
-export declare class ListCandidatePostsResponse extends Message<ListCandidatePostsResponse> {
-  /**
-   * @generated from field: repeated bff.moderation.v1.CandidatePost candidate_posts = 1;
-   */
-  candidatePosts: CandidatePost[];
-
-  constructor(data?: PartialMessage<ListCandidatePostsResponse>);
-
-  static readonly runtime: typeof proto3;
-  static readonly typeName = "bff.moderation.v1.ListCandidatePostsResponse";
-  static readonly fields: FieldList;
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListCandidatePostsResponse;
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListCandidatePostsResponse;
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListCandidatePostsResponse;
-
-  static equals(a: ListCandidatePostsResponse | PlainMessage<ListCandidatePostsResponse> | undefined, b: ListCandidatePostsResponse | PlainMessage<ListCandidatePostsResponse> | undefined): boolean;
-}
-
-/**
- * @generated from message bff.moderation.v1.ListCandidateActorsRequest
- */
-export declare class ListCandidateActorsRequest extends Message<ListCandidateActorsRequest> {
-  constructor(data?: PartialMessage<ListCandidateActorsRequest>);
-
-  static readonly runtime: typeof proto3;
-  static readonly typeName = "bff.moderation.v1.ListCandidateActorsRequest";
-  static readonly fields: FieldList;
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListCandidateActorsRequest;
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListCandidateActorsRequest;
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListCandidateActorsRequest;
-
-  static equals(a: ListCandidateActorsRequest | PlainMessage<ListCandidateActorsRequest> | undefined, b: ListCandidateActorsRequest | PlainMessage<ListCandidateActorsRequest> | undefined): boolean;
-}
-
-/**
- * @generated from message bff.moderation.v1.ListCandidateActorsResponse
- */
-export declare class ListCandidateActorsResponse extends Message<ListCandidateActorsResponse> {
-  constructor(data?: PartialMessage<ListCandidateActorsResponse>);
-
-  static readonly runtime: typeof proto3;
-  static readonly typeName = "bff.moderation.v1.ListCandidateActorsResponse";
-  static readonly fields: FieldList;
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListCandidateActorsResponse;
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListCandidateActorsResponse;
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListCandidateActorsResponse;
-
-  static equals(a: ListCandidateActorsResponse | PlainMessage<ListCandidateActorsResponse> | undefined, b: ListCandidateActorsResponse | PlainMessage<ListCandidateActorsResponse> | undefined): boolean;
-}
-
-/**
- * @generated from message bff.moderation.v1.ListCandidateLikesRequest
- */
-export declare class ListCandidateLikesRequest extends Message<ListCandidateLikesRequest> {
-  constructor(data?: PartialMessage<ListCandidateLikesRequest>);
-
-  static readonly runtime: typeof proto3;
-  static readonly typeName = "bff.moderation.v1.ListCandidateLikesRequest";
-  static readonly fields: FieldList;
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListCandidateLikesRequest;
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListCandidateLikesRequest;
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListCandidateLikesRequest;
-
-  static equals(a: ListCandidateLikesRequest | PlainMessage<ListCandidateLikesRequest> | undefined, b: ListCandidateLikesRequest | PlainMessage<ListCandidateLikesRequest> | undefined): boolean;
-}
-
-/**
- * @generated from message bff.moderation.v1.ListCandidateLikesResponse
- */
-export declare class ListCandidateLikesResponse extends Message<ListCandidateLikesResponse> {
-  constructor(data?: PartialMessage<ListCandidateLikesResponse>);
-
-  static readonly runtime: typeof proto3;
-  static readonly typeName = "bff.moderation.v1.ListCandidateLikesResponse";
-  static readonly fields: FieldList;
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListCandidateLikesResponse;
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListCandidateLikesResponse;
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListCandidateLikesResponse;
-
-  static equals(a: ListCandidateLikesResponse | PlainMessage<ListCandidateLikesResponse> | undefined, b: ListCandidateLikesResponse | PlainMessage<ListCandidateLikesResponse> | undefined): boolean;
-}
-
-/**
- * @generated from message bff.moderation.v1.ListCandidateFollowsRequest
- */
-export declare class ListCandidateFollowsRequest extends Message<ListCandidateFollowsRequest> {
-  constructor(data?: PartialMessage<ListCandidateFollowsRequest>);
-
-  static readonly runtime: typeof proto3;
-  static readonly typeName = "bff.moderation.v1.ListCandidateFollowsRequest";
-  static readonly fields: FieldList;
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListCandidateFollowsRequest;
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListCandidateFollowsRequest;
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListCandidateFollowsRequest;
-
-  static equals(a: ListCandidateFollowsRequest | PlainMessage<ListCandidateFollowsRequest> | undefined, b: ListCandidateFollowsRequest | PlainMessage<ListCandidateFollowsRequest> | undefined): boolean;
-}
-
-/**
- * @generated from message bff.moderation.v1.ListCandidateFollowsResponse
- */
-export declare class ListCandidateFollowsResponse extends Message<ListCandidateFollowsResponse> {
-  constructor(data?: PartialMessage<ListCandidateFollowsResponse>);
-
-  static readonly runtime: typeof proto3;
-  static readonly typeName = "bff.moderation.v1.ListCandidateFollowsResponse";
-  static readonly fields: FieldList;
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListCandidateFollowsResponse;
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListCandidateFollowsResponse;
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListCandidateFollowsResponse;
-
-  static equals(a: ListCandidateFollowsResponse | PlainMessage<ListCandidateFollowsResponse> | undefined, b: ListCandidateFollowsResponse | PlainMessage<ListCandidateFollowsResponse> | undefined): boolean;
+  static equals(a: ProcessApprovalQueueResponse | PlainMessage<ProcessApprovalQueueResponse> | undefined, b: ProcessApprovalQueueResponse | PlainMessage<ProcessApprovalQueueResponse> | undefined): boolean;
 }
 
