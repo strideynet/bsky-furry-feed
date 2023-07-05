@@ -1,15 +1,18 @@
 import {useEffect, useMemo, useState} from 'react'
 import {AppBskyActorDefs, AtpAgent} from "@atproto/api";
 import {
-  AppBar,
-  Container,
-  Toolbar,
-  Grid,
-  Paper,
-  Card,
-  CardContent
-} from "@mui/material";
-import Typography from '@mui/material/Typography';
+  ActionIcon,
+  AppShell,
+  Box,
+  Group,
+  Header,
+  Image,
+  Navbar, rem,
+  Text,
+  Title,
+  useMantineColorScheme, useMantineTheme
+} from "@mantine/core";
+import {IconMoonStars, IconSun} from "@tabler/icons-react";
 
 interface session {
   did: string
@@ -19,7 +22,10 @@ const useSession = (agent: AtpAgent) => {
   const [session, setSession] = useState<session | undefined>()
 
   useEffect(() => {
-    agent.login({ identifier: import.meta.env.VITE_BSKY_USERNAME, password: import.meta.env.VITE_BSKY_PASSWORD })
+    agent.login({
+      identifier: import.meta.env.VITE_BSKY_USERNAME,
+      password: import.meta.env.VITE_BSKY_PASSWORD
+    })
       .then((res) => {
         setSession({
           did: res.data.did,
@@ -42,7 +48,7 @@ const useGetProfile = (agent: AtpAgent, session?: session) => {
       return
     }
 
-    agent.api.app.bsky.actor.getProfile({ actor: session.did })
+    agent.api.app.bsky.actor.getProfile({actor: session.did})
       .then((res) => {
         setProfile(res.data)
       })
@@ -54,62 +60,69 @@ const useGetProfile = (agent: AtpAgent, session?: session) => {
   return profile
 }
 
-type  ProfileComponentProps = {
-  profile: AppBskyActorDefs.ProfileViewDetailed,
-}
-
-const ProfileComponent = ({ profile }: ProfileComponentProps) => {
-  return <>
-    Name: { profile.displayName }<br/>
-    Handle: { profile.handle }
-  </>
-}
-
 const App = () => {
+  const {colorScheme, toggleColorScheme} = useMantineColorScheme();
+  const theme = useMantineTheme();
+
   const agent = useMemo(() => {
-    return new AtpAgent({ service: 'https://bsky.social' })
+    return new AtpAgent({service: 'https://bsky.social'})
   }, [])
   const session = useSession(agent)
   const profile = useGetProfile(agent, session)
 
   return (
     <>
-      <AppBar position="static">
-        <Toolbar variant="dense">
-          <Typography variant="h6" color="inherit" component="div">
-            Furryli.st
-          </Typography>
-        </Toolbar>
-      </AppBar>
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={8} lg={4}>
-            <Card sx={{ minWidth: 275 }}>
-              <CardContent>
-                <Typography variant="h4">
-                  About You
-                </Typography>
-                <Typography variant="body1">
-                  {profile ?
-                    <ProfileComponent profile={profile}/>
-                    : 'loading'}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={8} lg={8}>
-            <Paper
-              sx={{
-                p: 2,
-                display: 'flex',
-                flexDirection: 'column',
-                height: 240,
-              }}
-            >
-            </Paper>
-          </Grid>
-        </Grid>
-      </Container>
+      <AppShell
+        padding="md"
+        navbar={
+          <Navbar width={{base: 300}} p="xs">
+            <Navbar.Section grow mt="xs">
+              <Text>Approval Queue</Text>
+            </Navbar.Section>
+            <Navbar.Section>
+              <Box sx={{
+                borderTop: `${rem(1)} solid ${
+                  theme.colorScheme === 'dark' ? theme.colors.dark[4] : theme.colors.gray[2]
+                }`
+              }}>
+                <Title order={3}>Your User</Title>
+                {profile ?
+                  <Text>
+                    Handle: {profile.handle}<br/>
+                    Username: {profile.displayName}
+                  </Text> : <Text>Loading...</Text>
+                }
+              </Box>
+            </Navbar.Section>
+          </Navbar>
+        }
+        header={
+          <Header height={60} p="xs">
+            <Group sx={{height: '100%'}} px={20} position="apart">
+              <Group>
+                <Image src="/dogmotif.png" radius="md" width={40}
+                       fit="contain"/>
+                <Title>Admin Dash</Title>
+              </Group>
+
+              <ActionIcon
+                variant="default"
+                onClick={() => toggleColorScheme()}
+                size={30}
+              >
+                {colorScheme === 'dark' ? <IconSun size="1rem"/> :
+                  <IconMoonStars size="1rem"/>}
+              </ActionIcon>
+            </Group>
+
+          </Header>
+        }
+        styles={(theme) => ({
+          main: {backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[8] : theme.colors.gray[0]},
+        })}
+      >
+        Content
+      </AppShell>
     </>
   )
 }
