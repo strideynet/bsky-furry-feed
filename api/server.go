@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"github.com/bufbuild/connect-go"
 	otelconnect "github.com/bufbuild/connect-opentelemetry-go"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/strideynet/bsky-furry-feed/feed"
 	"github.com/strideynet/bsky-furry-feed/proto/bff/moderation/v1/moderationv1pbconnect"
+	"github.com/strideynet/bsky-furry-feed/store"
 	"go.uber.org/zap"
 	"net/http"
 )
@@ -37,7 +37,7 @@ func New(
 	hostname string,
 	listenAddr string,
 	feedRegistry *feed.Service,
-	db *pgxpool.Pool,
+	queries *store.QueriesWithTX,
 ) (*http.Server, error) {
 	mux := &http.ServeMux{}
 
@@ -52,13 +52,14 @@ func New(
 
 	// Mount Buf Connect services
 	modSvcHandler := &ModerationServiceHandler{
-		db: db,
+		queries: queries,
 	}
 	mux.Handle(
 		moderationv1pbconnect.NewModerationServiceHandler(
 			modSvcHandler,
 			connect.WithInterceptors(
-				otelconnect.NewInterceptor()),
+				otelconnect.NewInterceptor(),
+			),
 		),
 	)
 

@@ -148,7 +148,7 @@ func runE(log *zap.Logger) error {
 
 	crc := ingester.NewCandidateActorCache(
 		log.Named("candidate_actor_cache"),
-		queries,
+		queries.Queries,
 	)
 	// Prefill the CRC before we proceed to ensure all candidate actors
 	// are available to sub-services. This eliminates some potential weirdness
@@ -167,14 +167,14 @@ func runE(log *zap.Logger) error {
 	// Setup ingester if not running in feed developer mode
 	if mode != feedDevMode {
 		fi := ingester.NewFirehoseIngester(
-			log.Named("firehose_ingester"), queries, crc,
+			log.Named("firehose_ingester"), queries.Queries, crc,
 		)
 		eg.Go(func() error {
 			return fi.Start(ctx)
 		})
 	}
 
-	feedService := feed.ServiceWithDefaultFeeds(queries)
+	feedService := feed.ServiceWithDefaultFeeds(queries.Queries)
 
 	// Setup the public HTTP/XRPC server
 	// TODO: Make these externally configurable
@@ -188,6 +188,7 @@ func runE(log *zap.Logger) error {
 		hostname,
 		listenAddr,
 		feedService,
+		queries,
 	)
 	if err != nil {
 		return fmt.Errorf("creating feed server: %w", err)

@@ -42,12 +42,27 @@ func (c *CloudSQLConnectorConfig) poolConfig(ctx context.Context) (*pgxpool.Conf
 	return pgxCfg, nil
 }
 
+type QueriesWithTX struct {
+	db *pgxpool.Pool
+	*Queries
+}
+
+func (q *QueriesWithTX) WithTx(ctx context.Context) (queries *Queries, commit func(ctx context.Context) error, rollback func() error, err error) {
+	tx, err := q.db.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return q.Queries.WithTx(tx), tx.Commit, func() error {
+		return tx.Rollback(context.Background())
+	}, nil
+}
+
 type Config struct {
 	CloudSQL *CloudSQLConnectorConfig
 	Direct   *DirectConnectorConfig
 }
 
-func (c *Config) Connect(ctx context.Context) (*Queries, func(), error) {
+func (c *Config) Connect(ctx context.Context) (*QueriesWithTX, func(), error) {
 	var err error
 	var pgxCfg *pgxpool.Config
 	switch {
@@ -66,7 +81,10 @@ func (c *Config) Connect(ctx context.Context) (*Queries, func(), error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create pool: %w", err)
 	}
-	return New(pool), pool.Close, nil
+	return &QueriesWithTX{
+		db:      pool,
+		Queries: New(pool),
+	}, pool.Close, nil
 }
 
 func ConfigFromEnv() (*Config, error) {

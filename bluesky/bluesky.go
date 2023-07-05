@@ -32,19 +32,15 @@ func NewUnauthClient() *UnauthClient {
 }
 
 func (c *UnauthClient) ResolveHandle(ctx context.Context, handle string) (*atproto.IdentityResolveHandle_Output, error) {
-	out, err := atproto.IdentityResolveHandle(
+	return atproto.IdentityResolveHandle(
 		ctx,
 		c.xrpc,
 		handle,
 	)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *UnauthClient) CreateSession(ctx context.Context, identifier string, password string) (*atproto.ServerCreateSession_Output, error) {
-	out, err := atproto.ServerCreateSession(
+	return atproto.ServerCreateSession(
 		ctx,
 		c.xrpc,
 		&atproto.ServerCreateSession_Input{
@@ -52,10 +48,6 @@ func (c *UnauthClient) CreateSession(ctx context.Context, identifier string, pas
 			Password:   password,
 		},
 	)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func AuthInfoFromCreateSession(in *atproto.ServerCreateSession_Output) *xrpc.AuthInfo {
@@ -84,38 +76,26 @@ func NewClient(auth *xrpc.AuthInfo) *Client {
 func (c *Client) GetFollowers(
 	ctx context.Context, actor string, cursor string, limit int64,
 ) (*bsky.GraphGetFollowers_Output, error) {
-	out, err := bsky.GraphGetFollowers(
+	return bsky.GraphGetFollowers(
 		ctx,
 		c.xrpc,
 		actor,
 		cursor,
 		limit,
 	)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *Client) GetPostThread(
 	ctx context.Context, uri string,
 ) (*bsky.FeedGetPostThread_Output, error) {
-	out, err := bsky.FeedGetPostThread(ctx, c.xrpc, 1, uri)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
+	return bsky.FeedGetPostThread(ctx, c.xrpc, 1, uri)
 }
 
 // GetProfile fetches an actor's profile. actor can be a DID or a handle.
 func (c *Client) GetProfile(
 	ctx context.Context, actor string,
 ) (*bsky.ActorDefs_ProfileViewDetailed, error) {
-	out, err := bsky.ActorGetProfile(ctx, c.xrpc, actor)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
+	return bsky.ActorGetProfile(ctx, c.xrpc, actor)
 }
 
 // Follow creates an app.bsky.graph.follow for the user the client is
@@ -147,4 +127,9 @@ func (c *Client) Follow(
 		return err
 	}
 	return nil
+}
+
+// GetSession calls com.atproto.server.getSession
+func (c *Client) GetSession(ctx context.Context) (*atproto.ServerGetSession_Output, error) {
+	return atproto.ServerGetSession(ctx, c.xrpc)
 }
