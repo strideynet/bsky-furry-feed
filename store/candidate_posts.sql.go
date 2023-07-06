@@ -208,7 +208,8 @@ SELECT
      WHERE
            cl.subject_uri = cp.uri
        AND ($1::TIMESTAMPTZ IS NULL OR
-            cl.indexed_at < $1)) AS likes
+            cl.indexed_at < $1)
+       AND cl.deleted_at IS NULL) AS likes
 FROM
     candidate_posts cp
         INNER JOIN candidate_actors ca ON cp.actor_did = ca.did

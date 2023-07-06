@@ -76,7 +76,8 @@ SELECT
      WHERE
            cl.subject_uri = cp.uri
        AND (@cursor_timestamp::TIMESTAMPTZ IS NULL OR
-            cl.indexed_at < @cursor_timestamp)) AS likes
+            cl.indexed_at < @cursor_timestamp)
+       AND cl.deleted_at IS NULL) AS likes
 FROM
     candidate_posts cp
         INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
