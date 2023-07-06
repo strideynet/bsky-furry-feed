@@ -39,7 +39,7 @@ func (q *Queries) CreateCandidatePost(ctx context.Context, arg CreateCandidatePo
 
 const getFurryHotFeed = `-- name: GetFurryHotFeed :many
 SELECT
-    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden, cp.tags
+    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden, cp.tags, cp.deleted_at
 FROM
     candidate_posts cp
         INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
@@ -49,6 +49,7 @@ WHERE
   AND ca.status = 'approved'
   AND ($1::TIMESTAMPTZ IS NULL OR
        cp.created_at < $1)
+  AND cp.deleted_at IS NULL
 GROUP BY
     cp.uri
 HAVING
@@ -81,6 +82,7 @@ func (q *Queries) GetFurryHotFeed(ctx context.Context, arg GetFurryHotFeedParams
 			&i.IsNSFW,
 			&i.IsHidden,
 			&i.Tags,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -94,7 +96,7 @@ func (q *Queries) GetFurryHotFeed(ctx context.Context, arg GetFurryHotFeedParams
 
 const getFurryNewFeed = `-- name: GetFurryNewFeed :many
 SELECT
-    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden, cp.tags
+    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden, cp.tags, cp.deleted_at
 FROM
     candidate_posts cp
         INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
@@ -103,6 +105,7 @@ WHERE
   AND ca.status = 'approved'
   AND ($1::TIMESTAMPTZ IS NULL OR
        cp.created_at < $1)
+  AND cp.deleted_at IS NULL
 ORDER BY
     cp.created_at DESC
 LIMIT $2
@@ -130,6 +133,7 @@ func (q *Queries) GetFurryNewFeed(ctx context.Context, arg GetFurryNewFeedParams
 			&i.IsNSFW,
 			&i.IsHidden,
 			&i.Tags,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -143,7 +147,7 @@ func (q *Queries) GetFurryNewFeed(ctx context.Context, arg GetFurryNewFeedParams
 
 const getFurryNewFeedWithTag = `-- name: GetFurryNewFeedWithTag :many
 SELECT
-    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden, cp.tags
+    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden, cp.tags, cp.deleted_at
 FROM
     candidate_posts cp
         INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
@@ -153,6 +157,7 @@ WHERE
   AND $1::TEXT = ANY (cp.tags)
   AND ($2::TIMESTAMPTZ IS NULL OR
        cp.created_at < $2)
+  AND cp.deleted_at IS NULL
 ORDER BY
     cp.created_at DESC
 LIMIT $3
@@ -181,6 +186,7 @@ func (q *Queries) GetFurryNewFeedWithTag(ctx context.Context, arg GetFurryNewFee
 			&i.IsNSFW,
 			&i.IsHidden,
 			&i.Tags,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -194,7 +200,7 @@ func (q *Queries) GetFurryNewFeedWithTag(ctx context.Context, arg GetFurryNewFee
 
 const getPostsWithLikes = `-- name: GetPostsWithLikes :many
 SELECT
-    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden, cp.tags,
+    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden, cp.tags, cp.deleted_at,
     (SELECT
          COUNT(*)
      FROM
@@ -211,6 +217,7 @@ WHERE
   AND ca.status = 'approved'
   AND ($1::TIMESTAMPTZ IS NULL OR
        cp.indexed_at < $1)
+  AND cp.deleted_at IS NULL
 ORDER BY
     cp.indexed_at DESC
 LIMIT $2
@@ -229,6 +236,7 @@ type GetPostsWithLikesRow struct {
 	IsNSFW    bool
 	IsHidden  bool
 	Tags      []string
+	DeletedAt pgtype.Timestamptz
 	Likes     int64
 }
 
@@ -249,6 +257,7 @@ func (q *Queries) GetPostsWithLikes(ctx context.Context, arg GetPostsWithLikesPa
 			&i.IsNSFW,
 			&i.IsHidden,
 			&i.Tags,
+			&i.DeletedAt,
 			&i.Likes,
 		); err != nil {
 			return nil, err
@@ -259,4 +268,18 @@ func (q *Queries) GetPostsWithLikes(ctx context.Context, arg GetPostsWithLikesPa
 		return nil, err
 	}
 	return items, nil
+}
+
+const softDeleteCandidatePost = `-- name: SoftDeleteCandidatePost :exec
+UPDATE
+    candidate_posts
+SET
+    deleted_at = NOW()
+WHERE
+    uri = $1
+`
+
+func (q *Queries) SoftDeleteCandidatePost(ctx context.Context, uri string) error {
+	_, err := q.db.Exec(ctx, softDeleteCandidatePost, uri)
+	return err
 }
