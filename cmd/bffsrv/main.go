@@ -2,7 +2,13 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
+	"os/signal"
+	"time"
+
+	"github.com/joho/godotenv"
 	"github.com/strideynet/bsky-furry-feed/api"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/feed"
@@ -18,9 +24,6 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sys/unix"
-	"os"
-	"os/signal"
-	"time"
 )
 
 // TODO: Better, more granular, env configuration.
@@ -48,8 +51,12 @@ func getMode() (mode, error) {
 
 func main() {
 	log, _ := zap.NewProduction()
-	err := runE(log)
-	if err != nil {
+
+	if err := godotenv.Load(); err != nil && !errors.Is(err, os.ErrNotExist) {
+		log.Fatal("could not load existing .env file", zap.Error(err))
+	}
+
+	if err := runE(log); err != nil {
 		log.Fatal("exited with error", zap.Error(err))
 	}
 }
