@@ -69,13 +69,10 @@ func scanCmd(log *zap.Logger, env *environment) *cli.Command {
 				excludeActorDIDs = append(excludeActorDIDs, actor.DID)
 			}
 
-			out, err := bluesky.NewUnauthClient().CreateSession(
-				cctx.Context, username, password,
-			)
+			client, err := getBlueskyClient(cctx.Context)
 			if err != nil {
-				return fmt.Errorf("authenticating: %w", err)
+				return err
 			}
-			client := bluesky.NewClient(bluesky.AuthInfoFromCreateSession(out))
 			prospectActors, err := postRepliesScanSource(
 				cctx.Context, log, client, furryBeaconURI, excludeActorDIDs,
 			)

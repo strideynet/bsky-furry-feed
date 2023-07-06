@@ -48,7 +48,7 @@ func auth(ctx context.Context, req connect.AnyRequest) error {
 	}
 
 	if !slices.Contains(moderatorDIDs, tokenDID) {
-		return connect.NewError(connect.CodePermissionDenied, fmt.Errorf("did not associated with moderator role: %s"))
+		return connect.NewError(connect.CodePermissionDenied, fmt.Errorf("did not associated with moderator role: %s", tokenDID))
 	}
 
 	return nil

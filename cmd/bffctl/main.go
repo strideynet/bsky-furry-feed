@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/urfave/cli/v2"
@@ -25,11 +26,17 @@ var environments = map[string]environment{
 }
 
 // TODO: Have a `login` and `logout` command that persists auth state to disk.
-var username = os.Getenv("BSKY_USERNAME")
-var password = os.Getenv("BSKY_PASSWORD")
+func getBlueskyClient(ctx context.Context) (*bluesky.Client, error) {
+	creds, err := bluesky.CredentialsFromEnv()
+	if err != nil {
+		return nil, err
+	}
+	return bluesky.ClientFromCredentials(ctx, creds)
+}
 
 func main() {
 	log, _ := zap.NewDevelopment()
+
 	var env = &environment{}
 	app := &cli.App{
 		Name:  "bffctl",
@@ -79,7 +86,10 @@ func findDIDCmd(log *zap.Logger) *cli.Command {
 			},
 		},
 		Action: func(cctx *cli.Context) error {
-			client := bluesky.NewClient(nil)
+			client, err := getBlueskyClient(cctx.Context)
+			if err != nil {
+				return err
+			}
 			did, err := client.ResolveHandle(cctx.Context, handle)
 			if err != nil {
 				return err

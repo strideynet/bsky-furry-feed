@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/jackc/pgx/v5"
-	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
@@ -30,14 +29,10 @@ func followCmd(log *zap.Logger, env *environment) *cli.Command {
 				return fmt.Errorf("listing candidate actors: %w", err)
 			}
 
-			out, err := bluesky.NewUnauthClient().CreateSession(
-				cctx.Context, username, password,
-			)
+			client, err := getBlueskyClient(cctx.Context)
 			if err != nil {
-				return fmt.Errorf("authenticating: %w", err)
+				return err
 			}
-
-			client := bluesky.NewClient(bluesky.AuthInfoFromCreateSession(out))
 
 			for _, subject := range subjects {
 				err := client.Follow(cctx.Context, subject.DID)
