@@ -4,3 +4,11 @@ INSERT INTO
                      indexed_at)
 VALUES
     ($1, $2, $3, $4, $5);
+
+-- name: SoftDeleteCandidateLike :exec
+UPDATE
+    candidate_likes
+SET
+    deleted_at = NOW()
+WHERE
+    uri = $1;

@@ -71,6 +71,7 @@ type CandidateFollow struct {
 	SubjectDid string
 	CreatedAt  pgtype.Timestamptz
 	IndexedAt  pgtype.Timestamptz
+	DeletedAt  pgtype.Timestamptz
 }
 
 type CandidateLike struct {
@@ -79,6 +80,7 @@ type CandidateLike struct {
 	SubjectURI string
 	CreatedAt  pgtype.Timestamptz
 	IndexedAt  pgtype.Timestamptz
+	DeletedAt  pgtype.Timestamptz
 }
 
 type CandidatePost struct {
@@ -89,4 +91,5 @@ type CandidatePost struct {
 	IsNSFW    bool
 	IsHidden  bool
 	Tags      []string
+	DeletedAt pgtype.Timestamptz
 }

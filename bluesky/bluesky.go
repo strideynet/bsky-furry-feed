@@ -2,11 +2,14 @@ package bluesky
 
 import (
 	"context"
+	"fmt"
+	"strings"
+	"time"
+
 	"github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/bluesky-social/indigo/lex/util"
 	"github.com/bluesky-social/indigo/xrpc"
-	"time"
 )
 
 type UnauthClient struct {
@@ -147,4 +150,21 @@ func (c *Client) Follow(
 		return err
 	}
 	return nil
+}
+
+var ErrMalformedRecordUri = fmt.Errorf("malformed record uri")
+
+// Parse the namespace ID from a full record URI, such
+// as app.bsky.feed.post or app.bsky.graph.follow.
+//
+// Errors with a `ErrMalformedRecordUri` if the URI is
+// not a _parseable_ record URI.
+func ParseNamespaceID(recordUri string) (string, error) {
+	parts := strings.Split(recordUri, "/")
+
+	if len(parts) <= 3 {
+		return "", ErrMalformedRecordUri
+	}
+
+	return parts[3], nil
 }

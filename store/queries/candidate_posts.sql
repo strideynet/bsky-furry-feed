@@ -4,6 +4,14 @@ INSERT INTO
 VALUES
     ($1, $2, $3, $4, $5);
 
+-- name: SoftDeleteCandidatePost :exec
+UPDATE
+    candidate_posts
+SET
+    deleted_at = NOW()
+WHERE
+    uri = $1;
+
 -- name: GetFurryNewFeed :many
 SELECT
     cp.*
@@ -15,6 +23,7 @@ WHERE
   AND ca.status = 'approved'
   AND (@cursor_timestamp::TIMESTAMPTZ IS NULL OR
        cp.created_at < @cursor_timestamp)
+  AND cp.deleted_at IS NULL
 ORDER BY
     cp.created_at DESC
 LIMIT @_limit;
@@ -31,6 +40,7 @@ WHERE
   AND ca.status = 'approved'
   AND (@cursor_timestamp::TIMESTAMPTZ IS NULL OR
        cp.created_at < @cursor_timestamp)
+  AND cp.deleted_at IS NULL
 GROUP BY
     cp.uri
 HAVING
@@ -51,6 +61,7 @@ WHERE
   AND @tag::TEXT = ANY (cp.tags)
   AND (@cursor_timestamp::TIMESTAMPTZ IS NULL OR
        cp.created_at < @cursor_timestamp)
+  AND cp.deleted_at IS NULL
 ORDER BY
     cp.created_at DESC
 LIMIT @_limit;
@@ -65,7 +76,8 @@ SELECT
      WHERE
            cl.subject_uri = cp.uri
        AND (@cursor_timestamp::TIMESTAMPTZ IS NULL OR
-            cl.indexed_at < @cursor_timestamp)) AS likes
+            cl.indexed_at < @cursor_timestamp)
+       AND cl.deleted_at IS NULL) AS likes
 FROM
     candidate_posts cp
         INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
@@ -74,6 +86,7 @@ WHERE
   AND ca.status = 'approved'
   AND (@cursor_timestamp::TIMESTAMPTZ IS NULL OR
        cp.indexed_at < @cursor_timestamp)
+  AND cp.deleted_at IS NULL
 ORDER BY
     cp.indexed_at DESC
 LIMIT @_limit;
