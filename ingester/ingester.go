@@ -206,7 +206,7 @@ func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncS
 			log = log.With(zap.String("record.uri", uri))
 
 			if err := fi.handleRecordDelete(
-				ctx, log, uri,
+				ctx, log, evt.Repo, uri,
 			); err != nil {
 				return fmt.Errorf("handling record delete: %w", err)
 			}
@@ -302,10 +302,18 @@ func (fi *FirehoseIngester) handleRecordCreate(
 func (fi *FirehoseIngester) handleRecordDelete(
 	ctx context.Context,
 	log *zap.Logger,
+	repoDID string,
 	recordUri string,
 ) (err error) {
 	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_record_delete")
 	defer span.End()
+
+	actor := fi.crc.GetByDID(repoDID)
+
+	if actor == nil {
+		// if we don’t know the actor, we don’t have their data
+		return
+	}
 
 	parts := strings.Split(recordUri, "/")
 
