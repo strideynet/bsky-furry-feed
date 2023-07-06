@@ -18,17 +18,18 @@ type ModerationServiceHandler struct {
 }
 
 func (m *ModerationServiceHandler) Ping(ctx context.Context, req *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error) {
-	err := auth(ctx, req)
+	authCtx, err := auth(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	m.log.Info("received authenticated ping!")
+	// Temporary log message - useful for debugging.
+	m.log.Info("received authenticated ping!", zap.String("did", authCtx.DID))
 
 	return connect.NewResponse(&v1.PingResponse{}), nil
 }
 
 func (m *ModerationServiceHandler) GetApprovalQueue(ctx context.Context, req *connect.Request[v1.GetApprovalQueueRequest]) (*connect.Response[v1.GetApprovalQueueResponse], error) {
-	err := auth(ctx, req)
+	_, err := auth(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +52,7 @@ func (m *ModerationServiceHandler) GetApprovalQueue(ctx context.Context, req *co
 }
 
 func (m *ModerationServiceHandler) ProcessApprovalQueue(ctx context.Context, req *connect.Request[v1.ProcessApprovalQueueRequest]) (*connect.Response[v1.ProcessApprovalQueueResponse], error) {
-	err := auth(ctx, req)
+	authCtx, err := auth(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -99,9 +100,8 @@ func (m *ModerationServiceHandler) ProcessApprovalQueue(ctx context.Context, req
 			Valid: true,
 		},
 		Comment: pgtype.Text{
-			Valid: true,
-			// TODO: Calculate comment
-			String: "",
+			Valid:  true,
+			String: fmt.Sprintf("Set to %s by %s using ProcessApprovalQueue", statusToSet, authCtx.DID),
 		},
 	})
 	if err != nil {

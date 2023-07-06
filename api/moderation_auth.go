@@ -22,21 +22,25 @@ var moderatorDIDs = []string{
 	"did:plc:bv2ckchoc76yobfhkrrie4g6",
 }
 
+type authContext struct {
+	DID string
+}
+
 // TODO: Allow a authOpts to be passed in with a description of attempted
 // action.
-func auth(ctx context.Context, req connect.AnyRequest) error {
+func auth(ctx context.Context, req connect.AnyRequest) (*authContext, error) {
 	authHeader := req.Header().Get("Authorization")
 	if authHeader == "" {
-		return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("no token provided"))
+		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("no token provided"))
 	}
 
 	authParts := strings.Split(authHeader, " ")
 	if len(authParts) != 2 {
-		return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("malformed header"))
+		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("malformed header"))
 	}
 
 	if authParts[0] != "Bearer" {
-		return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("only Bearer auth supported"))
+		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("only Bearer auth supported"))
 	}
 
 	// Check the presented token is valid against the real bsky.
@@ -44,12 +48,13 @@ func auth(ctx context.Context, req connect.AnyRequest) error {
 	// parse the JWT as they do not use public key signing for the JWT.
 	_, tokenDID, err := bluesky.ClientFromToken(ctx, authParts[1])
 	if err != nil {
-		return fmt.Errorf("verifying token: %w", err)
+		return nil, fmt.Errorf("verifying token: %w", err)
 	}
-
 	if !slices.Contains(moderatorDIDs, tokenDID) {
-		return connect.NewError(connect.CodePermissionDenied, fmt.Errorf("did not associated with moderator role: %s", tokenDID))
+		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("did not associated with moderator role: %s", tokenDID))
 	}
 
-	return nil
+	return &authContext{
+		DID: tokenDID,
+	}, nil
 }

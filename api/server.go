@@ -58,6 +58,7 @@ func New(
 	// Mount Buf Connect services
 	modSvcHandler := &ModerationServiceHandler{
 		queries:            queries,
+		log:                log,
 		blueskyCredentials: bskyCredentials,
 	}
 	mux.Handle(
