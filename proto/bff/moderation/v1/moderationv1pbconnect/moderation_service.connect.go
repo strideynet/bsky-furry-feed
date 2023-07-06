@@ -28,11 +28,8 @@ const (
 // ModerationServiceClient is a client for the bff.moderation.v1.ModerationService service.
 type ModerationServiceClient interface {
 	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
-	GetCandidateActor(context.Context, *connect_go.Request[v1.GetCandidateActorRequest]) (*connect_go.Response[v1.GetCandidateActorResponse], error)
-	ListCandidateActors(context.Context, *connect_go.Request[v1.ListCandidateActorsRequest]) (*connect_go.Response[v1.ListCandidateActorsResponse], error)
-	ListCandidatePosts(context.Context, *connect_go.Request[v1.ListCandidatePostsRequest]) (*connect_go.Response[v1.ListCandidatePostsResponse], error)
-	ListCandidateLikes(context.Context, *connect_go.Request[v1.ListCandidateLikesRequest]) (*connect_go.Response[v1.ListCandidateLikesResponse], error)
-	ListCandidateFollows(context.Context, *connect_go.Request[v1.ListCandidateFollowsRequest]) (*connect_go.Response[v1.ListCandidateFollowsResponse], error)
+	GetApprovalQueue(context.Context, *connect_go.Request[v1.GetApprovalQueueRequest]) (*connect_go.Response[v1.GetApprovalQueueResponse], error)
+	ProcessApprovalQueue(context.Context, *connect_go.Request[v1.ProcessApprovalQueueRequest]) (*connect_go.Response[v1.ProcessApprovalQueueResponse], error)
 }
 
 // NewModerationServiceClient constructs a client for the bff.moderation.v1.ModerationService
@@ -50,29 +47,14 @@ func NewModerationServiceClient(httpClient connect_go.HTTPClient, baseURL string
 			baseURL+"/bff.moderation.v1.ModerationService/Ping",
 			opts...,
 		),
-		getCandidateActor: connect_go.NewClient[v1.GetCandidateActorRequest, v1.GetCandidateActorResponse](
+		getApprovalQueue: connect_go.NewClient[v1.GetApprovalQueueRequest, v1.GetApprovalQueueResponse](
 			httpClient,
-			baseURL+"/bff.moderation.v1.ModerationService/GetCandidateActor",
+			baseURL+"/bff.moderation.v1.ModerationService/GetApprovalQueue",
 			opts...,
 		),
-		listCandidateActors: connect_go.NewClient[v1.ListCandidateActorsRequest, v1.ListCandidateActorsResponse](
+		processApprovalQueue: connect_go.NewClient[v1.ProcessApprovalQueueRequest, v1.ProcessApprovalQueueResponse](
 			httpClient,
-			baseURL+"/bff.moderation.v1.ModerationService/ListCandidateActors",
-			opts...,
-		),
-		listCandidatePosts: connect_go.NewClient[v1.ListCandidatePostsRequest, v1.ListCandidatePostsResponse](
-			httpClient,
-			baseURL+"/bff.moderation.v1.ModerationService/ListCandidatePosts",
-			opts...,
-		),
-		listCandidateLikes: connect_go.NewClient[v1.ListCandidateLikesRequest, v1.ListCandidateLikesResponse](
-			httpClient,
-			baseURL+"/bff.moderation.v1.ModerationService/ListCandidateLikes",
-			opts...,
-		),
-		listCandidateFollows: connect_go.NewClient[v1.ListCandidateFollowsRequest, v1.ListCandidateFollowsResponse](
-			httpClient,
-			baseURL+"/bff.moderation.v1.ModerationService/ListCandidateFollows",
+			baseURL+"/bff.moderation.v1.ModerationService/ProcessApprovalQueue",
 			opts...,
 		),
 	}
@@ -81,11 +63,8 @@ func NewModerationServiceClient(httpClient connect_go.HTTPClient, baseURL string
 // moderationServiceClient implements ModerationServiceClient.
 type moderationServiceClient struct {
 	ping                 *connect_go.Client[v1.PingRequest, v1.PingResponse]
-	getCandidateActor    *connect_go.Client[v1.GetCandidateActorRequest, v1.GetCandidateActorResponse]
-	listCandidateActors  *connect_go.Client[v1.ListCandidateActorsRequest, v1.ListCandidateActorsResponse]
-	listCandidatePosts   *connect_go.Client[v1.ListCandidatePostsRequest, v1.ListCandidatePostsResponse]
-	listCandidateLikes   *connect_go.Client[v1.ListCandidateLikesRequest, v1.ListCandidateLikesResponse]
-	listCandidateFollows *connect_go.Client[v1.ListCandidateFollowsRequest, v1.ListCandidateFollowsResponse]
+	getApprovalQueue     *connect_go.Client[v1.GetApprovalQueueRequest, v1.GetApprovalQueueResponse]
+	processApprovalQueue *connect_go.Client[v1.ProcessApprovalQueueRequest, v1.ProcessApprovalQueueResponse]
 }
 
 // Ping calls bff.moderation.v1.ModerationService.Ping.
@@ -93,39 +72,21 @@ func (c *moderationServiceClient) Ping(ctx context.Context, req *connect_go.Requ
 	return c.ping.CallUnary(ctx, req)
 }
 
-// GetCandidateActor calls bff.moderation.v1.ModerationService.GetCandidateActor.
-func (c *moderationServiceClient) GetCandidateActor(ctx context.Context, req *connect_go.Request[v1.GetCandidateActorRequest]) (*connect_go.Response[v1.GetCandidateActorResponse], error) {
-	return c.getCandidateActor.CallUnary(ctx, req)
+// GetApprovalQueue calls bff.moderation.v1.ModerationService.GetApprovalQueue.
+func (c *moderationServiceClient) GetApprovalQueue(ctx context.Context, req *connect_go.Request[v1.GetApprovalQueueRequest]) (*connect_go.Response[v1.GetApprovalQueueResponse], error) {
+	return c.getApprovalQueue.CallUnary(ctx, req)
 }
 
-// ListCandidateActors calls bff.moderation.v1.ModerationService.ListCandidateActors.
-func (c *moderationServiceClient) ListCandidateActors(ctx context.Context, req *connect_go.Request[v1.ListCandidateActorsRequest]) (*connect_go.Response[v1.ListCandidateActorsResponse], error) {
-	return c.listCandidateActors.CallUnary(ctx, req)
-}
-
-// ListCandidatePosts calls bff.moderation.v1.ModerationService.ListCandidatePosts.
-func (c *moderationServiceClient) ListCandidatePosts(ctx context.Context, req *connect_go.Request[v1.ListCandidatePostsRequest]) (*connect_go.Response[v1.ListCandidatePostsResponse], error) {
-	return c.listCandidatePosts.CallUnary(ctx, req)
-}
-
-// ListCandidateLikes calls bff.moderation.v1.ModerationService.ListCandidateLikes.
-func (c *moderationServiceClient) ListCandidateLikes(ctx context.Context, req *connect_go.Request[v1.ListCandidateLikesRequest]) (*connect_go.Response[v1.ListCandidateLikesResponse], error) {
-	return c.listCandidateLikes.CallUnary(ctx, req)
-}
-
-// ListCandidateFollows calls bff.moderation.v1.ModerationService.ListCandidateFollows.
-func (c *moderationServiceClient) ListCandidateFollows(ctx context.Context, req *connect_go.Request[v1.ListCandidateFollowsRequest]) (*connect_go.Response[v1.ListCandidateFollowsResponse], error) {
-	return c.listCandidateFollows.CallUnary(ctx, req)
+// ProcessApprovalQueue calls bff.moderation.v1.ModerationService.ProcessApprovalQueue.
+func (c *moderationServiceClient) ProcessApprovalQueue(ctx context.Context, req *connect_go.Request[v1.ProcessApprovalQueueRequest]) (*connect_go.Response[v1.ProcessApprovalQueueResponse], error) {
+	return c.processApprovalQueue.CallUnary(ctx, req)
 }
 
 // ModerationServiceHandler is an implementation of the bff.moderation.v1.ModerationService service.
 type ModerationServiceHandler interface {
 	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
-	GetCandidateActor(context.Context, *connect_go.Request[v1.GetCandidateActorRequest]) (*connect_go.Response[v1.GetCandidateActorResponse], error)
-	ListCandidateActors(context.Context, *connect_go.Request[v1.ListCandidateActorsRequest]) (*connect_go.Response[v1.ListCandidateActorsResponse], error)
-	ListCandidatePosts(context.Context, *connect_go.Request[v1.ListCandidatePostsRequest]) (*connect_go.Response[v1.ListCandidatePostsResponse], error)
-	ListCandidateLikes(context.Context, *connect_go.Request[v1.ListCandidateLikesRequest]) (*connect_go.Response[v1.ListCandidateLikesResponse], error)
-	ListCandidateFollows(context.Context, *connect_go.Request[v1.ListCandidateFollowsRequest]) (*connect_go.Response[v1.ListCandidateFollowsResponse], error)
+	GetApprovalQueue(context.Context, *connect_go.Request[v1.GetApprovalQueueRequest]) (*connect_go.Response[v1.GetApprovalQueueResponse], error)
+	ProcessApprovalQueue(context.Context, *connect_go.Request[v1.ProcessApprovalQueueRequest]) (*connect_go.Response[v1.ProcessApprovalQueueResponse], error)
 }
 
 // NewModerationServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -140,29 +101,14 @@ func NewModerationServiceHandler(svc ModerationServiceHandler, opts ...connect_g
 		svc.Ping,
 		opts...,
 	))
-	mux.Handle("/bff.moderation.v1.ModerationService/GetCandidateActor", connect_go.NewUnaryHandler(
-		"/bff.moderation.v1.ModerationService/GetCandidateActor",
-		svc.GetCandidateActor,
+	mux.Handle("/bff.moderation.v1.ModerationService/GetApprovalQueue", connect_go.NewUnaryHandler(
+		"/bff.moderation.v1.ModerationService/GetApprovalQueue",
+		svc.GetApprovalQueue,
 		opts...,
 	))
-	mux.Handle("/bff.moderation.v1.ModerationService/ListCandidateActors", connect_go.NewUnaryHandler(
-		"/bff.moderation.v1.ModerationService/ListCandidateActors",
-		svc.ListCandidateActors,
-		opts...,
-	))
-	mux.Handle("/bff.moderation.v1.ModerationService/ListCandidatePosts", connect_go.NewUnaryHandler(
-		"/bff.moderation.v1.ModerationService/ListCandidatePosts",
-		svc.ListCandidatePosts,
-		opts...,
-	))
-	mux.Handle("/bff.moderation.v1.ModerationService/ListCandidateLikes", connect_go.NewUnaryHandler(
-		"/bff.moderation.v1.ModerationService/ListCandidateLikes",
-		svc.ListCandidateLikes,
-		opts...,
-	))
-	mux.Handle("/bff.moderation.v1.ModerationService/ListCandidateFollows", connect_go.NewUnaryHandler(
-		"/bff.moderation.v1.ModerationService/ListCandidateFollows",
-		svc.ListCandidateFollows,
+	mux.Handle("/bff.moderation.v1.ModerationService/ProcessApprovalQueue", connect_go.NewUnaryHandler(
+		"/bff.moderation.v1.ModerationService/ProcessApprovalQueue",
+		svc.ProcessApprovalQueue,
 		opts...,
 	))
 	return "/bff.moderation.v1.ModerationService/", mux
@@ -175,22 +121,10 @@ func (UnimplementedModerationServiceHandler) Ping(context.Context, *connect_go.R
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("bff.moderation.v1.ModerationService.Ping is not implemented"))
 }
 
-func (UnimplementedModerationServiceHandler) GetCandidateActor(context.Context, *connect_go.Request[v1.GetCandidateActorRequest]) (*connect_go.Response[v1.GetCandidateActorResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("bff.moderation.v1.ModerationService.GetCandidateActor is not implemented"))
+func (UnimplementedModerationServiceHandler) GetApprovalQueue(context.Context, *connect_go.Request[v1.GetApprovalQueueRequest]) (*connect_go.Response[v1.GetApprovalQueueResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("bff.moderation.v1.ModerationService.GetApprovalQueue is not implemented"))
 }
 
-func (UnimplementedModerationServiceHandler) ListCandidateActors(context.Context, *connect_go.Request[v1.ListCandidateActorsRequest]) (*connect_go.Response[v1.ListCandidateActorsResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("bff.moderation.v1.ModerationService.ListCandidateActors is not implemented"))
-}
-
-func (UnimplementedModerationServiceHandler) ListCandidatePosts(context.Context, *connect_go.Request[v1.ListCandidatePostsRequest]) (*connect_go.Response[v1.ListCandidatePostsResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("bff.moderation.v1.ModerationService.ListCandidatePosts is not implemented"))
-}
-
-func (UnimplementedModerationServiceHandler) ListCandidateLikes(context.Context, *connect_go.Request[v1.ListCandidateLikesRequest]) (*connect_go.Response[v1.ListCandidateLikesResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("bff.moderation.v1.ModerationService.ListCandidateLikes is not implemented"))
-}
-
-func (UnimplementedModerationServiceHandler) ListCandidateFollows(context.Context, *connect_go.Request[v1.ListCandidateFollowsRequest]) (*connect_go.Response[v1.ListCandidateFollowsResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("bff.moderation.v1.ModerationService.ListCandidateFollows is not implemented"))
+func (UnimplementedModerationServiceHandler) ProcessApprovalQueue(context.Context, *connect_go.Request[v1.ProcessApprovalQueueRequest]) (*connect_go.Response[v1.ProcessApprovalQueueResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("bff.moderation.v1.ModerationService.ProcessApprovalQueue is not implemented"))
 }

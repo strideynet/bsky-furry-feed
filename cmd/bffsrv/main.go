@@ -5,6 +5,7 @@ import (
 	"fmt"
 	texporter "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace"
 	"github.com/strideynet/bsky-furry-feed/api"
+	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/feed"
 	"github.com/strideynet/bsky-furry-feed/ingester"
 	"github.com/strideynet/bsky-furry-feed/store"
@@ -101,6 +102,10 @@ func runE(log *zap.Logger) error {
 	if err != nil {
 		return err
 	}
+	bskyCredentials, err := bluesky.CredentialsFromEnv()
+	if err != nil {
+		return fmt.Errorf("loading bsky credentials: %w", err)
+	}
 
 	log.Info("starting", zap.String("mode", string(mode)))
 
@@ -148,7 +153,7 @@ func runE(log *zap.Logger) error {
 
 	crc := ingester.NewCandidateActorCache(
 		log.Named("candidate_actor_cache"),
-		queries,
+		queries.Queries,
 	)
 	// Prefill the CRC before we proceed to ensure all candidate actors
 	// are available to sub-services. This eliminates some potential weirdness
@@ -167,14 +172,14 @@ func runE(log *zap.Logger) error {
 	// Setup ingester if not running in feed developer mode
 	if mode != feedDevMode {
 		fi := ingester.NewFirehoseIngester(
-			log.Named("firehose_ingester"), queries, crc,
+			log.Named("firehose_ingester"), queries.Queries, crc,
 		)
 		eg.Go(func() error {
 			return fi.Start(ctx)
 		})
 	}
 
-	feedService := feed.ServiceWithDefaultFeeds(queries)
+	feedService := feed.ServiceWithDefaultFeeds(queries.Queries)
 
 	// Setup the public HTTP/XRPC server
 	// TODO: Make these externally configurable
@@ -188,6 +193,8 @@ func runE(log *zap.Logger) error {
 		hostname,
 		listenAddr,
 		feedService,
+		queries,
+		bskyCredentials,
 	)
 	if err != nil {
 		return fmt.Errorf("creating feed server: %w", err)

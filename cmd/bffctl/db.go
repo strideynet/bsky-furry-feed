@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
@@ -133,13 +132,10 @@ func dbCandidateActorsAddCmd(log *zap.Logger, env *environment) *cli.Command {
 			}
 			defer conn.Close(cctx.Context)
 
-			unuathClient, err := bluesky.NewUnauthClient().CreateSession(
-				cctx.Context, username, password,
-			)
+			client, err := getBlueskyClient(cctx.Context)
 			if err != nil {
-				return fmt.Errorf("authenticating: %w", err)
+				return err
 			}
-			client := bluesky.NewClient(bluesky.AuthInfoFromCreateSession(unuathClient))
 
 			did, err := client.ResolveHandle(cctx.Context, handle)
 			if err != nil {
