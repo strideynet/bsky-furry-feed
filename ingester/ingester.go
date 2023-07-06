@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
@@ -19,6 +18,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
 	typegen "github.com/whyrusleeping/cbor-gen"
 	"go.opentelemetry.io/otel"
@@ -315,7 +315,7 @@ func (fi *FirehoseIngester) handleRecordDelete(
 		return
 	}
 
-	nsid, err := parseNsid(recordUri)
+	nsid, err := bluesky.ParseNamespaceID(recordUri)
 
 	if err != nil {
 		return
@@ -335,14 +335,4 @@ func (fi *FirehoseIngester) handleRecordDelete(
 	}
 
 	return
-}
-
-func parseNsid(recordUri string) (string, error) {
-	parts := strings.Split(recordUri, "/")
-
-	if len(parts) < 3 {
-		return "", fmt.Errorf("malformed record uri '%s'", recordUri)
-	}
-
-	return parts[3], nil
 }
