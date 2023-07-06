@@ -59,7 +59,6 @@ const setupAgent = () => {
           console.error('No session data was provided');
           break;
         }
-        session.set(data);
         break;
       case 'expired':
         session.set(null);
@@ -67,6 +66,7 @@ const setupAgent = () => {
       case 'create-failed':
         session.set(null);
         console.error('Failed to create session');
+        break;
     }
   };
 
