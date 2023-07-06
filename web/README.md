@@ -12,8 +12,10 @@ make install
 
 This takes care of installing deps and setting up any necessary files.
 
-Running `make dev` will start a livereload development server, and `make build` will build a production bundle using the given Adapter (defaults to `@sveltejs/adapter-node` if not specified using the `SK_ADAPTER` environment variable).
+For any given front-end, its source will be in a subdir (e.g. `./admin`).
+
+Running `make dev-<name>` will start a livereload development server for that front-end, and `make build-<name>` will build a production bundle.
 
 ## Testing
 
-Unit test are handled via Vitest and can be run using `make test`.
+Unit tests are handled via Vitest and can be run using `make test-<name>`.

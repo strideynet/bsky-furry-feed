@@ -5,18 +5,20 @@ install:
 	@echo "Installing dependencies..."
 	@pnpm install
 
-dev: install
-dev:
-	@SK_ADAPTER=node pnpm run dev
+install-%: SHELL:=/bin/bash
+install-%:
+	@echo "Installing dependencies for $*..."
+	@pnpm --filter $* install
 
-build: install
-build:
-	@SK_ADAPTER=vercel pnpm run build
+dev-%: install-%
+	@pnpm --filter $* dev
 
-test: install
-test:
-	@pnpm run test
+build-%: install-%
+	@SK_ADAPTER=vercel pnpm --filter $* build
+
+test-%: install-%
+	@pnpm --filter $* test
 
 clean: SHELL:=/bin/bash
 clean:
-	@rm -rf ./node_modules ./dist ./build
+	@rm -rf ./node_modules ./admin/dist ./admin/build
