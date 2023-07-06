@@ -7,7 +7,8 @@ help out so I can focus on keeping the feed running and adding features.
 In both cases, I'm looking for individuals who are happy working with a large
 amount of ownership over their own work.
 
-Please get in touch on Discord (`@strideynet#0001`) or Telegram (`@strideynet`) to enquire
+Please get in touch on Discord (`ottr.sh`) or Telegram (`@strideynet`) if you
+are interested.
 
 ## Trust and Safety Lead
 
@@ -16,8 +17,8 @@ an area I have a tonne of experience in. As such, I need some help.
 
 Responsibilities:
 
-- Writing TnS communications: There's a draft of the Community Guidelines but I 
-  need someone to take ownership of this and get it finished to the point where 
+- Writing TnS communications: There's a draft of the Community Guidelines but I
+  need someone to take ownership of this and get it finished to the point where
   we can publish it.
 - Writing TnS policy
 - Deciding when we need additional TnS volunteers and who we select
