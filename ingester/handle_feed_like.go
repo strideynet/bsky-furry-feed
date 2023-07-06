@@ -3,12 +3,13 @@ package ingester
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.uber.org/zap"
-	"time"
 )
 
 func (fi *FirehoseIngester) handleFeedLikeCreate(
@@ -43,6 +44,23 @@ func (fi *FirehoseIngester) handleFeedLikeCreate(
 	)
 	if err != nil {
 		return fmt.Errorf("creating candidate like: %w", err)
+	}
+
+	return nil
+}
+
+func (fi *FirehoseIngester) handleFeedLikeDelete(
+	ctx context.Context,
+	log *zap.Logger,
+	recordUri string,
+) error {
+	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_feed_like_delete")
+	defer span.End()
+
+	if err := fi.queries.SoftDeleteCandidateLike(
+		ctx, recordUri,
+	); err != nil {
+		return fmt.Errorf("deleting candidate like: %w", err)
 	}
 
 	return nil

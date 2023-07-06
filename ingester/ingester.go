@@ -5,6 +5,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"sync"
+	"time"
+
 	"github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/bluesky-social/indigo/events"
@@ -14,6 +18,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
 	typegen "github.com/whyrusleeping/cbor-gen"
 	"go.opentelemetry.io/otel"
@@ -21,9 +26,6 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
-	"net/http"
-	"sync"
-	"time"
 )
 
 var tracer = otel.Tracer("github.com/strideynet/bsky-furry-feed/ingester")
@@ -170,34 +172,44 @@ func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncS
 		return fmt.Errorf("reading repo from car %w", err)
 	}
 	for _, op := range evt.Ops {
-		// Ignore any op that isn't a record create.
-		if repomgr.EventKind(op.Action) != repomgr.EvtKindCreateRecord {
-			continue
-		}
 		log := log.With(
 			zap.String("op.action", op.Action),
 			zap.String("op.path", op.Path),
 		)
 
-		recordCid, record, err := rr.GetRecord(ctx, op.Path)
-		if err != nil {
-			if errors.Is(err, lexutil.ErrUnrecognizedType) {
-				continue
-			}
-			return fmt.Errorf("getting record for op: %w", err)
-		}
-		// Ensure there isn't a mismatch between the reference and the found
-		// object.
-		if lexutil.LexLink(recordCid) != *op.Cid {
-			return fmt.Errorf("mismatch in record and op cid: %s != %s", recordCid, *op.Cid)
-		}
-
 		uri := fmt.Sprintf("at://%s/%s", evt.Repo, op.Path)
-		log = log.With(zap.String("record.uri", uri))
-		if err := fi.handleRecordCreate(
-			ctx, log, evt.Repo, uri, record,
-		); err != nil {
-			return fmt.Errorf("handling record create: %w", err)
+
+		switch repomgr.EventKind(op.Action) {
+		case repomgr.EvtKindCreateRecord:
+			recordCid, record, err := rr.GetRecord(ctx, op.Path)
+			if err != nil {
+				if errors.Is(err, lexutil.ErrUnrecognizedType) {
+					continue
+				}
+				return fmt.Errorf("getting record for op: %w", err)
+			}
+
+			// Ensure there isn't a mismatch between the reference and the found
+			// object.
+			if lexutil.LexLink(recordCid) != *op.Cid {
+				return fmt.Errorf("mismatch in record and op cid: %s != %s", recordCid, *op.Cid)
+			}
+
+			log = log.With(zap.String("record.uri", uri))
+
+			if err := fi.handleRecordCreate(
+				ctx, log, evt.Repo, uri, record,
+			); err != nil {
+				return fmt.Errorf("handling record create: %w", err)
+			}
+		case repomgr.EvtKindDeleteRecord:
+			log = log.With(zap.String("record.uri", uri))
+
+			if err := fi.handleRecordDelete(
+				ctx, log, evt.Repo, uri,
+			); err != nil {
+				return fmt.Errorf("handling record delete: %w", err)
+			}
 		}
 	}
 
@@ -285,4 +297,42 @@ func (fi *FirehoseIngester) handleRecordCreate(
 	}
 
 	return nil
+}
+
+func (fi *FirehoseIngester) handleRecordDelete(
+	ctx context.Context,
+	log *zap.Logger,
+	repoDID string,
+	recordUri string,
+) (err error) {
+	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_record_delete")
+	defer span.End()
+
+	actor := fi.crc.GetByDID(repoDID)
+
+	if actor == nil {
+		// if we don’t know the actor, we don’t have their data
+		return
+	}
+
+	nsid, err := bluesky.ParseNamespaceID(recordUri)
+
+	if err != nil {
+		return
+	}
+
+	log.Debug("handling record delete", zap.Any("recordUri", recordUri), zap.Any("nsid", nsid))
+
+	switch nsid {
+	case "app.bsky.feed.post":
+		err = fi.handleFeedPostDelete(ctx, log, recordUri)
+	case "app.bsky.feed.like":
+		err = fi.handleFeedLikeDelete(ctx, log, recordUri)
+	case "app.bsky.graph.follow":
+		err = fi.handleFeedFollowDelete(ctx, log, recordUri)
+	default:
+		log.Debug("ignoring record create due to handled type")
+	}
+
+	return
 }
