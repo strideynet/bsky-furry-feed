@@ -315,17 +315,15 @@ func (fi *FirehoseIngester) handleRecordDelete(
 		return
 	}
 
-	parts := strings.Split(recordUri, "/")
+	nsid, err := parseNsid(recordUri)
 
-	if len(parts) < 3 {
-		return fmt.Errorf("malformed record uri '%s'", recordUri)
+	if err != nil {
+		return
 	}
 
-	typ := parts[3]
+	log.Debug("handling record delete", zap.Any("recordUri", recordUri), zap.Any("nsid", nsid))
 
-	log.Debug("handling record delete", zap.Any("recordUri", recordUri), zap.Any("type", typ))
-
-	switch typ {
+	switch nsid {
 	case "app.bsky.feed.post":
 		err = fi.handleFeedPostDelete(ctx, log, recordUri)
 	case "app.bsky.feed.like":
@@ -337,4 +335,14 @@ func (fi *FirehoseIngester) handleRecordDelete(
 	}
 
 	return
+}
+
+func parseNsid(recordUri string) (string, error) {
+	parts := strings.Split(recordUri, "/")
+
+	if len(parts) < 3 {
+		return "", fmt.Errorf("malformed record uri '%s'", recordUri)
+	}
+
+	return parts[3], nil
 }
