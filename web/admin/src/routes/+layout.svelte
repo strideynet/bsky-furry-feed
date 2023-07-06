@@ -14,7 +14,8 @@
 
   export let data: LayoutData;
 
-  let pageContainer: HTMLDivElement, isAtTop: boolean;
+  let pageContainer: HTMLDivElement,
+    isAtTop = true;
 
   const checkScroll = (_e?: Event) =>
     (isAtTop = pageContainer?.getBoundingClientRect().top >= 0);
@@ -27,7 +28,7 @@
 </script>
 
 <svelte:body
-  use:classList={'light bg-gray-100 w-screen h-screen overflow-y-scroll'}
+  use:classList={'light bg-gray-100'}
   on:scroll={checkScroll}
   on:wheel={checkScroll}
 />
