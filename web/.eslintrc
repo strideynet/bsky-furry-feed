@@ -1,0 +1,137 @@
+{
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "module",
+    "extraFileExtensions": [".svelte"]
+  },
+  "env": {
+    "browser": true,
+    "node": true,
+    "es2017": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "plugin:svelte/recommended",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "plugins": ["prettier", "@typescript-eslint", "simple-import-sort", "unused-imports"],
+  "rules": {
+    "prettier/prettier": ["error"],
+    "@typescript-eslint/prefer-namespace-keyword": ["off"],
+    "@typescript-eslint/no-namespace": ["off"],
+    "@typescript-eslint/restrict-template-expressions": ["off"],
+    "@typescript-eslint/no-unused-vars": ["off"],
+    "array-bracket-spacing": ["error", "never"],
+    "arrow-spacing": ["error"],
+    "block-scoped-var": ["error"],
+    "block-spacing": ["error"],
+    "brace-style": ["error", "1tbs"],
+    "comma-dangle": ["error", "never"],
+    "comma-spacing": ["error"],
+    "comma-style": ["error"],
+    "curly": ["error"],
+    "dot-notation": ["error"],
+    "eqeqeq": ["error"],
+    "func-call-spacing": ["error", "never"],
+    "key-spacing": ["error"],
+    "keyword-spacing": ["error"],
+    "linebreak-style": ["error"],
+    "no-confusing-arrow": ["error"],
+    "no-duplicate-imports": ["off"],
+    "no-trailing-spaces": ["error"],
+    "no-var": ["error"],
+    "no-eval": ["error"],
+    "no-extra-bind": ["error"],
+    "no-implicit-globals": ["error"],
+    "no-implied-eval": ["error"],
+    "no-loop-func": ["error"],
+    "no-multi-spaces": ["error"],
+    "no-prototype-builtins": ["error"],
+    "no-redeclare": ["error"],
+    "no-setter-return": ["error"],
+    "no-script-url": ["error"],
+    "no-unused-vars": ["off"],
+    "object-shorthand": ["error"],
+    "one-var-declaration-per-line": ["error"],
+    "quotes": ["error", "single", { "avoidEscape": true }],
+    "quote-props": ["error", "as-needed"],
+    "semi": ["error", "always"],
+    "semi-spacing": ["error"],
+    "simple-import-sort/imports": [
+      "error",
+      {
+        "groups": [
+          // Side effect imports
+          ["^\u0000(?!.*\u0000$)"],
+          // Svelte internal imports
+          [
+            "^svelte(/)?(?!.*\u0000$)",
+            "^@svelte(/)?(?!.*\u0000$)",
+            "^svelte-(?!.*\u0000$)"
+          ],
+          // Non-component path-aliased '$' imports
+          ["^\\$(?!components)(/)?(?!.*\u0000$)"],
+          // Component imports
+          ["^\\$components(/)?(?!.*\u0000$)"],
+          // Absolute imports
+          ["^[^.](?!.*\u0000$)"],
+          // Relative imports
+          ["^\\.(?!.*\u0000$)"],
+          // Type imports
+          ["\u0000$"]
+        ]
+      }
+    ],
+    "simple-import-sort/exports": ["error"],
+    "space-in-parens": ["error", "never"],
+    "spaced-comment": [
+      "error",
+      "always",
+      {
+        "block": { "balanced": true }
+      }
+    ],
+    "svelte/valid-compile": ["off"],
+    "unused-imports/no-unused-imports": ["error"],
+    "unused-imports/no-unused-vars": [
+      "error",
+      {
+        "varsIgnorePattern": "^_*",
+        "argsIgnorePattern": "^_*"
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["*.svelte"],
+      "parser": "svelte-eslint-parser",
+      "parserOptions": {
+        "parser": "@typescript-eslint/parser"
+      }
+    },
+    {
+      "files": ["*.test.ts", "*.spec.ts"],
+      "rules": {
+        "@typescript-eslint/no-empty-function": ["off"]
+      }
+    }
+  ],
+  "settings": {
+    "svelte3/typescript": true
+  },
+  "ignorePatterns": [
+    "**/.DS_Store",
+    "**/*.cjs",
+    "**/node_modules",
+    "**/dist",
+    "**/build",
+    "**/.svelte-kit/**",
+    "**/package",
+    "**/.env",
+    "**/.env.*",
+    "**/pnpm-lock.yaml",
+    "**/package-lock.json",
+    "**/yarn.lock"
+  ]
+}
