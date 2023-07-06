@@ -47,13 +47,14 @@ type QueriesWithTX struct {
 	*Queries
 }
 
-func (q *QueriesWithTX) WithTx(ctx context.Context) (queries *Queries, commit func(ctx context.Context) error, rollback func() error, err error) {
+func (q *QueriesWithTX) WithTx(ctx context.Context) (queries *Queries, commit func(ctx context.Context) error, rollback func(), err error) {
 	tx, err := q.db.Begin(ctx)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	return q.Queries.WithTx(tx), tx.Commit, func() error {
-		return tx.Rollback(context.Background())
+	return q.Queries.WithTx(tx), tx.Commit, func() {
+		// For now, we just sink this error - we should log this in future.
+		_ = tx.Rollback(context.Background())
 	}, nil
 }
 

@@ -22,6 +22,7 @@ func (m *ModerationServiceHandler) Ping(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, err
 	}
+	m.log.Info("received authenticated ping!")
 
 	return connect.NewResponse(&v1.PingResponse{}), nil
 }
