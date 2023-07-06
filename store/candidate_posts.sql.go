@@ -37,63 +37,6 @@ func (q *Queries) CreateCandidatePost(ctx context.Context, arg CreateCandidatePo
 	return err
 }
 
-const getFurryHotFeed = `-- name: GetFurryHotFeed :many
-SELECT
-    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden, cp.tags, cp.deleted_at
-FROM
-    candidate_posts cp
-        INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
-        INNER JOIN candidate_likes cl ON cp.uri = cl.subject_uri
-WHERE
-      cp.is_hidden = false
-  AND ca.status = 'approved'
-  AND ($1::TIMESTAMPTZ IS NULL OR
-       cp.created_at < $1)
-  AND cp.deleted_at IS NULL
-GROUP BY
-    cp.uri
-HAVING
-    count(*) >= $2::int
-ORDER BY
-    cp.created_at DESC
-LIMIT $3
-`
-
-type GetFurryHotFeedParams struct {
-	CursorTimestamp pgtype.Timestamptz
-	LikeThreshold   int32
-	Limit           int32
-}
-
-func (q *Queries) GetFurryHotFeed(ctx context.Context, arg GetFurryHotFeedParams) ([]CandidatePost, error) {
-	rows, err := q.db.Query(ctx, getFurryHotFeed, arg.CursorTimestamp, arg.LikeThreshold, arg.Limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []CandidatePost
-	for rows.Next() {
-		var i CandidatePost
-		if err := rows.Scan(
-			&i.URI,
-			&i.ActorDID,
-			&i.CreatedAt,
-			&i.IndexedAt,
-			&i.IsNSFW,
-			&i.IsHidden,
-			&i.Tags,
-			&i.DeletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getFurryNewFeed = `-- name: GetFurryNewFeed :many
 SELECT
     cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden, cp.tags, cp.deleted_at
