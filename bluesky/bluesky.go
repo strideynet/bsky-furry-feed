@@ -3,6 +3,7 @@ package bluesky
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -12,68 +13,87 @@ import (
 	"github.com/bluesky-social/indigo/xrpc"
 )
 
-type UnauthClient struct {
+type Client struct {
 	xrpc *xrpc.Client
 }
 
-type Client struct {
-	*UnauthClient
-	xrpc     *xrpc.Client
-	authInfo *xrpc.AuthInfo
+type Credentials struct {
+	Identifier string
+	Password   string
 }
 
-var userAgent = "github.com/strideynet/bluesky-furry-feed"
-var host = "https://bsky.social"
+func CredentialsFromEnv() (*Credentials, error) {
+	identifier := os.Getenv("BLUESKY_USERNAME")
+	if identifier == "" {
+		return nil, fmt.Errorf("BLUESKY_USERNAME environment variable not set")
+	}
+	password := os.Getenv("BLUESKY_PASSWORD")
+	if password == "" {
+		return nil, fmt.Errorf("BLUESKY_PASSWORD environment variable not set")
+	}
 
-func NewUnauthClient() *UnauthClient {
-	return &UnauthClient{
-		xrpc: &xrpc.Client{
-			Host:      host,
-			UserAgent: &userAgent,
-		},
+	return &Credentials{Identifier: identifier, Password: password}, nil
+}
+
+func baseXRPC() *xrpc.Client {
+	// TODO: Introduce a ClientConfig we can control these with
+	ua := "github.com/strideynet/bluesky-furry-feed"
+	return &xrpc.Client{
+		Host:      "https://bsky.social",
+		UserAgent: &ua,
 	}
 }
 
-func (c *UnauthClient) ResolveHandle(ctx context.Context, handle string) (*atproto.IdentityResolveHandle_Output, error) {
+func ClientFromCredentials(ctx context.Context, credentials *Credentials) (*Client, error) {
+	xrpcClient := baseXRPC()
+	out, err := atproto.ServerCreateSession(
+		ctx,
+		xrpcClient,
+		&atproto.ServerCreateSession_Input{
+			Identifier: credentials.Identifier,
+			Password:   credentials.Password,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("missing ")
+	}
+
+	xrpcClient.Auth = &xrpc.AuthInfo{
+		AccessJwt:  out.AccessJwt,
+		RefreshJwt: out.RefreshJwt,
+		Did:        out.Did,
+		Handle:     out.Handle,
+	}
+
+	return &Client{xrpc: xrpcClient}, nil
+}
+
+// ClientFromToken takes a JWT access token, and makes a client. It then calls
+// GetSession to verify the token.
+//
+// On success, an authenticated client is returned along with the JWTs DID
+func ClientFromToken(ctx context.Context, token string) (*Client, string, error) {
+	xrpcClient := baseXRPC()
+	xrpcClient.Auth = &xrpc.AuthInfo{
+		AccessJwt: token,
+	}
+
+	res, err := atproto.ServerGetSession(ctx, xrpcClient)
+	if err != nil {
+		return nil, "", fmt.Errorf("fetching session: %w", err)
+	}
+	xrpcClient.Auth.Did = res.Did
+	xrpcClient.Auth.Handle = res.Handle
+
+	return &Client{xrpc: xrpcClient}, res.Did, nil
+}
+
+func (c *Client) ResolveHandle(ctx context.Context, handle string) (*atproto.IdentityResolveHandle_Output, error) {
 	return atproto.IdentityResolveHandle(
 		ctx,
 		c.xrpc,
 		handle,
 	)
-}
-
-func (c *UnauthClient) CreateSession(ctx context.Context, identifier string, password string) (*atproto.ServerCreateSession_Output, error) {
-	return atproto.ServerCreateSession(
-		ctx,
-		c.xrpc,
-		&atproto.ServerCreateSession_Input{
-			Identifier: identifier,
-			Password:   password,
-		},
-	)
-}
-
-func AuthInfoFromCreateSession(in *atproto.ServerCreateSession_Output) *xrpc.AuthInfo {
-	return &xrpc.AuthInfo{
-		AccessJwt:  in.AccessJwt,
-		RefreshJwt: in.RefreshJwt,
-		Did:        in.Did,
-		Handle:     in.Handle,
-	}
-}
-
-// TODO: Manage refreshing identity for user and provide some way to persist
-// this refreshed identity.
-func NewClient(auth *xrpc.AuthInfo) *Client {
-	return &Client{
-		UnauthClient: NewUnauthClient(),
-		xrpc: &xrpc.Client{
-			Host:      host,
-			Auth:      auth,
-			UserAgent: &userAgent,
-		},
-		authInfo: auth,
-	}
 }
 
 func (c *Client) GetFollowers(
@@ -117,7 +137,7 @@ func (c *Client) Follow(
 	// }
 	createRecord := &atproto.RepoCreateRecord_Input{
 		Collection: "app.bsky.graph.follow",
-		Repo:       c.authInfo.Did,
+		Repo:       c.xrpc.Auth.Did,
 		Record: &util.LexiconTypeDecoder{
 			Val: &bsky.GraphFollow{
 				CreatedAt: FormatTime(time.Now()),
@@ -130,11 +150,6 @@ func (c *Client) Follow(
 		return err
 	}
 	return nil
-}
-
-// GetSession calls com.atproto.server.getSession
-func (c *Client) GetSession(ctx context.Context) (*atproto.ServerGetSession_Output, error) {
-	return atproto.ServerGetSession(ctx, c.xrpc)
 }
 
 var ErrMalformedRecordUri = fmt.Errorf("malformed record uri")

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	texporter "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace"
 	"github.com/strideynet/bsky-furry-feed/api"
+	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/feed"
 	"github.com/strideynet/bsky-furry-feed/ingester"
 	"github.com/strideynet/bsky-furry-feed/store"
@@ -101,6 +102,10 @@ func runE(log *zap.Logger) error {
 	if err != nil {
 		return err
 	}
+	bskyCredentials, err := bluesky.CredentialsFromEnv()
+	if err != nil {
+		return fmt.Errorf("loading bsky credentials: %w", err)
+	}
 
 	log.Info("starting", zap.String("mode", string(mode)))
 
@@ -189,6 +194,7 @@ func runE(log *zap.Logger) error {
 		listenAddr,
 		feedService,
 		queries,
+		bskyCredentials,
 	)
 	if err != nil {
 		return fmt.Errorf("creating feed server: %w", err)
