@@ -5,6 +5,8 @@ import { agent, session } from '$lib/atp';
 
 import type { PageLoad } from './$types';
 
+export const ssr = false;
+
 export const load = (async ({ parent }) => {
   await parent();
 

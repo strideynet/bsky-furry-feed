@@ -14,7 +14,7 @@
     <div class="flex flex-row gap-4">
       {#if hasSession}
         <a href="/dash">Dashboard</a>
-        <a href="/auth/logout" data-sveltekit-reload>Logout</a>
+        <a href="/auth/logout">Logout</a>
       {:else}
         <a href="/auth/login">Login</a>
       {/if}
