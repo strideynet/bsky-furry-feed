@@ -18,3 +18,9 @@ Reach out on the [Bluesky furries discord](https://discord.gg/5UNyBtnwKy) for mo
 This is also a neat example of a Bluesky feed generator written in Go! If you
 are trying to build something similar in Go, and need any advice, please learn
 what you can from the source code and ask any questions.
+
+Interested in contributing? Read our [getting started guide][developing]
+or [check out the open issues][issues].
+
+[developing]: ./docs/developing.md
+[issues]: https://github.com/strideynet/bsky-furry-feed/issues
