@@ -58,7 +58,7 @@ func NewFirehoseIngester(
 		queries: queries,
 
 		subscribeURL:    "wss://bsky.social/xrpc/com.atproto.sync.subscribeRepos",
-		workerCount:     6,
+		workerCount:     8,
 		workItemTimeout: time.Second * 30,
 		furryFeeds: []string{
 			"at://did:plc:jdkvwye2lf4mingzk7qdebzc/app.bsky.feed.generator/furry-new",
@@ -137,10 +137,10 @@ func (fi *FirehoseIngester) Start(ctx context.Context) error {
 			}
 			fi.log.Warn("closed websocket subscription")
 		}()
-		// TODO: sometimes stream exits of own accord, we should attempt to
-		// reconnect several times and then return an error to cause the
-		// process to crash out.
-		return events.HandleRepoStream(ctx, con, &events.RepoStreamCallbacks{
+
+		// TODO: Indigo now offers a native parallel consumer pool, we should
+		// consider switching to it - but only if we can
+		callbacks := &events.RepoStreamCallbacks{
 			RepoCommit: func(evt *atproto.SyncSubscribeRepos_Commit) error {
 				select {
 				case <-ctx.Done():
@@ -151,7 +151,12 @@ func (fi *FirehoseIngester) Start(ctx context.Context) error {
 				}
 				return nil
 			},
+		}
+		return events.HandleRepoStream(ctx, con, &events.SequentialScheduler{
+			Do: callbacks.EventHandler,
 		})
+		// TODO: sometimes stream exits of own accord, we should attempt to
+		// reconnect and enter an "error state".
 	})
 
 	return eg.Wait()
