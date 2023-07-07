@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
+
 	texporter "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace"
 	"github.com/strideynet/bsky-furry-feed/api"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
@@ -18,8 +21,6 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sys/unix"
-	"os"
-	"os/signal"
 )
 
 // TODO: Better, more granular, env configuration.
@@ -172,7 +173,7 @@ func runE(log *zap.Logger) error {
 	// Setup ingester if not running in feed developer mode
 	if mode != feedDevMode {
 		fi := ingester.NewFirehoseIngester(
-			log.Named("firehose_ingester"), pgxStore, actorCache,
+			log.Named("firehose_ingester"), pgxStore, actorCache, "wss://bsky.social/xrpc/com.atproto.sync.subscribeRepos",
 		)
 		eg.Go(func() error {
 			return fi.Start(ctx)

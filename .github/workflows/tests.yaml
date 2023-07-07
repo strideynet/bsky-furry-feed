@@ -14,5 +14,12 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version: "1.20"
+      - uses: isbang/compose-action@v1.4.1
+        with:
+          compose-file: "./docker-compose.ci.yaml"
+          down-flags: "--volumes"
+      - run: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+      - run: sleep 1
+      - run: migrate -path store/migrations -database "postgres://bff:bff@localhost:5433/bff?sslmode=disable" up
       - name: Test
         run: go test -race -v ./...
