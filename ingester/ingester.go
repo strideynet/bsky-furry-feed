@@ -55,14 +55,14 @@ type FirehoseIngester struct {
 }
 
 func NewFirehoseIngester(
-	log *zap.Logger, store *store.PGXStore, crc *ActorCache,
+	log *zap.Logger, store *store.PGXStore, crc *ActorCache, subscribeURL string,
 ) *FirehoseIngester {
 	return &FirehoseIngester{
 		log:   log,
 		crc:   crc,
 		store: store,
 
-		subscribeURL:    "wss://bsky.social/xrpc/com.atproto.sync.subscribeRepos",
+		subscribeURL:    subscribeURL,
 		workerCount:     8,
 		workItemTimeout: time.Second * 30,
 		furryFeeds: []string{
