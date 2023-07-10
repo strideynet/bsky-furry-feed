@@ -62,8 +62,6 @@ func main() {
 		Commands: []*cli.Command{
 			dbCmd(log, env),
 			findDIDCmd(log),
-			followCmd(log, env),
-			scanCmd(log, env),
 			queueCmd(log, env),
 		},
 	}

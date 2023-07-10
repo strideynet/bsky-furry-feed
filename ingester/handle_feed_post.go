@@ -7,11 +7,9 @@ import (
 	"time"
 
 	"github.com/bluesky-social/indigo/api/bsky"
-	"github.com/jackc/pgx/v5/pgtype"
 	bff "github.com/strideynet/bsky-furry-feed"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
-	"go.uber.org/zap"
 )
 
 func hasImage(data *bsky.FeedPost) bool {
@@ -42,7 +40,6 @@ func isNSFW(data *bsky.FeedPost) bool {
 
 func (fi *FirehoseIngester) handleFeedPostCreate(
 	ctx context.Context,
-	log *zap.Logger,
 	repoDID string,
 	recordUri string,
 	data *bsky.FeedPost,
@@ -67,43 +64,36 @@ func (fi *FirehoseIngester) handleFeedPostCreate(
 			tags = append(tags, bff.TagNSFW)
 		}
 
-		err = fi.queries.CreateCandidatePost(
+		err = fi.store.CreatePost(
 			ctx,
-			store.CreateCandidatePostParams{
-				URI:      recordUri,
-				ActorDID: repoDID,
-				CreatedAt: pgtype.Timestamptz{
-					Time:  createdAt,
-					Valid: true,
-				},
-				IndexedAt: pgtype.Timestamptz{
-					Time:  time.Now(),
-					Valid: true,
-				},
-				Tags: tags,
+			store.CreatePostOpts{
+				URI:       recordUri,
+				ActorDID:  repoDID,
+				CreatedAt: createdAt,
+				IndexedAt: time.Now(),
+				Tags:      tags,
 			},
 		)
 		if err != nil {
-			return fmt.Errorf("creating candidate post: %w", err)
+			return fmt.Errorf("creating post: %w", err)
 		}
 	} else {
-		log.Info("ignoring reply")
+		span.AddEvent("ignoring post as it is a reply")
 	}
 	return nil
 }
 
 func (fi *FirehoseIngester) handleFeedPostDelete(
 	ctx context.Context,
-	log *zap.Logger,
 	recordUri string,
 ) error {
 	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_feed_post_delete")
 	defer span.End()
 
-	if err := fi.queries.SoftDeleteCandidatePost(
-		ctx, recordUri,
+	if err := fi.store.DeletePost(
+		ctx, store.DeletePostOpts{URI: recordUri},
 	); err != nil {
-		return fmt.Errorf("deleting candidate post: %w", err)
+		return fmt.Errorf("deleting post: %w", err)
 	}
 
 	return nil

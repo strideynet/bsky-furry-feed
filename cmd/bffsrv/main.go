@@ -122,43 +122,43 @@ func runE(log *zap.Logger) error {
 		return fmt.Errorf("creating tracer provider: %w", err)
 	}
 
-	var storeConfig store.Config
+	var poolConnector store.PoolConnector
 	switch mode {
 	case productionMode:
-		storeConfig.CloudSQL = &store.CloudSQLConnectorConfig{
+		poolConnector = &store.CloudSQLConnector{
 			Instance: "bsky-furry-feed:us-east1:main-us-east",
 			Database: "bff",
 			// TODO: Fetch this from an env var or from adc
 			Username: "849144245446-compute@developer",
 		}
 	case feedDevMode:
-		storeConfig.CloudSQL = &store.CloudSQLConnectorConfig{
+		poolConnector = &store.CloudSQLConnector{
 			Instance: "bsky-furry-feed:us-east1:main-us-east",
 			Database: "bff",
 			// TODO: Fetch this from an env var or from adc
 			Username: "noah@noahstride.co.uk",
 		}
 	case devMode:
-		storeConfig.Direct = &store.DirectConnectorConfig{
+		poolConnector = &store.DirectConnector{
 			URI: "postgres://bff:bff@localhost:5432/bff?sslmode=disable",
 		}
 	default:
 		return fmt.Errorf("unhandled mode: %s", mode)
 	}
-	queries, queriesClose, err := storeConfig.Connect(ctx)
+	pgxStore, err := store.ConnectPGXStore(ctx, log.Named("store"), poolConnector)
 	if err != nil {
 		return fmt.Errorf("connecting to store: %w", err)
 	}
-	defer queriesClose()
+	defer pgxStore.Close()
 
-	crc := ingester.NewCandidateActorCache(
-		log.Named("candidate_actor_cache"),
-		queries.Queries,
+	actorCache := ingester.NewActorCache(
+		log.Named("actor_cache"),
+		pgxStore,
 	)
-	// Prefill the CRC before we proceed to ensure all candidate actors
+	// Prefill the actor cache before we proceed to ensure all actors
 	// are available to sub-services. This eliminates some potential weirdness
 	// when handling events/requests shortly after process startup.
-	if err := crc.Sync(ctx); err != nil {
+	if err := actorCache.Sync(ctx); err != nil {
 		return fmt.Errorf("filling candidate actor cache: %w", err)
 	}
 
@@ -166,20 +166,20 @@ func runE(log *zap.Logger) error {
 	// If one exits, all will exit.
 	eg, ctx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
-		return crc.Start(ctx)
+		return actorCache.Start(ctx)
 	})
 
 	// Setup ingester if not running in feed developer mode
 	if mode != feedDevMode {
 		fi := ingester.NewFirehoseIngester(
-			log.Named("firehose_ingester"), queries.Queries, crc,
+			log.Named("firehose_ingester"), pgxStore, actorCache,
 		)
 		eg.Go(func() error {
 			return fi.Start(ctx)
 		})
 	}
 
-	feedService := feed.ServiceWithDefaultFeeds(queries.Queries)
+	feedService := feed.ServiceWithDefaultFeeds(pgxStore)
 
 	// Setup the public HTTP/XRPC server
 	// TODO: Make these externally configurable
@@ -193,7 +193,7 @@ func runE(log *zap.Logger) error {
 		hostname,
 		listenAddr,
 		feedService,
-		queries,
+		pgxStore,
 		bskyCredentials,
 	)
 	if err != nil {

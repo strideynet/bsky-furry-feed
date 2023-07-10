@@ -3,7 +3,7 @@
 //   sqlc v1.18.0
 // source: candidate_actors.sql
 
-package store
+package gen
 
 import (
 	"context"
@@ -27,8 +27,8 @@ type CreateCandidateActorParams struct {
 	Status    ActorStatus
 }
 
-func (q *Queries) CreateCandidateActor(ctx context.Context, arg CreateCandidateActorParams) (CandidateActor, error) {
-	row := q.db.QueryRow(ctx, createCandidateActor,
+func (q *Queries) CreateCandidateActor(ctx context.Context, db DBTX, arg CreateCandidateActorParams) (CandidateActor, error) {
+	row := db.QueryRow(ctx, createCandidateActor,
 		arg.DID,
 		arg.CreatedAt,
 		arg.IsArtist,
@@ -56,8 +56,8 @@ WHERE
     did = $1
 `
 
-func (q *Queries) GetCandidateActorByDID(ctx context.Context, did string) (CandidateActor, error) {
-	row := q.db.QueryRow(ctx, getCandidateActorByDID, did)
+func (q *Queries) GetCandidateActorByDID(ctx context.Context, db DBTX, did string) (CandidateActor, error) {
+	row := db.QueryRow(ctx, getCandidateActorByDID, did)
 	var i CandidateActor
 	err := row.Scan(
 		&i.DID,
@@ -82,8 +82,8 @@ ORDER BY
     did
 `
 
-func (q *Queries) ListCandidateActors(ctx context.Context, status NullActorStatus) ([]CandidateActor, error) {
-	rows, err := q.db.Query(ctx, listCandidateActors, status)
+func (q *Queries) ListCandidateActors(ctx context.Context, db DBTX, status NullActorStatus) ([]CandidateActor, error) {
+	rows, err := db.Query(ctx, listCandidateActors, status)
 	if err != nil {
 		return nil, err
 	}
@@ -128,8 +128,8 @@ type UpdateCandidateActorParams struct {
 	DID      string
 }
 
-func (q *Queries) UpdateCandidateActor(ctx context.Context, arg UpdateCandidateActorParams) (CandidateActor, error) {
-	row := q.db.QueryRow(ctx, updateCandidateActor,
+func (q *Queries) UpdateCandidateActor(ctx context.Context, db DBTX, arg UpdateCandidateActorParams) (CandidateActor, error) {
+	row := db.QueryRow(ctx, updateCandidateActor,
 		arg.Status,
 		arg.IsArtist,
 		arg.Comment,

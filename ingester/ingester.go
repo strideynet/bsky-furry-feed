@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"net/http"
 	"sync"
 	"time"
@@ -37,9 +38,9 @@ var workItemsProcessed = promauto.NewSummaryVec(prometheus.SummaryOpts{
 
 type FirehoseIngester struct {
 	// dependencies
-	log     *zap.Logger
-	crc     *CandidateActorCache
-	queries *store.Queries
+	log   *zap.Logger
+	crc   *ActorCache
+	store *store.PGXStore
 
 	// configuration
 	subscribeURL    string
@@ -50,12 +51,12 @@ type FirehoseIngester struct {
 }
 
 func NewFirehoseIngester(
-	log *zap.Logger, queries *store.Queries, crc *CandidateActorCache,
+	log *zap.Logger, store *store.PGXStore, crc *ActorCache,
 ) *FirehoseIngester {
 	return &FirehoseIngester{
-		log:     log,
-		crc:     crc,
-		queries: queries,
+		log:   log,
+		crc:   crc,
+		store: store,
 
 		subscribeURL:    "wss://bsky.social/xrpc/com.atproto.sync.subscribeRepos",
 		workerCount:     8,
@@ -267,7 +268,7 @@ func (fi *FirehoseIngester) handleRecordCreate(
 			zap.Bool("feed_like", feedLike),
 			zap.Bool("feed_follow", feedFollow),
 		)
-		if _, err := fi.crc.CreatePendingCandidateActor(ctx, repoDID); err != nil {
+		if err := fi.crc.CreatePendingCandidateActor(ctx, repoDID); err != nil {
 			return fmt.Errorf("creating pending candidate actor: %w", err)
 		}
 
@@ -276,24 +277,24 @@ func (fi *FirehoseIngester) handleRecordCreate(
 
 	// Only collect events from actors we care about e.g those that are
 	// approved.
-	if !(actor.Status == store.ActorStatusApproved) {
+	if !(actor.Status == v1.ActorStatus_ACTOR_STATUS_APPROVED) {
 		return nil
 	}
 
 	log.Debug("handling record create", zap.Any("record", record))
 	switch data := record.(type) {
 	case *bsky.FeedPost:
-		err := fi.handleFeedPostCreate(ctx, log, repoDID, recordUri, data)
+		err := fi.handleFeedPostCreate(ctx, repoDID, recordUri, data)
 		if err != nil {
 			return fmt.Errorf("handling app.bsky.feed.post create: %w", err)
 		}
 	case *bsky.FeedLike:
-		err := fi.handleFeedLikeCreate(ctx, log, repoDID, recordUri, data)
+		err := fi.handleFeedLikeCreate(ctx, repoDID, recordUri, data)
 		if err != nil {
 			return fmt.Errorf("handling app.bsky.feed.like: %w", err)
 		}
 	case *bsky.GraphFollow:
-		err := fi.handleGraphFollowCreate(ctx, log, repoDID, recordUri, data)
+		err := fi.handleGraphFollowCreate(ctx, repoDID, recordUri, data)
 		if err != nil {
 			return fmt.Errorf("handling app.bsky.graph.follow: %w", err)
 		}
@@ -330,11 +331,11 @@ func (fi *FirehoseIngester) handleRecordDelete(
 
 	switch nsid {
 	case "app.bsky.feed.post":
-		err = fi.handleFeedPostDelete(ctx, log, recordUri)
+		err = fi.handleFeedPostDelete(ctx, recordUri)
 	case "app.bsky.feed.like":
-		err = fi.handleFeedLikeDelete(ctx, log, recordUri)
+		err = fi.handleFeedLikeDelete(ctx, recordUri)
 	case "app.bsky.graph.follow":
-		err = fi.handleFeedFollowDelete(ctx, log, recordUri)
+		err = fi.handleFeedFollowDelete(ctx, recordUri)
 	default:
 		log.Debug("ignoring record create due to handled type")
 	}

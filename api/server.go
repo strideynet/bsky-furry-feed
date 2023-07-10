@@ -9,7 +9,7 @@ import (
 	"github.com/rs/cors"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/feed"
-	"github.com/strideynet/bsky-furry-feed/proto/bff/moderation/v1/moderationv1pbconnect"
+	"github.com/strideynet/bsky-furry-feed/proto/bff/v1/bffv1pbconnect"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.uber.org/zap"
 	"net/http"
@@ -40,7 +40,7 @@ func New(
 	hostname string,
 	listenAddr string,
 	feedRegistry *feed.Service,
-	queries *store.QueriesWithTX,
+	pgxStore *store.PGXStore,
 	bskyCredentials *bluesky.Credentials,
 ) (*http.Server, error) {
 	mux := &http.ServeMux{}
@@ -68,13 +68,13 @@ func New(
 
 	// Mount Buf Connect services
 	modSvcHandler := &ModerationServiceHandler{
-		queries:            queries,
+		store:              pgxStore,
 		log:                log,
 		blueskyCredentials: bskyCredentials,
 	}
 
 	mux.Handle(
-		moderationv1pbconnect.NewModerationServiceHandler(
+		bffv1pbconnect.NewModerationServiceHandler(
 			modSvcHandler,
 			connect.WithInterceptors(
 				unaryLoggingInterceptor(log),

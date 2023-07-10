@@ -3,24 +3,25 @@ package ingester
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5/pgtype"
-	bff "github.com/strideynet/bsky-furry-feed"
+	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.uber.org/zap"
 	"sync"
 	"time"
 )
 
-// CandidateActorCache holds a view of the candidate actors from
+// ActorCache holds a view of the candidate actors from
 // the database, refreshing itself every minute. It's designed to be safely
 // called concurrently. This prevents us needing to hit the database for every
 // event which would produce significant load on the db and also increase the
 // amount of time it takes to handle an event we aren't interested in.
 // The only downside to this approach is that it takes up to a minute for
 // new candidate repositories to be monitored.
-type CandidateActorCache struct {
-	log     *zap.Logger
-	queries *store.Queries
+//
+// TODO: Move this to the store as a wrapper around *store.PGXStore ?
+type ActorCache struct {
+	log   *zap.Logger
+	store *store.PGXStore
 
 	// period is how often to attempt to fresh the list of candidate
 	// actors.
@@ -34,47 +35,45 @@ type CandidateActorCache struct {
 	// cached is a map keyed by the actor DID to the data about the
 	// actor. The go standard map implementation is fast enough for our
 	// needs at this time.
-	cached map[string]bff.CandidateActor
+	cached map[string]*v1.Actor
 	// mu protects cached to prevent concurrent access leading to corruption.
 	mu sync.RWMutex
 }
 
-func NewCandidateActorCache(
+func NewActorCache(
 	log *zap.Logger,
-	queries *store.Queries,
-) *CandidateActorCache {
-	return &CandidateActorCache{
-		queries:        queries,
+	store *store.PGXStore,
+) *ActorCache {
+	return &ActorCache{
+		store:          store,
 		log:            log,
 		period:         time.Minute,
 		refreshTimeout: time.Second * 10,
 	}
 }
 
-func (crc *CandidateActorCache) GetByDID(
+func (crc *ActorCache) GetByDID(
 	did string,
-) *bff.CandidateActor {
+) *v1.Actor {
 	crc.mu.RLock()
 	defer crc.mu.RUnlock()
 	v, ok := crc.cached[did]
 	if ok {
-		return &v
+		return v
 	}
 	return nil
 }
 
-func (crc *CandidateActorCache) Sync(ctx context.Context) error {
+func (crc *ActorCache) Sync(ctx context.Context) error {
 	crc.log.Info("starting cache sync")
-	data, err := crc.queries.ListCandidateActors(ctx, store.NullActorStatus{
-		Valid: false,
-	})
+	data, err := crc.store.ListActors(ctx, store.ListActorsOpts{})
 	if err != nil {
-		return fmt.Errorf("listing candidate actors: %w", err)
+		return fmt.Errorf("listing actors: %w", err)
 	}
 
-	mapped := map[string]bff.CandidateActor{}
+	mapped := map[string]*v1.Actor{}
 	for _, cr := range data {
-		mapped[cr.DID] = bff.CandidateActorFromStore(cr)
+		mapped[cr.Did] = cr
 	}
 
 	crc.mu.Lock()
@@ -84,7 +83,7 @@ func (crc *CandidateActorCache) Sync(ctx context.Context) error {
 	return nil
 }
 
-func (crc *CandidateActorCache) Start(ctx context.Context) error {
+func (crc *ActorCache) Start(ctx context.Context) error {
 	ticker := time.NewTicker(crc.period)
 	defer ticker.Stop()
 	for {
@@ -103,27 +102,22 @@ func (crc *CandidateActorCache) Start(ctx context.Context) error {
 	}
 }
 
-func (crc *CandidateActorCache) CreatePendingCandidateActor(ctx context.Context, did string) (*bff.CandidateActor, error) {
-	ctx, span := tracer.Start(ctx, "candidate_actor_cache.create_pending_candidate_actor")
+func (crc *ActorCache) CreatePendingCandidateActor(ctx context.Context, did string) error {
+	ctx, span := tracer.Start(ctx, "actor_cache.create_pending_actor")
 	defer span.End()
-	params := store.CreateCandidateActorParams{
+	params := store.CreateActorOpts{
 		DID:     did,
 		Comment: "added by system",
-		CreatedAt: pgtype.Timestamptz{
-			Time:  time.Now(),
-			Valid: true,
-		},
-		Status: store.ActorStatusPending,
+		Status:  v1.ActorStatus_ACTOR_STATUS_PENDING,
 	}
-	ca, err := crc.queries.CreateCandidateActor(ctx, params)
+	ca, err := crc.store.CreateActor(ctx, params)
 	if err != nil {
-		return nil, fmt.Errorf("creating candidate actor: %w", err)
+		return fmt.Errorf("creating actor: %w", err)
 	}
 	crc.log.Info("added new pending actor")
 
 	crc.mu.Lock()
 	defer crc.mu.Unlock()
-	converted := bff.CandidateActorFromStore(ca)
-	crc.cached[ca.DID] = converted
-	return &converted, nil
+	crc.cached[ca.Did] = ca
+	return nil
 }
