@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/bufbuild/connect-go"
@@ -76,6 +77,7 @@ func New(
 		moderationv1pbconnect.NewModerationServiceHandler(
 			modSvcHandler,
 			connect.WithInterceptors(
+				unaryLoggingInterceptor(log),
 				otelconnect.NewInterceptor(),
 			),
 		),
@@ -88,4 +90,26 @@ func New(
 		Addr:    listenAddr,
 		Handler: c.Handler(mux),
 	}, nil
+}
+
+func unaryLoggingInterceptor(log *zap.Logger) connect.UnaryInterceptorFunc {
+	interceptor := func(next connect.UnaryFunc) connect.UnaryFunc {
+		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+			res, err := next(ctx, req)
+			if err != nil {
+				log.Error(
+					"gRPC request failed",
+					zap.String("procedure", req.Spec().Procedure),
+					zap.Error(err),
+				)
+			} else {
+				log.Info(
+					"gRPC request handled",
+					zap.String("procedure", req.Spec().Procedure),
+				)
+			}
+			return res, err
+		}
+	}
+	return interceptor
 }
