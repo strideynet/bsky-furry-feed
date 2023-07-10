@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/strideynet/bsky-furry-feed/store"
+	"github.com/strideynet/bsky-furry-feed/store/gen"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 	"strings"
@@ -21,7 +21,7 @@ func queueCmd(log *zap.Logger, env *environment) *cli.Command {
 			}
 			defer conn.Close(cctx.Context)
 
-			queries := store.New(conn)
+			queries := gen.New()
 
 			client, err := getBlueskyClient(cctx.Context)
 			if err != nil {
@@ -30,8 +30,9 @@ func queueCmd(log *zap.Logger, env *environment) *cli.Command {
 
 			prospectActors, err := queries.ListCandidateActors(
 				cctx.Context,
-				store.NullActorStatus{
-					ActorStatus: store.ActorStatusPending,
+				conn,
+				gen.NullActorStatus{
+					ActorStatus: gen.ActorStatusPending,
 					Valid:       true,
 				},
 			)
@@ -77,25 +78,25 @@ func queueCmd(log *zap.Logger, env *environment) *cli.Command {
 					return nil
 				case "reject", "r":
 					fmt.Println("rejecting...")
-					params := store.UpdateCandidateActorParams{
+					params := gen.UpdateCandidateActorParams{
 						DID: actor.DID,
-						Status: store.NullActorStatus{
+						Status: gen.NullActorStatus{
 							Valid:       true,
-							ActorStatus: store.ActorStatusNone,
+							ActorStatus: gen.ActorStatusNone,
 						},
 					}
-					_, err := queries.UpdateCandidateActor(cctx.Context, params)
+					_, err := queries.UpdateCandidateActor(cctx.Context, conn, params)
 					if err != nil {
 						return fmt.Errorf("creating candidate actor: %w", err)
 					}
 
 					fmt.Println("successfully rejected")
 				case "add", "a":
-					params := store.UpdateCandidateActorParams{
+					params := gen.UpdateCandidateActorParams{
 						DID: actor.DID,
-						Status: store.NullActorStatus{
+						Status: gen.NullActorStatus{
 							Valid:       true,
-							ActorStatus: store.ActorStatusApproved,
+							ActorStatus: gen.ActorStatusApproved,
 						},
 						IsArtist: pgtype.Bool{
 							Valid: true,
@@ -123,7 +124,7 @@ func queueCmd(log *zap.Logger, env *environment) *cli.Command {
 					}
 
 					log.Info("adding")
-					_, err := queries.UpdateCandidateActor(cctx.Context, params)
+					_, err := queries.UpdateCandidateActor(cctx.Context, conn, params)
 					if err != nil {
 						return fmt.Errorf("creating candidate actor: %w", err)
 					}

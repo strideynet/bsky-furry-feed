@@ -3,7 +3,7 @@
 //   sqlc v1.18.0
 // source: candidate_posts.sql
 
-package store
+package gen
 
 import (
 	"context"
@@ -26,8 +26,8 @@ type CreateCandidatePostParams struct {
 	Tags      []string
 }
 
-func (q *Queries) CreateCandidatePost(ctx context.Context, arg CreateCandidatePostParams) error {
-	_, err := q.db.Exec(ctx, createCandidatePost,
+func (q *Queries) CreateCandidatePost(ctx context.Context, db DBTX, arg CreateCandidatePostParams) error {
+	_, err := db.Exec(ctx, createCandidatePost,
 		arg.URI,
 		arg.ActorDID,
 		arg.CreatedAt,
@@ -46,58 +46,7 @@ FROM
 WHERE
       cp.is_hidden = false
   AND ca.status = 'approved'
-  AND ($1::TIMESTAMPTZ IS NULL OR
-       cp.created_at < $1)
-  AND cp.deleted_at IS NULL
-ORDER BY
-    cp.created_at DESC
-LIMIT $2
-`
-
-type GetFurryNewFeedParams struct {
-	CursorTimestamp pgtype.Timestamptz
-	Limit           int32
-}
-
-func (q *Queries) GetFurryNewFeed(ctx context.Context, arg GetFurryNewFeedParams) ([]CandidatePost, error) {
-	rows, err := q.db.Query(ctx, getFurryNewFeed, arg.CursorTimestamp, arg.Limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []CandidatePost
-	for rows.Next() {
-		var i CandidatePost
-		if err := rows.Scan(
-			&i.URI,
-			&i.ActorDID,
-			&i.CreatedAt,
-			&i.IndexedAt,
-			&i.IsNSFW,
-			&i.IsHidden,
-			&i.Tags,
-			&i.DeletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getFurryNewFeedWithTag = `-- name: GetFurryNewFeedWithTag :many
-SELECT
-    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden, cp.tags, cp.deleted_at
-FROM
-    candidate_posts cp
-        INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
-WHERE
-      cp.is_hidden = false
-  AND ca.status = 'approved'
-  AND $1::TEXT = ANY (cp.tags)
+  AND ($1::TEXT = '' OR $1::TEXT = ANY (cp.tags))
   AND ($2::TIMESTAMPTZ IS NULL OR
        cp.created_at < $2)
   AND cp.deleted_at IS NULL
@@ -106,14 +55,14 @@ ORDER BY
 LIMIT $3
 `
 
-type GetFurryNewFeedWithTagParams struct {
+type GetFurryNewFeedParams struct {
 	Tag             string
 	CursorTimestamp pgtype.Timestamptz
 	Limit           int32
 }
 
-func (q *Queries) GetFurryNewFeedWithTag(ctx context.Context, arg GetFurryNewFeedWithTagParams) ([]CandidatePost, error) {
-	rows, err := q.db.Query(ctx, getFurryNewFeedWithTag, arg.Tag, arg.CursorTimestamp, arg.Limit)
+func (q *Queries) GetFurryNewFeed(ctx context.Context, db DBTX, arg GetFurryNewFeedParams) ([]CandidatePost, error) {
+	rows, err := db.Query(ctx, getFurryNewFeed, arg.Tag, arg.CursorTimestamp, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -184,8 +133,8 @@ type GetPostsWithLikesRow struct {
 	Likes     int64
 }
 
-func (q *Queries) GetPostsWithLikes(ctx context.Context, arg GetPostsWithLikesParams) ([]GetPostsWithLikesRow, error) {
-	rows, err := q.db.Query(ctx, getPostsWithLikes, arg.CursorTimestamp, arg.Limit)
+func (q *Queries) GetPostsWithLikes(ctx context.Context, db DBTX, arg GetPostsWithLikesParams) ([]GetPostsWithLikesRow, error) {
+	rows, err := db.Query(ctx, getPostsWithLikes, arg.CursorTimestamp, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +172,7 @@ WHERE
     uri = $1
 `
 
-func (q *Queries) SoftDeleteCandidatePost(ctx context.Context, uri string) error {
-	_, err := q.db.Exec(ctx, softDeleteCandidatePost, uri)
+func (q *Queries) SoftDeleteCandidatePost(ctx context.Context, db DBTX, uri string) error {
+	_, err := db.Exec(ctx, softDeleteCandidatePost, uri)
 	return err
 }

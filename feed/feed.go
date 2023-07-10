@@ -3,12 +3,12 @@ package feed
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	bff "github.com/strideynet/bsky-furry-feed"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
+	"github.com/strideynet/bsky-furry-feed/store/gen"
 	"golang.org/x/exp/slices"
 	"math"
 	"strings"
@@ -36,12 +36,12 @@ type Post struct {
 	Cursor string
 }
 
-type GenerateFunc func(ctx context.Context, queries *store.Queries, cursor string, limit int) ([]Post, error)
+type GenerateFunc func(ctx context.Context, queries *store.PGXStore, cursor string, limit int) ([]Post, error)
 
 type Service struct {
 	// TODO: Locking on feeds to avoid data races
-	feeds   map[string]*feed
-	queries *store.Queries
+	feeds map[string]*feed
+	store *store.PGXStore
 }
 
 func (s *Service) Register(m Meta, generateFunc GenerateFunc) {
@@ -80,9 +80,10 @@ func (s *Service) GetFeedPosts(ctx context.Context, feedKey string, cursor strin
 		return nil, fmt.Errorf("unrecognized feed")
 	}
 
-	return f.generate(ctx, s.queries, cursor, limit)
+	return f.generate(ctx, s.store, cursor, limit)
 }
-func PostsFromStorePosts(storePosts []store.CandidatePost) []Post {
+
+func PostsFromStorePosts(storePosts []gen.CandidatePost) []Post {
 	posts := make([]Post, 0, len(storePosts))
 	for _, p := range storePosts {
 		posts = append(posts, Post{
@@ -94,56 +95,50 @@ func PostsFromStorePosts(storePosts []store.CandidatePost) []Post {
 }
 
 func newGenerator() GenerateFunc {
-	return func(ctx context.Context, queries *store.Queries, cursor string, limit int) ([]Post, error) {
-		params := store.GetFurryNewFeedParams{
-			Limit: int32(limit),
+	return func(ctx context.Context, pgxStore *store.PGXStore, cursor string, limit int) ([]Post, error) {
+		params := store.ListPostsForNewFeedOpts{
+			Limit: limit,
 		}
 		if cursor != "" {
 			cursorTime, err := bluesky.ParseTime(cursor)
 			if err != nil {
 				return nil, fmt.Errorf("parsing cursor: %w", err)
 			}
-			params.CursorTimestamp = pgtype.Timestamptz{
-				Valid: true,
-				Time:  cursorTime,
-			}
+			params.CursorTime = &cursorTime
 		}
 
-		posts, err := queries.GetFurryNewFeed(ctx, params)
+		posts, err := pgxStore.ListPostsForNewFeed(ctx, params)
 		if err != nil {
-			return nil, fmt.Errorf("executing sql: %w", err)
+			return nil, fmt.Errorf("executing ListPostsForNewFeed: %w", err)
 		}
 		return PostsFromStorePosts(posts), nil
 	}
 }
 
 func newWithTagGenerator(tag string) GenerateFunc {
-	return func(ctx context.Context, queries *store.Queries, cursor string, limit int) ([]Post, error) {
-		params := store.GetFurryNewFeedWithTagParams{
-			Limit: int32(limit),
-			Tag:   tag,
+	return func(ctx context.Context, pgxStore *store.PGXStore, cursor string, limit int) ([]Post, error) {
+		params := store.ListPostsForNewFeedOpts{
+			Limit:     limit,
+			FilterTag: tag,
 		}
 		if cursor != "" {
 			cursorTime, err := bluesky.ParseTime(cursor)
 			if err != nil {
 				return nil, fmt.Errorf("parsing cursor: %w", err)
 			}
-			params.CursorTimestamp = pgtype.Timestamptz{
-				Valid: true,
-				Time:  cursorTime,
-			}
+			params.CursorTime = &cursorTime
 		}
 
-		posts, err := queries.GetFurryNewFeedWithTag(ctx, params)
+		posts, err := pgxStore.ListPostsForNewFeed(ctx, params)
 		if err != nil {
-			return nil, fmt.Errorf("executing sql: %w", err)
+			return nil, fmt.Errorf("executing ListPostsForNewFeed: %w", err)
 		}
 		return PostsFromStorePosts(posts), nil
 	}
 }
 
 func scoreBasedGenerator(gravity float64, postAgeOffset time.Duration) GenerateFunc {
-	return func(ctx context.Context, queries *store.Queries, cursor string, limit int) ([]Post, error) {
+	return func(ctx context.Context, pgxStore *store.PGXStore, cursor string, limit int) ([]Post, error) {
 		cursorTime := time.Now().UTC()
 		if cursor != "" {
 			parts := strings.Split(cursor, "|")
@@ -157,12 +152,9 @@ func scoreBasedGenerator(gravity float64, postAgeOffset time.Duration) GenerateF
 			cursorTime = parsedTime
 		}
 
-		rows, err := queries.GetPostsWithLikes(ctx, store.GetPostsWithLikesParams{
-			Limit: 2000,
-			CursorTimestamp: pgtype.Timestamptz{
-				Time:  cursorTime,
-				Valid: true,
-			},
+		rows, err := pgxStore.ListPostsWithLikes(ctx, store.ListPostsWithLikesOpts{
+			Limit:      2000,
+			CursorTime: &cursorTime,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("executing sql: %w", err)
@@ -242,9 +234,9 @@ func scoreBasedGenerator(gravity float64, postAgeOffset time.Duration) GenerateF
 // bksy-furry-feed feeds.
 // TODO: This really doesn't belong here, ideally, these feeds would be defined
 // elsewhere to make this more pluggable. A refactor idea for the future :)
-func ServiceWithDefaultFeeds(queries *store.Queries) *Service {
+func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r := &Service{
-		queries: queries,
+		store: pgxStore,
 	}
 
 	r.Register(Meta{ID: "furry-new"}, newGenerator())
@@ -252,7 +244,7 @@ func ServiceWithDefaultFeeds(queries *store.Queries) *Service {
 	r.Register(Meta{ID: "furry-fursuit"}, newWithTagGenerator(bff.TagFursuitMedia))
 	r.Register(Meta{ID: "furry-art"}, newWithTagGenerator(bff.TagArt))
 	r.Register(Meta{ID: "furry-nsfw"}, newWithTagGenerator(bff.TagNSFW))
-	r.Register(Meta{ID: "furry-test"}, func(_ context.Context, _ *store.Queries, _ string, limit int) ([]Post, error) {
+	r.Register(Meta{ID: "furry-test"}, func(_ context.Context, _ *store.PGXStore, _ string, limit int) ([]Post, error) {
 		return []Post{
 			{
 				URI: "at://did:plc:dllwm3fafh66ktjofzxhylwk/app.bsky.feed.post/3jznh32lq6s2c",

@@ -13,6 +13,7 @@ sql:
     schema: "store/migrations/"
     gen:
       go:
-        package: "store"
-        out: "store/"
+        package: "gen"
+        out: "store/gen"
         sql_package: pgx/v5
+        emit_methods_with_db_argument: true
