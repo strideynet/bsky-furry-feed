@@ -1,6 +1,16 @@
 <script lang="ts">
+  import NavItem from '$components/nav/item.svelte';
+
   export let hasSession: boolean,
     isAtTop = false;
+
+  $: navItems = hasSession
+    ? [
+        { text: 'Dashboard', href: '/dash' },
+        { text: 'Queue', href: '/queue' },
+        { text: 'Logout', href: '/auth/logout', danger: true }
+      ]
+    : [{ text: 'Login', href: '/auth/login' }];
 </script>
 
 <div
@@ -12,12 +22,9 @@
       <a class="text-2xl font-bold" href="/">🐕 furryli.st</a>
     </div>
     <div class="flex flex-row gap-4">
-      {#if hasSession}
-        <a href="/dash">Dashboard</a>
-        <a href="/auth/logout">Logout</a>
-      {:else}
-        <a href="/auth/login">Login</a>
-      {/if}
+      {#each navItems as item}
+        <NavItem {...item} />
+      {/each}
     </div>
   </div>
 </div>

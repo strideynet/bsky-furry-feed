@@ -6,6 +6,7 @@
 
   import { browser } from '$app/environment';
   import { agent, session } from '$lib/atp';
+  import { head } from '$stores/head';
 
   import PageTransitionWrapper from '$components/layouts/page-transition.svelte';
   import Nav from '$components/nav.svelte';
@@ -34,8 +35,8 @@
 />
 
 <svelte:head>
-  <title>furryli.st</title>
-  <meta name="description" content="The purremier furry feed for Bluesky" />
+  <title>furryli.st Admin{$head.title?.trim() ? ` | ${$head.title}` : ''}</title>
+  <meta name="description" content={$head.description} />
 </svelte:head>
 
 <div class="relative flex flex-col" bind:this={pageContainer}>

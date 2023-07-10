@@ -1,11 +1,15 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { get } from 'svelte/store';
 
   import { goto } from '$app/navigation';
   import { agent, session } from '$lib/atp';
+  import { head } from '$stores/head';
 
   import Button from '$components/inputs/button.svelte';
   import Field from '$components/inputs/field.svelte';
+
+  onMount(() => head.set({ ...$head, title: 'Login' }));
 
   let error = '';
 

@@ -1,7 +1,12 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+
   import { session } from '$lib/atp';
+  import { head } from '$stores/head';
 
   import Heading from '$components/text/heading.svelte';
+
+  onMount(() => head.set({ ...$head, title: 'Dashboard' }));
 </script>
 
 <Heading level={1}>Dashboard</Heading>

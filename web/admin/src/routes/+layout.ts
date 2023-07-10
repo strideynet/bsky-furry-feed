@@ -1,15 +1,13 @@
 import { get } from 'svelte/store';
+import { redirect } from '@sveltejs/kit';
 
-import { browser } from '$app/environment';
 import { agent, session, setupAgent, setupSession } from '$lib/atp';
 
 import type { LayoutLoad } from './$types';
 
-export const load = (({ url }) => {
-  if (!browser) {
-    return { url };
-  }
+export const ssr = false;
 
+export const load = (({ url }) => {
   if (!get(agent)) {
     agent.set(setupAgent());
   }
@@ -25,8 +23,12 @@ export const load = (({ url }) => {
 
   const currentSession = get(session);
 
-  if (currentSession) {
+  if (currentSession && !get(agent)?.hasSession) {
     get(agent)?.resumeSession(currentSession);
+  }
+
+  if (!get(session) && !url.pathname.startsWith('/auth')) {
+    throw redirect(302, '/auth/login');
   }
 
   return { url };
