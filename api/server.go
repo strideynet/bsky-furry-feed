@@ -4,15 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bufbuild/connect-go"
-	grpcreflect "github.com/bufbuild/connect-grpcreflect-go"
 	otelconnect "github.com/bufbuild/connect-opentelemetry-go"
+	"github.com/rs/cors"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/feed"
 	"github.com/strideynet/bsky-furry-feed/proto/bff/moderation/v1/moderationv1pbconnect"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.uber.org/zap"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 	"net/http"
 )
 
@@ -46,6 +44,18 @@ func New(
 ) (*http.Server, error) {
 	mux := &http.ServeMux{}
 
+	c := cors.New(cors.Options{
+		AllowedOrigins: []string{
+			"https://admin.furryli.st",
+			"http://localhost:*",
+			"https://buf.build",
+		},
+		AllowCredentials: true,
+		AllowedHeaders: []string{
+			"*",
+		},
+	})
+
 	// Mount xrpc handlers
 	didEndpointPath, didHandler, err := didHandler(hostname)
 	if err != nil {
@@ -61,6 +71,7 @@ func New(
 		log:                log,
 		blueskyCredentials: bskyCredentials,
 	}
+
 	mux.Handle(
 		moderationv1pbconnect.NewModerationServiceHandler(
 			modSvcHandler,
@@ -70,17 +81,11 @@ func New(
 		),
 	)
 
-	grpcReflector := grpcreflect.NewStaticReflector(
-		moderationv1pbconnect.ModerationServiceName,
-	)
-	mux.Handle(grpcreflect.NewHandlerV1(grpcReflector))
-	mux.Handle(grpcreflect.NewHandlerV1Alpha(grpcReflector))
-
 	// Mount root/not found handler
 	mux.Handle(rootHandler(log))
 
 	return &http.Server{
 		Addr:    listenAddr,
-		Handler: h2c.NewHandler(mux, &http2.Server{}),
+		Handler: c.Handler(mux),
 	}, nil
 }
