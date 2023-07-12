@@ -33,7 +33,9 @@ func (m *ModerationServiceHandler) ListActors(ctx context.Context, req *connect.
 		return nil, fmt.Errorf("authenticating: %w", err)
 	}
 
-	actors, err := m.store.ListActors(ctx, store.ListActorsOpts{})
+	actors, err := m.store.ListActors(ctx, store.ListActorsOpts{
+		FilterStatus: req.Msg.FilterStatus,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("listing actors: %w", err)
 	}
@@ -93,7 +95,7 @@ func (m *ModerationServiceHandler) ProcessApprovalQueue(ctx context.Context, req
 	}
 	actorDID := req.Msg.Did
 	if actorDID == "" {
-		return nil, fmt.Errorf("validating 'did': missing")
+		return nil, fmt.Errorf("validating did: missing")
 	}
 	isArtist := req.Msg.IsArtist
 

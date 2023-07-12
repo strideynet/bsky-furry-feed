@@ -15,6 +15,7 @@ export const ActorStatus = proto3.makeEnum(
     {no: 1, name: "ACTOR_STATUS_PENDING", localName: "PENDING"},
     {no: 2, name: "ACTOR_STATUS_APPROVED", localName: "APPROVED"},
     {no: 3, name: "ACTOR_STATUS_BANNED", localName: "BANNED"},
+    {no: 4, name: "ACTOR_STATUS_NONE", localName: "NONE"},
   ],
 );
 
@@ -80,7 +81,11 @@ export const GetActorResponse = proto3.makeMessageType(
  */
 export const ListActorsRequest = proto3.makeMessageType(
   "bff.v1.ListActorsRequest",
-  [],
+  () => [
+    { no: 1, name: "cursor", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "filter_status", kind: "enum", T: proto3.getEnumType(ActorStatus) },
+  ],
 );
 
 /**
@@ -90,6 +95,7 @@ export const ListActorsResponse = proto3.makeMessageType(
   "bff.v1.ListActorsResponse",
   () => [
     { no: 1, name: "actors", kind: "message", T: Actor, repeated: true },
+    { no: 2, name: "cursor", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ],
 );
 
