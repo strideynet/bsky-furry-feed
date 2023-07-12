@@ -6,6 +6,9 @@ import (
 	"errors"
 	"fmt"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"net/http"
 	"sync"
 	"time"
@@ -22,14 +25,15 @@ import (
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
 	typegen "github.com/whyrusleeping/cbor-gen"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 )
 
-var tracer = otel.Tracer("github.com/strideynet/bsky-furry-feed/ingester")
+// globalTracer is the BFF wide tracer. This is different to the tracer used in
+// the feedIngester which has a different sampling rate.
+var globalTracer = otel.Tracer("github.com/strideynet/bsky-furry-feed/ingester")
 
 var workItemsProcessed = promauto.NewSummaryVec(prometheus.SummaryOpts{
 	Name: "bff_ingester_work_item_duration_seconds",
@@ -38,9 +42,11 @@ var workItemsProcessed = promauto.NewSummaryVec(prometheus.SummaryOpts{
 
 type FirehoseIngester struct {
 	// dependencies
-	log   *zap.Logger
-	crc   *ActorCache
-	store *store.PGXStore
+	log            *zap.Logger
+	crc            *ActorCache
+	store          *store.PGXStore
+	tracerProvider trace.TracerProvider
+	tracer         trace.Tracer
 
 	// configuration
 	subscribeURL    string
@@ -51,12 +57,13 @@ type FirehoseIngester struct {
 }
 
 func NewFirehoseIngester(
-	log *zap.Logger, store *store.PGXStore, crc *ActorCache,
+	log *zap.Logger, store *store.PGXStore, crc *ActorCache, tracerProvider trace.TracerProvider,
 ) *FirehoseIngester {
 	return &FirehoseIngester{
-		log:   log,
-		crc:   crc,
-		store: store,
+		log:    log,
+		crc:    crc,
+		store:  store,
+		tracer: tracerProvider.Tracer("github.com/strideynet/bsky-furry-feed/ingester-fi"),
 
 		subscribeURL:    "wss://bsky.social/xrpc/com.atproto.sync.subscribeRepos",
 		workerCount:     8,
@@ -163,26 +170,20 @@ func (fi *FirehoseIngester) Start(ctx context.Context) error {
 	return eg.Wait()
 }
 
-func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncSubscribeRepos_Commit) error {
-	// TODO: Find a way to use tail-based sampling so that we can capture this trace
-	// before candidateActor is run and ensure we always capture candidateActor
-	// traces.
-	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_commit")
-	defer span.End()
+func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncSubscribeRepos_Commit) (err error) {
+	ctx, span := fi.tracer.Start(ctx, "firehose_ingester.handle_commit")
+	defer func() {
+		endSpan(span, err)
+	}()
 	span.SetAttributes(
-		attribute.String("candidate_actor.did", evt.Repo),
+		attribute.String("actor.did", evt.Repo),
 	)
-	log := fi.log.With(zap.String("candidate_actor.did", evt.Repo))
+
 	rr, err := repo.ReadRepoFromCar(ctx, bytes.NewReader(evt.Blocks))
 	if err != nil {
-		return fmt.Errorf("reading repo from car %w", err)
+		return fmt.Errorf("reading repo from car: %w", err)
 	}
 	for _, op := range evt.Ops {
-		log := log.With(
-			zap.String("op.action", op.Action),
-			zap.String("op.path", op.Path),
-		)
-
 		uri := fmt.Sprintf("at://%s/%s", evt.Repo, op.Path)
 
 		switch repomgr.EventKind(op.Action) {
@@ -201,18 +202,14 @@ func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncS
 				return fmt.Errorf("mismatch in record and op cid: %s != %s", recordCid, *op.Cid)
 			}
 
-			log = log.With(zap.String("record.uri", uri))
-
 			if err := fi.handleRecordCreate(
-				ctx, log, evt.Repo, uri, record,
+				ctx, evt.Repo, uri, record,
 			); err != nil {
 				return fmt.Errorf("handling record create: %w", err)
 			}
 		case repomgr.EvtKindDeleteRecord:
-			log = log.With(zap.String("record.uri", uri))
-
 			if err := fi.handleRecordDelete(
-				ctx, log, evt.Repo, uri,
+				ctx, evt.Repo, uri,
 			); err != nil {
 				return fmt.Errorf("handling record delete: %w", err)
 			}
@@ -242,15 +239,25 @@ func (fi *FirehoseIngester) isFurryFeedFollow(record typegen.CBORMarshaler) bool
 	return follow.Subject == "did:plc:jdkvwye2lf4mingzk7qdebzc"
 }
 
+func endSpan(span trace.Span, err error) {
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+	}
+	span.End()
+}
+
 func (fi *FirehoseIngester) handleRecordCreate(
 	ctx context.Context,
-	log *zap.Logger,
 	repoDID string,
 	recordUri string,
 	record typegen.CBORMarshaler,
-) error {
-	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_record_create")
-	defer span.End()
+) (err error) {
+	ctx, span := fi.tracer.Start(ctx, "firehose_ingester.handle_record_create")
+	defer func() {
+		endSpan(span, err)
+	}()
+	span.SetAttributes(attribute.String("record.uri", recordUri))
 
 	actor := fi.crc.GetByDID(repoDID)
 	if actor == nil {
@@ -262,7 +269,7 @@ func (fi *FirehoseIngester) handleRecordCreate(
 		if !(feedLike || feedFollow) {
 			return nil
 		}
-		log.Info(
+		fi.log.Info(
 			"unknown actor interacted, adding to db as pending",
 			zap.String("did", repoDID),
 			zap.Bool("feed_like", feedLike),
@@ -278,10 +285,10 @@ func (fi *FirehoseIngester) handleRecordCreate(
 	// Only collect events from actors we care about e.g those that are
 	// approved.
 	if !(actor.Status == v1.ActorStatus_ACTOR_STATUS_APPROVED) {
+		span.AddEvent("ignoring unknown actor")
 		return nil
 	}
 
-	log.Debug("handling record create", zap.Any("record", record))
 	switch data := record.(type) {
 	case *bsky.FeedPost:
 		err := fi.handleFeedPostCreate(ctx, repoDID, recordUri, data)
@@ -299,7 +306,7 @@ func (fi *FirehoseIngester) handleRecordCreate(
 			return fmt.Errorf("handling app.bsky.graph.follow: %w", err)
 		}
 	default:
-		log.Debug("ignoring record create due to handled type")
+		span.AddEvent("ignoring record due to unrecognized type")
 	}
 
 	return nil
@@ -307,27 +314,26 @@ func (fi *FirehoseIngester) handleRecordCreate(
 
 func (fi *FirehoseIngester) handleRecordDelete(
 	ctx context.Context,
-	log *zap.Logger,
 	repoDID string,
 	recordUri string,
 ) (err error) {
-	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_record_delete")
-	defer span.End()
+	ctx, span := fi.tracer.Start(ctx, "firehose_ingester.handle_record_delete")
+	defer func() {
+		endSpan(span, err)
+	}()
+	span.SetAttributes(attribute.String("record.uri", recordUri))
 
 	actor := fi.crc.GetByDID(repoDID)
-
 	if actor == nil {
+		span.AddEvent("ignoring unknown actor")
 		// if we don’t know the actor, we don’t have their data
 		return
 	}
 
 	nsid, err := bluesky.ParseNamespaceID(recordUri)
-
 	if err != nil {
-		return
+		return fmt.Errorf("parsing nsid: %w", err)
 	}
-
-	log.Debug("handling record delete", zap.Any("recordUri", recordUri), zap.Any("nsid", nsid))
 
 	switch nsid {
 	case "app.bsky.feed.post":
@@ -337,7 +343,7 @@ func (fi *FirehoseIngester) handleRecordDelete(
 	case "app.bsky.graph.follow":
 		err = fi.handleFeedFollowDelete(ctx, recordUri)
 	default:
-		log.Debug("ignoring record create due to handled type")
+		span.AddEvent("ignoring record due to unrecognized type")
 	}
 
 	return

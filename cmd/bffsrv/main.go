@@ -20,6 +20,7 @@ import (
 	"golang.org/x/sys/unix"
 	"os"
 	"os/signal"
+	"time"
 )
 
 // TODO: Better, more granular, env configuration.
@@ -53,18 +54,18 @@ func main() {
 	}
 }
 
-func tracerProvider(ctx context.Context, url string, mode mode) (*tracesdk.TracerProvider, error) {
+func tracerProvider(ctx context.Context, url string, mode mode) (*tracesdk.TracerProvider, func(), error) {
 	var exp tracesdk.SpanExporter
 	var err error
 	if mode == productionMode {
 		exp, err = texporter.New()
 		if err != nil {
-			return nil, fmt.Errorf("creating gcp trace exporter: %w", err)
+			return nil, nil, fmt.Errorf("creating gcp trace exporter: %w", err)
 		}
 	} else {
 		exp, err = jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(url)))
 		if err != nil {
-			return nil, fmt.Errorf("creating jaeger exporter: %w", err)
+			return nil, nil, fmt.Errorf("creating jaeger exporter: %w", err)
 		}
 	}
 
@@ -77,24 +78,36 @@ func tracerProvider(ctx context.Context, url string, mode mode) (*tracesdk.Trace
 		),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("creating resource attributes: %w", err)
+		return nil, nil, fmt.Errorf("creating resource attributes: %w", err)
 	}
 
-	tpOpts := []tracesdk.TracerProviderOption{
+	sharedOpts := []tracesdk.TracerProviderOption{
 		tracesdk.WithBatcher(exp),
 		tracesdk.WithResource(r),
 	}
-	if mode == productionMode {
-		tpOpts = append(tpOpts, tracesdk.WithSampler(tracesdk.TraceIDRatioBased(0.001)))
-	}
 
-	tp := tracesdk.NewTracerProvider(
-		tpOpts...,
+	// Global TP is used by most things.
+	globalTP := tracesdk.NewTracerProvider(
+		sharedOpts...,
 	)
-	otel.SetTracerProvider(tp)
-	// TODO: Tracer shutdown
+	otel.SetTracerProvider(globalTP)
 
-	return tp, nil
+	// Ingester TP is used for the very noisy feed ingester until we configure
+	// a otel collector for tail based sampling.
+	ingesterOpts := append([]tracesdk.TracerProviderOption(nil), sharedOpts...)
+	if mode == productionMode {
+		ingesterOpts = append(ingesterOpts, tracesdk.WithSampler(tracesdk.TraceIDRatioBased(0.001)))
+	}
+	ingesterTP := tracesdk.NewTracerProvider(
+		ingesterOpts...,
+	)
+
+	return ingesterTP, func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+		defer cancel()
+		_ = globalTP.ForceFlush(ctx)
+		_ = ingesterTP.ForceFlush(ctx)
+	}, nil
 }
 
 func runE(log *zap.Logger) error {
@@ -113,14 +126,15 @@ func runE(log *zap.Logger) error {
 	defer cancel()
 
 	log.Info("setting up services")
-	_, err = tracerProvider(
+	ingesterTP, shutdownTrace, err := tracerProvider(
 		ctx,
 		"http://localhost:14268/api/traces",
 		mode,
 	)
 	if err != nil {
-		return fmt.Errorf("creating tracer provider: %w", err)
+		return fmt.Errorf("creating tracer providers: %w", err)
 	}
+	defer shutdownTrace()
 
 	var poolConnector store.PoolConnector
 	switch mode {
@@ -172,7 +186,7 @@ func runE(log *zap.Logger) error {
 	// Setup ingester if not running in feed developer mode
 	if mode != feedDevMode {
 		fi := ingester.NewFirehoseIngester(
-			log.Named("firehose_ingester"), pgxStore, actorCache,
+			log.Named("firehose_ingester"), pgxStore, actorCache, ingesterTP,
 		)
 		eg.Go(func() error {
 			return fi.Start(ctx)

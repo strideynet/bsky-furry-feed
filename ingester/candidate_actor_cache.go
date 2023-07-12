@@ -102,9 +102,11 @@ func (crc *ActorCache) Start(ctx context.Context) error {
 	}
 }
 
-func (crc *ActorCache) CreatePendingCandidateActor(ctx context.Context, did string) error {
-	ctx, span := tracer.Start(ctx, "actor_cache.create_pending_actor")
-	defer span.End()
+func (crc *ActorCache) CreatePendingCandidateActor(ctx context.Context, did string) (err error) {
+	ctx, span := globalTracer.Start(ctx, "actor_cache.create_pending_actor")
+	defer func() {
+		endSpan(span, err)
+	}()
 	params := store.CreateActorOpts{
 		DID:     did,
 		Comment: "added by system",

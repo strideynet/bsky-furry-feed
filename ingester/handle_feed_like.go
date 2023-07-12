@@ -14,9 +14,11 @@ func (fi *FirehoseIngester) handleFeedLikeCreate(
 	repoDID string,
 	recordUri string,
 	data *bsky.FeedLike,
-) error {
-	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_feed_like_create")
-	defer span.End()
+) (err error) {
+	ctx, span := fi.tracer.Start(ctx, "firehose_ingester.handle_feed_like_create")
+	defer func() {
+		endSpan(span, err)
+	}()
 
 	createdAt, err := bluesky.ParseTime(data.CreatedAt)
 	if err != nil {
@@ -39,9 +41,11 @@ func (fi *FirehoseIngester) handleFeedLikeCreate(
 func (fi *FirehoseIngester) handleFeedLikeDelete(
 	ctx context.Context,
 	recordUri string,
-) error {
-	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_feed_like_delete")
-	defer span.End()
+) (err error) {
+	ctx, span := fi.tracer.Start(ctx, "firehose_ingester.handle_feed_like_delete")
+	defer func() {
+		endSpan(span, err)
+	}()
 
 	if err := fi.store.DeleteLike(
 		ctx, store.DeleteLikeOpts{URI: recordUri},

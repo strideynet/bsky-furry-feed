@@ -43,9 +43,13 @@ func (fi *FirehoseIngester) handleFeedPostCreate(
 	repoDID string,
 	recordUri string,
 	data *bsky.FeedPost,
-) error {
-	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_feed_post_create")
+) (err error) {
+	ctx, span := fi.tracer.Start(ctx, "firehose_ingester.handle_feed_post_create")
 	defer span.End()
+	defer func() {
+		endSpan(span, err)
+	}()
+
 	if data.Reply == nil {
 		createdAt, err := bluesky.ParseTime(data.CreatedAt)
 		if err != nil {
@@ -86,9 +90,11 @@ func (fi *FirehoseIngester) handleFeedPostCreate(
 func (fi *FirehoseIngester) handleFeedPostDelete(
 	ctx context.Context,
 	recordUri string,
-) error {
-	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_feed_post_delete")
-	defer span.End()
+) (err error) {
+	ctx, span := fi.tracer.Start(ctx, "firehose_ingester.handle_feed_post_delete")
+	defer func() {
+		endSpan(span, err)
+	}()
 
 	if err := fi.store.DeletePost(
 		ctx, store.DeletePostOpts{URI: recordUri},
