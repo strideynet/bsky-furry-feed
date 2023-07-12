@@ -6,20 +6,28 @@ on:
   pull_request:
 
 jobs:
-  test-go:
-    name: Test Go
+  go-test:
+    name: Go unit tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
         with:
           go-version: "1.20"
-      - uses: isbang/compose-action@v1.4.1
-        with:
-          compose-file: "./docker-compose.ci.yaml"
-          down-flags: "--volumes"
-      - run: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-      - run: sleep 1
-      - run: migrate -path store/migrations -database "postgres://bff:bff@localhost:5433/bff?sslmode=disable" up
       - name: Test
-        run: go test -race -v ./...
+        run: go test -race -v -short ./...
+  go-integration:
+    services:
+      dind:
+        image: docker:23.0-rc-dind-rootless
+        ports:
+          - 2375:2375
+    name: Go integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.20"
+      - name: Test
+        run: go test -race -v ./testing
