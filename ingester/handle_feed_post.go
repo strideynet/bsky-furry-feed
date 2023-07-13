@@ -44,7 +44,7 @@ func (fi *FirehoseIngester) handleFeedPostCreate(
 	recordUri string,
 	data *bsky.FeedPost,
 ) (err error) {
-	ctx, span := fi.tracer.Start(ctx, "firehose_ingester.handle_feed_post_create")
+	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_feed_post_create")
 	defer span.End()
 	defer func() {
 		endSpan(span, err)
@@ -91,7 +91,7 @@ func (fi *FirehoseIngester) handleFeedPostDelete(
 	ctx context.Context,
 	recordUri string,
 ) (err error) {
-	ctx, span := fi.tracer.Start(ctx, "firehose_ingester.handle_feed_post_delete")
+	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_feed_post_delete")
 	defer func() {
 		endSpan(span, err)
 	}()

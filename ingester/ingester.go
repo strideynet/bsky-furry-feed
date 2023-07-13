@@ -31,9 +31,9 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// globalTracer is the BFF wide tracer. This is different to the tracer used in
+// tracer is the BFF wide tracer. This is different to the tracer used in
 // the feedIngester which has a different sampling rate.
-var globalTracer = otel.Tracer("github.com/strideynet/bsky-furry-feed/ingester")
+var tracer = otel.Tracer("github.com/strideynet/bsky-furry-feed/ingester")
 
 var workItemsProcessed = promauto.NewSummaryVec(prometheus.SummaryOpts{
 	Name: "bff_ingester_work_item_duration_seconds",
@@ -42,11 +42,9 @@ var workItemsProcessed = promauto.NewSummaryVec(prometheus.SummaryOpts{
 
 type FirehoseIngester struct {
 	// dependencies
-	log            *zap.Logger
-	crc            *ActorCache
-	store          *store.PGXStore
-	tracerProvider trace.TracerProvider
-	tracer         trace.Tracer
+	log   *zap.Logger
+	crc   *ActorCache
+	store *store.PGXStore
 
 	// configuration
 	subscribeURL    string
@@ -57,13 +55,12 @@ type FirehoseIngester struct {
 }
 
 func NewFirehoseIngester(
-	log *zap.Logger, store *store.PGXStore, crc *ActorCache, tracerProvider trace.TracerProvider,
+	log *zap.Logger, store *store.PGXStore, crc *ActorCache,
 ) *FirehoseIngester {
 	return &FirehoseIngester{
-		log:    log,
-		crc:    crc,
-		store:  store,
-		tracer: tracerProvider.Tracer("github.com/strideynet/bsky-furry-feed/ingester-fi"),
+		log:   log,
+		crc:   crc,
+		store: store,
 
 		subscribeURL:    "wss://bsky.social/xrpc/com.atproto.sync.subscribeRepos",
 		workerCount:     8,
@@ -171,13 +168,11 @@ func (fi *FirehoseIngester) Start(ctx context.Context) error {
 }
 
 func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncSubscribeRepos_Commit) (err error) {
-	ctx, span := fi.tracer.Start(ctx, "firehose_ingester.handle_commit")
+	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_commit")
 	defer func() {
 		endSpan(span, err)
 	}()
-	span.SetAttributes(
-		attribute.String("actor.did", evt.Repo),
-	)
+	span.SetAttributes(actorDIDAttr(evt.Repo))
 
 	rr, err := repo.ReadRepoFromCar(ctx, bytes.NewReader(evt.Blocks))
 	if err != nil {
@@ -253,11 +248,11 @@ func (fi *FirehoseIngester) handleRecordCreate(
 	recordUri string,
 	record typegen.CBORMarshaler,
 ) (err error) {
-	ctx, span := fi.tracer.Start(ctx, "firehose_ingester.handle_record_create")
+	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_record_create")
 	defer func() {
 		endSpan(span, err)
 	}()
-	span.SetAttributes(attribute.String("record.uri", recordUri))
+	span.SetAttributes(recordUriAttr(recordUri))
 
 	actor := fi.crc.GetByDID(repoDID)
 	if actor == nil {
@@ -285,7 +280,6 @@ func (fi *FirehoseIngester) handleRecordCreate(
 	// Only collect events from actors we care about e.g those that are
 	// approved.
 	if !(actor.Status == v1.ActorStatus_ACTOR_STATUS_APPROVED) {
-		span.AddEvent("ignoring unknown actor")
 		return nil
 	}
 
@@ -312,20 +306,27 @@ func (fi *FirehoseIngester) handleRecordCreate(
 	return nil
 }
 
+func actorDIDAttr(s string) attribute.KeyValue {
+	return attribute.String("actor.did", s)
+}
+
+func recordUriAttr(s string) attribute.KeyValue {
+	return attribute.String("record.uri", s)
+}
+
 func (fi *FirehoseIngester) handleRecordDelete(
 	ctx context.Context,
 	repoDID string,
 	recordUri string,
 ) (err error) {
-	ctx, span := fi.tracer.Start(ctx, "firehose_ingester.handle_record_delete")
+	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_record_delete")
 	defer func() {
 		endSpan(span, err)
 	}()
-	span.SetAttributes(attribute.String("record.uri", recordUri))
+	span.SetAttributes(recordUriAttr(recordUri))
 
 	actor := fi.crc.GetByDID(repoDID)
 	if actor == nil {
-		span.AddEvent("ignoring unknown actor")
 		// if we don’t know the actor, we don’t have their data
 		return
 	}

@@ -16,7 +16,7 @@ func (fi *FirehoseIngester) handleGraphFollowCreate(
 	recordUri string,
 	data *bsky.GraphFollow,
 ) (err error) {
-	ctx, span := fi.tracer.Start(ctx, "firehose_ingester.handle_graph_follow_create")
+	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_graph_follow_create")
 	defer func() {
 		endSpan(span, err)
 	}()
@@ -46,7 +46,7 @@ func (fi *FirehoseIngester) handleFeedFollowDelete(
 	ctx context.Context,
 	recordUri string,
 ) (err error) {
-	ctx, span := fi.tracer.Start(ctx, "firehose_ingester.handle_feed_follow_delete")
+	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_feed_follow_delete")
 	defer func() {
 		endSpan(span, err)
 	}()
