@@ -51,41 +51,49 @@ func ConnectPGXStore(ctx context.Context, log *zap.Logger, connector PoolConnect
 	}, nil
 }
 
-func actorStatusFromProto(s v1.ActorStatus) gen.ActorStatus {
+func actorStatusFromProto(s v1.ActorStatus) (gen.ActorStatus, error) {
 	switch s {
 	case v1.ActorStatus_ACTOR_STATUS_PENDING:
-		return gen.ActorStatusPending
+		return gen.ActorStatusPending, nil
 	case v1.ActorStatus_ACTOR_STATUS_APPROVED:
-		return gen.ActorStatusApproved
+		return gen.ActorStatusApproved, nil
 	case v1.ActorStatus_ACTOR_STATUS_BANNED:
-		return gen.ActorStatusBanned
+		return gen.ActorStatusBanned, nil
+	case v1.ActorStatus_ACTOR_STATUS_NONE:
+		return gen.ActorStatusNone, nil
 	default:
-		return gen.ActorStatusNone
+		return "", fmt.Errorf("unhandled proto actor status: %s", s)
 	}
 }
 
-func actorStatusToProto(s gen.ActorStatus) v1.ActorStatus {
+func actorStatusToProto(s gen.ActorStatus) (v1.ActorStatus, error) {
 	switch s {
 	case gen.ActorStatusPending:
-		return v1.ActorStatus_ACTOR_STATUS_PENDING
+		return v1.ActorStatus_ACTOR_STATUS_PENDING, nil
 	case gen.ActorStatusApproved:
-		return v1.ActorStatus_ACTOR_STATUS_APPROVED
+		return v1.ActorStatus_ACTOR_STATUS_APPROVED, nil
 	case gen.ActorStatusBanned:
-		return v1.ActorStatus_ACTOR_STATUS_BANNED
+		return v1.ActorStatus_ACTOR_STATUS_BANNED, nil
+	case gen.ActorStatusNone:
+		return v1.ActorStatus_ACTOR_STATUS_NONE, nil
 	default:
-		return v1.ActorStatus_ACTOR_STATUS_UNSPECIFIED
+		return v1.ActorStatus_ACTOR_STATUS_UNSPECIFIED, fmt.Errorf("unsupported actor status: %s", s)
 	}
 }
 
-func actorToProto(actor gen.CandidateActor) *v1.Actor {
+func actorToProto(actor gen.CandidateActor) (*v1.Actor, error) {
+	status, err := actorStatusToProto(actor.Status)
+	if err != nil {
+		return nil, fmt.Errorf("converting status: %w", err)
+	}
 	return &v1.Actor{
 		Did:       actor.DID,
 		IsHidden:  actor.IsHidden,
 		IsArtist:  actor.IsArtist,
 		Comment:   actor.Comment,
-		Status:    actorStatusToProto(actor.Status),
+		Status:    status,
 		CreatedAt: timestamppb.New(actor.CreatedAt.Time),
-	}
+	}, nil
 }
 
 func endSpan(span trace.Span, err error) {
@@ -108,8 +116,12 @@ func (s *PGXStore) ListActors(ctx context.Context, opts ListActorsOpts) (out []*
 
 	statusFilter := gen.NullActorStatus{}
 	if opts.FilterStatus != v1.ActorStatus_ACTOR_STATUS_UNSPECIFIED {
+		status, err := actorStatusFromProto(opts.FilterStatus)
+		if err != nil {
+			return nil, fmt.Errorf("converting filter_status: %w", err)
+		}
 		statusFilter.Valid = true
-		statusFilter.ActorStatus = actorStatusFromProto(opts.FilterStatus)
+		statusFilter.ActorStatus = status
 	}
 
 	actors, err := s.queries.ListCandidateActors(ctx, s.pool, statusFilter)
@@ -118,7 +130,11 @@ func (s *PGXStore) ListActors(ctx context.Context, opts ListActorsOpts) (out []*
 	}
 
 	for _, a := range actors {
-		out = append(out, actorToProto(a))
+		convertedActor, err := actorToProto(a)
+		if err != nil {
+			return nil, fmt.Errorf("converting actor (%s): %w", a.DID, err)
+		}
+		out = append(out, convertedActor)
 	}
 
 	return out, nil
@@ -136,10 +152,14 @@ func (s *PGXStore) CreateActor(ctx context.Context, opts CreateActorOpts) (out *
 		endSpan(span, err)
 	}()
 
+	status, err := actorStatusFromProto(opts.Status)
+	if err != nil {
+		return nil, fmt.Errorf("converting status: %w", err)
+	}
 	queryParams := gen.CreateCandidateActorParams{
 		DID:     opts.DID,
 		Comment: opts.Comment,
-		Status:  actorStatusFromProto(opts.Status),
+		Status:  status,
 		CreatedAt: pgtype.Timestamptz{
 			Time:  time.Now(),
 			Valid: true,
@@ -150,7 +170,12 @@ func (s *PGXStore) CreateActor(ctx context.Context, opts CreateActorOpts) (out *
 		return nil, fmt.Errorf("executing CreateCandidateActor query: %w", err)
 	}
 
-	return actorToProto(created), nil
+	convertedActor, err := actorToProto(created)
+	if err != nil {
+		return nil, fmt.Errorf("converting actor (%s): %w", convertedActor.Did, err)
+	}
+
+	return convertedActor, nil
 }
 
 type UpdateActorOpts struct {
@@ -187,16 +212,23 @@ func (s *PGXStore) UpdateActor(ctx context.Context, opts UpdateActorOpts) (out *
 		return nil, fmt.Errorf("fetching actor: %w", err)
 	}
 
-	actor := actorToProto(dbActor)
+	actor, err := actorToProto(dbActor)
+	if err != nil {
+		return nil, fmt.Errorf("converting actor: %w", err)
+	}
 	err = opts.Predicate(actor)
 	if err != nil {
 		return nil, fmt.Errorf("update predicate: %w", err)
 	}
 
+	status, err := actorStatusFromProto(opts.UpdateStatus)
+	if err != nil {
+		return nil, fmt.Errorf("converting status: %w", err)
+	}
 	queryParams := gen.UpdateCandidateActorParams{
 		DID: opts.DID,
 		Status: gen.NullActorStatus{
-			ActorStatus: actorStatusFromProto(opts.UpdateStatus),
+			ActorStatus: status,
 			Valid:       true,
 		},
 		IsArtist: pgtype.Bool{
@@ -217,7 +249,11 @@ func (s *PGXStore) UpdateActor(ctx context.Context, opts UpdateActorOpts) (out *
 		return nil, fmt.Errorf("committing transaction: %w", err)
 	}
 
-	return actorToProto(created), nil
+	actor, err = actorToProto(created)
+	if err != nil {
+		return nil, fmt.Errorf("converting actor: %w", err)
+	}
+	return actor, nil
 }
 
 type CreateLikeOpts struct {

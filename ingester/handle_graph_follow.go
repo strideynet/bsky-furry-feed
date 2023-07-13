@@ -15,9 +15,11 @@ func (fi *FirehoseIngester) handleGraphFollowCreate(
 	repoDID string,
 	recordUri string,
 	data *bsky.GraphFollow,
-) error {
+) (err error) {
 	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_graph_follow_create")
-	defer span.End()
+	defer func() {
+		endSpan(span, err)
+	}()
 
 	createdAt, err := bluesky.ParseTime(data.CreatedAt)
 	if err != nil {
@@ -43,9 +45,11 @@ func (fi *FirehoseIngester) handleGraphFollowCreate(
 func (fi *FirehoseIngester) handleFeedFollowDelete(
 	ctx context.Context,
 	recordUri string,
-) error {
+) (err error) {
 	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_feed_follow_delete")
-	defer span.End()
+	defer func() {
+		endSpan(span, err)
+	}()
 
 	if err := fi.store.DeleteFollow(
 		ctx, store.DeleteFollowOpts{URI: recordUri},

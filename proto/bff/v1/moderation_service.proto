@@ -21,6 +21,7 @@ enum ActorStatus {
   ACTOR_STATUS_PENDING = 1;
   ACTOR_STATUS_APPROVED = 2;
   ACTOR_STATUS_BANNED = 3;
+  ACTOR_STATUS_NONE = 4;
 }
 
 message Actor {
@@ -56,10 +57,15 @@ message GetActorResponse {
   Actor actor = 1;
 }
 
-message ListActorsRequest {}
+message ListActorsRequest {
+  string cursor = 1;
+  int32  limit = 2;
+  ActorStatus filter_status = 3;
+}
 
 message ListActorsResponse {
   repeated Actor actors = 1;
+  string cursor = 2;
 }
 
 message PingRequest {}

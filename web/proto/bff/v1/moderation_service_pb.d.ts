@@ -29,6 +29,11 @@ export declare enum ActorStatus {
    * @generated from enum value: ACTOR_STATUS_BANNED = 3;
    */
   BANNED = 3,
+
+  /**
+   * @generated from enum value: ACTOR_STATUS_NONE = 4;
+   */
+  NONE = 4,
 }
 
 /**
@@ -199,6 +204,21 @@ export declare class GetActorResponse extends Message<GetActorResponse> {
  * @generated from message bff.v1.ListActorsRequest
  */
 export declare class ListActorsRequest extends Message<ListActorsRequest> {
+  /**
+   * @generated from field: string cursor = 1;
+   */
+  cursor: string;
+
+  /**
+   * @generated from field: int32 limit = 2;
+   */
+  limit: number;
+
+  /**
+   * @generated from field: bff.v1.ActorStatus filter_status = 3;
+   */
+  filterStatus: ActorStatus;
+
   constructor(data?: PartialMessage<ListActorsRequest>);
 
   static readonly runtime: typeof proto3;
@@ -222,6 +242,11 @@ export declare class ListActorsResponse extends Message<ListActorsResponse> {
    * @generated from field: repeated bff.v1.Actor actors = 1;
    */
   actors: Actor[];
+
+  /**
+   * @generated from field: string cursor = 2;
+   */
+  cursor: string;
 
   constructor(data?: PartialMessage<ListActorsResponse>);
 

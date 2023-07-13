@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	texporter "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace"
 	"github.com/strideynet/bsky-furry-feed/api"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/feed"
@@ -12,6 +11,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/gcp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/jaeger"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -20,6 +20,7 @@ import (
 	"golang.org/x/sys/unix"
 	"os"
 	"os/signal"
+	"time"
 )
 
 // TODO: Better, more granular, env configuration.
@@ -53,13 +54,13 @@ func main() {
 	}
 }
 
-func tracerProvider(ctx context.Context, url string, mode mode) (*tracesdk.TracerProvider, error) {
+func setupTracing(ctx context.Context, url string, mode mode) (func(), error) {
 	var exp tracesdk.SpanExporter
 	var err error
 	if mode == productionMode {
-		exp, err = texporter.New()
+		exp, err = otlptracehttp.New(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("creating gcp trace exporter: %w", err)
+			return nil, fmt.Errorf("creating http trace exporter: %w", err)
 		}
 	} else {
 		exp, err = jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(url)))
@@ -80,21 +81,17 @@ func tracerProvider(ctx context.Context, url string, mode mode) (*tracesdk.Trace
 		return nil, fmt.Errorf("creating resource attributes: %w", err)
 	}
 
-	tpOpts := []tracesdk.TracerProviderOption{
+	tracerProvider := tracesdk.NewTracerProvider(
 		tracesdk.WithBatcher(exp),
 		tracesdk.WithResource(r),
-	}
-	if mode == productionMode {
-		tpOpts = append(tpOpts, tracesdk.WithSampler(tracesdk.TraceIDRatioBased(0.001)))
-	}
-
-	tp := tracesdk.NewTracerProvider(
-		tpOpts...,
 	)
-	otel.SetTracerProvider(tp)
-	// TODO: Tracer shutdown
+	otel.SetTracerProvider(tracerProvider)
 
-	return tp, nil
+	return func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+		defer cancel()
+		_ = tracerProvider.Shutdown(ctx)
+	}, nil
 }
 
 func runE(log *zap.Logger) error {
@@ -113,14 +110,15 @@ func runE(log *zap.Logger) error {
 	defer cancel()
 
 	log.Info("setting up services")
-	_, err = tracerProvider(
+	shutdownTrace, err := setupTracing(
 		ctx,
 		"http://localhost:14268/api/traces",
 		mode,
 	)
 	if err != nil {
-		return fmt.Errorf("creating tracer provider: %w", err)
+		return fmt.Errorf("creating tracer providers: %w", err)
 	}
+	defer shutdownTrace()
 
 	var poolConnector store.PoolConnector
 	switch mode {

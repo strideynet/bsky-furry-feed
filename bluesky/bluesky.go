@@ -55,7 +55,7 @@ func ClientFromCredentials(ctx context.Context, credentials *Credentials) (*Clie
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("missing ")
+		return nil, fmt.Errorf("creating session: %w", err)
 	}
 
 	xrpcClient.Auth = &xrpc.AuthInfo{
