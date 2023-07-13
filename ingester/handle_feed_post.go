@@ -45,7 +45,6 @@ func (fi *FirehoseIngester) handleFeedPostCreate(
 	data *bsky.FeedPost,
 ) (err error) {
 	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_feed_post_create")
-	defer span.End()
 	defer func() {
 		endSpan(span, err)
 	}()
