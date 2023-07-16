@@ -137,7 +137,7 @@ func TestIntegration(t *testing.T) {
 	assert.NoError(err)
 	assert.NoError(cac.Sync(ctx))
 
-	ingester := ingester.NewFirehoseIngester(log, pgxStore, cac, "ws://"+pds.RawHost()+"/xrpc/com.atproto.sync.subscribeRepos")
+	ingester := ingester.NewFirehoseIngester(log, pgxStore, cac, "ws://"+pds.RawHost())
 	ended := false
 	defer func() { ended = true }()
 	go func() {

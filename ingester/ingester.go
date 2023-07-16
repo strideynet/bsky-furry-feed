@@ -5,13 +5,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"sync"
+	"time"
+
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
-	"net/http"
-	"sync"
-	"time"
 
 	"github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/api/bsky"
@@ -55,14 +56,14 @@ type FirehoseIngester struct {
 }
 
 func NewFirehoseIngester(
-	log *zap.Logger, store *store.PGXStore, crc *ActorCache, subscribeURL string,
+	log *zap.Logger, store *store.PGXStore, crc *ActorCache, baseURL string,
 ) *FirehoseIngester {
 	return &FirehoseIngester{
 		log:   log,
 		crc:   crc,
 		store: store,
 
-		subscribeURL:    subscribeURL,
+		subscribeURL:    baseURL + "/xrpc/com.atproto.sync.subscribeRepos",
 		workerCount:     8,
 		workItemTimeout: time.Second * 30,
 		furryFeeds: []string{

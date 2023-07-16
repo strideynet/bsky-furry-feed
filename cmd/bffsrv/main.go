@@ -177,7 +177,7 @@ func runE(log *zap.Logger) error {
 	// Setup ingester if not running in feed developer mode
 	if mode != feedDevMode {
 		fi := ingester.NewFirehoseIngester(
-			log.Named("firehose_ingester"), pgxStore, actorCache, "wss://bsky.social/xrpc/com.atproto.sync.subscribeRepos",
+			log.Named("firehose_ingester"), pgxStore, actorCache, "wss://bsky.social",
 		)
 		eg.Go(func() error {
 			return fi.Start(ctx)
