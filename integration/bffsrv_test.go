@@ -1,28 +1,23 @@
-package testing_test
+package integration_test
 
 import (
 	"context"
 	"flag"
-	"fmt"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
 	. "github.com/bluesky-social/indigo/testing"
-	"github.com/docker/go-connections/nat"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/strideynet/bsky-furry-feed/ingester"
+	"github.com/strideynet/bsky-furry-feed/integration"
 	bffv1pb "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store"
-	helper "github.com/strideynet/bsky-furry-feed/testing"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 	"go.uber.org/zap"
 )
 
@@ -39,31 +34,18 @@ func TestMain(m *testing.M) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
-	container, err := postgres.RunContainer(ctx,
-		postgres.WithDatabase("bff"),
-		postgres.WithUsername("bff"),
-		postgres.WithPassword("bff"),
-		testcontainers.WithWaitStrategy(wait.ForListeningPort(nat.Port("5432/tcp"))),
-	)
+	db, err := integration.StartDatabase(ctx)
+
 	if err != nil {
-		log.Fatal("could not start postgres", zap.Error(err))
+		log.Fatal("could not start integration database", zap.Error(err))
 	}
 
-	port, err := container.MappedPort(ctx, "5432/tcp")
-	if err != nil {
-		log.Fatal("could not get postgres port", zap.Error(err))
-	}
-	host, err := container.Host(ctx)
-	if err != nil {
-		log.Fatal("could not get postgres host", zap.Error(err))
-	}
-
-	postgresUrl = fmt.Sprintf("postgres://bff:bff@%s:%d/bff?sslmode=disable", host, port.Int())
+	postgresUrl = db.URL()
 
 	code := m.Run()
 
-	if err := container.Terminate(ctx); err != nil {
-		log.Fatal("could not purge postgres", zap.Error(err))
+	if err := db.Close(ctx); err != nil {
+		log.Fatal("could not remove test database", zap.Error(err))
 	}
 
 	os.Exit(code)
@@ -75,7 +57,7 @@ func mustConnectDB(t *testing.T, ctx context.Context) *pgx.Conn {
 	return con
 }
 
-// sets up test db and truncates all tables
+// runs all migrations and clears all tables
 func mustSetupDB(t *testing.T, ctx context.Context) {
 	con := mustConnectDB(t, ctx)
 	defer con.Close(ctx)
@@ -116,7 +98,7 @@ func TestIntegration(t *testing.T) {
 	bgs := MustSetupBGS(t, didr)
 	bgs.Run(t)
 
-	helper.SetTrialHostOnBGS(bgs, pds.RawHost())
+	integration.SetTrialHostOnBGS(bgs, pds.RawHost())
 
 	bob := pds.MustNewUser(t, "bob.tpds")
 	furry := pds.MustNewUser(t, "furry.tpds")
