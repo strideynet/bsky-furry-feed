@@ -4,11 +4,16 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"unsafe"
 
 	"github.com/bluesky-social/indigo/testing"
 	"github.com/docker/go-connections/nat"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/ipfs/go-log"
+	"github.com/jackc/pgx/v5"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -71,4 +76,47 @@ func (db Database) Close(ctx context.Context) error {
 
 func (db Database) URL() string {
 	return db.url
+}
+
+func (db Database) Connect(ctx context.Context) (*pgx.Conn, error) {
+	return pgx.Connect(ctx, db.URL())
+}
+
+func (db Database) Refresh(ctx context.Context) error {
+	con, err := db.Connect(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't connect to testing database: %w", err)
+	}
+	defer con.Close(ctx)
+
+	migrate, err := migrate.New("file://../store/migrations", db.URL())
+	if err != nil {
+		return fmt.Errorf("couldn't initialize migration runner: %w", err)
+	}
+	err = migrate.Up()
+	if err != nil {
+		return fmt.Errorf("couldn't apply migrations: %w", err)
+	}
+
+	rows, err := con.Query(ctx, "SELECT table_name FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog', 'information_schema')")
+	if err != nil {
+		return fmt.Errorf("couldn't query table names: %w", err)
+	}
+
+	results, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (s string, err error) {
+		err = row.Scan(&s)
+		return
+	})
+	if err != nil {
+		return fmt.Errorf("could not collect table names into array: %w", err)
+	}
+
+	tables := strings.Join(results, ", ")
+
+	_, err = con.Exec(ctx, "TRUNCATE TABLE "+tables)
+	if err != nil {
+		return fmt.Errorf("could not truncate tables")
+	}
+
+	return nil
 }
