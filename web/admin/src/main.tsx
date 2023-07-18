@@ -1,28 +1,37 @@
 import React, { useState } from "react";
 import ReactDOM from "react-dom/client";
-import { RootRoute, Route, Router, RouterProvider } from "@tanstack/router";
 import {
   ColorScheme,
   ColorSchemeProvider,
   MantineProvider,
 } from "@mantine/core";
 
-import App, { HomePage } from "./App.tsx";
+import {ApprovalQueuePage, HomePage, Shell} from "./App.tsx";
+import {
+  createBrowserRouter,
+  RouterProvider,
+} from "react-router-dom";
 
-// TODO: Pull routing into seperate file!
-const rootRoute = new RootRoute({
-  component: App,
-});
-
-const indexRoute = new Route({
-  getParentRoute: () => rootRoute,
-  path: "/",
-  component: HomePage,
-});
-
-const routeTree = rootRoute.addChildren([indexRoute]);
-
-const router = new Router({ routeTree });
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: < Shell />,
+    children: [
+      {
+        path: "/",
+        element: <HomePage />,
+      },
+      {
+        path: "/approval-queue",
+        element: <ApprovalQueuePage />,
+      }
+    ]
+  },
+  {
+    path: "/login",
+    element: <h1> LOG IN NOW!!</h1>
+  }
+]);
 
 const Root = () => {
   const [colorScheme, setColorScheme] = useState<ColorScheme>("light");

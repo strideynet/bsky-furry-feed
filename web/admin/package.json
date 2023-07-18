@@ -16,9 +16,12 @@
     "@mantine/hooks": "^6.0.16",
     "@tabler/icons-react": "^2.23.0",
     "@tanstack/react-query": "^4.29.19",
-    "@tanstack/router": "^0.0.1-beta.89",
+    "localforage": "^1.10.0",
+    "match-sorter": "^6.3.1",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.14.2",
+    "sort-by": "^1.2.0"
   },
   "devDependencies": {
     "@tanstack/eslint-plugin-query": "^4.29.9",

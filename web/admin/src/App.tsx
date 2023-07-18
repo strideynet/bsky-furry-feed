@@ -8,14 +8,20 @@ import {
   Header,
   Image,
   Navbar,
+  NavLink,
   rem,
   Text,
   Title,
   useMantineColorScheme,
   useMantineTheme,
 } from "@mantine/core";
-import { IconMoonStars, IconSun } from "@tabler/icons-react";
-import { Outlet } from "@tanstack/router";
+import {
+  IconHome,
+  IconMoonStars,
+  IconSun,
+  IconTicket,
+} from "@tabler/icons-react";
+import { Outlet, NavLink as RouterNavLink } from "react-router-dom";
 
 interface session {
   did: string;
@@ -67,7 +73,7 @@ const useGetProfile = (agent: AtpAgent, session?: session) => {
   return profile;
 };
 
-const App = () => {
+export const Shell = () => {
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const theme = useMantineTheme();
 
@@ -84,7 +90,20 @@ const App = () => {
         navbar={
           <Navbar width={{ base: 300 }} p="xs">
             <Navbar.Section grow mt="xs">
-              <Text>Approval Queue</Text>
+              <RouterNavLink to="/">
+                {({ isActive }) => (
+                  <NavLink label="Home" icon={<IconHome />} active={isActive} />
+                )}
+              </RouterNavLink>
+              <RouterNavLink to="/approval-queue">
+                {({ isActive }) => (
+                  <NavLink
+                    label="Approval Queue"
+                    icon={<IconTicket />}
+                    active={isActive}
+                  />
+                )}
+              </RouterNavLink>
             </Navbar.Section>
             <Navbar.Section>
               <Box
@@ -120,7 +139,7 @@ const App = () => {
                   width={40}
                   fit="contain"
                 />
-                <Title>Admin Dash</Title>
+                <Title>Admin</Title>
               </Group>
 
               <ActionIcon
@@ -156,4 +175,11 @@ export const HomePage = () => {
   return <Text>Home!</Text>;
 };
 
-export default App;
+export const ApprovalQueuePage = () => {
+  return <Text>Approval Queue!</Text>;
+};
+
+export const LoginPage = () => {
+  // LoginPage is rendered outside of Shell unlike most pages.
+  return <h1>oooh you want to log in</h1>;
+};
