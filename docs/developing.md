@@ -21,7 +21,7 @@ In addition to this, we’re using `sqlc` and `migrate` to manage our
 database schema. Install them by executing the following commands:
 
 ```bash
-$ go install github.com/kyleconroy/sqlc/cmd/sqlc@latest
+$ go install github.com/kyleconroy/sqlc/cmd/sqlc@v1.18.0
 $ go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 ```
 
