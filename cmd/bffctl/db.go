@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/strideynet/bsky-furry-feed/bluesky"
-	"github.com/strideynet/bsky-furry-feed/store"
+	"github.com/strideynet/bsky-furry-feed/store/gen"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 	"strings"
@@ -42,8 +41,8 @@ func dbCandidateActorsList(log *zap.Logger, env *environment) *cli.Command {
 			}
 			defer conn.Close(cctx.Context)
 
-			db := store.New(conn)
-			repos, err := db.ListCandidateActors(cctx.Context, store.NullActorStatus{})
+			db := gen.New()
+			repos, err := db.ListCandidateActors(cctx.Context, conn, gen.NullActorStatus{})
 			if err != nil {
 				return err
 			}
@@ -66,7 +65,7 @@ func dbCandidateActorsSeedCmd(log *zap.Logger, env *environment) *cli.Command {
 			}
 			defer conn.Close(cctx.Context)
 
-			db := store.New(conn)
+			db := gen.New()
 
 			log.Info("seed candidates", zap.Int("count", len(seedCandidateActors)))
 			for did, candidate := range seedCandidateActors {
@@ -76,7 +75,8 @@ func dbCandidateActorsSeedCmd(log *zap.Logger, env *environment) *cli.Command {
 				)
 				_, err := db.CreateCandidateActor(
 					cctx.Context,
-					store.CreateCandidateActorParams{
+					conn,
+					gen.CreateCandidateActorParams{
 						DID: did,
 						CreatedAt: pgtype.Timestamptz{
 							Time:  time.Now(),
@@ -133,13 +133,10 @@ func dbCandidateActorsAddCmd(log *zap.Logger, env *environment) *cli.Command {
 			}
 			defer conn.Close(cctx.Context)
 
-			unuathClient, err := bluesky.NewUnauthClient().CreateSession(
-				cctx.Context, username, password,
-			)
+			client, err := getBlueskyClient(cctx.Context)
 			if err != nil {
-				return fmt.Errorf("authenticating: %w", err)
+				return err
 			}
-			client := bluesky.NewClient(bluesky.AuthInfoFromCreateSession(unuathClient))
 
 			did, err := client.ResolveHandle(cctx.Context, handle)
 			if err != nil {
@@ -147,9 +144,9 @@ func dbCandidateActorsAddCmd(log *zap.Logger, env *environment) *cli.Command {
 			}
 			log.Info("found did", zap.String("did", did.Did))
 
-			db := store.New(conn)
+			db := gen.New()
 
-			params := store.CreateCandidateActorParams{
+			params := gen.CreateCandidateActorParams{
 				DID: did.Did,
 				CreatedAt: pgtype.Timestamptz{
 					Time:  time.Now(),
@@ -157,13 +154,14 @@ func dbCandidateActorsAddCmd(log *zap.Logger, env *environment) *cli.Command {
 				},
 				IsArtist: isArtist,
 				Comment:  handle,
-				Status:   store.ActorStatusApproved,
+				Status:   gen.ActorStatusApproved,
 			}
 			log.Info("adding candidate actor",
 				zap.Any("data", params),
 			)
 			_, err = db.CreateCandidateActor(
 				cctx.Context,
+				conn,
 				params,
 			)
 			if err != nil {

@@ -2,26 +2,29 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	texporter "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace"
+	"os"
+	"os/signal"
+	"time"
+
+	"github.com/joho/godotenv"
 	"github.com/strideynet/bsky-furry-feed/api"
+	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/feed"
 	"github.com/strideynet/bsky-furry-feed/ingester"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.opentelemetry.io/contrib/detectors/gcp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/jaeger"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sys/unix"
-	"os"
-	"os/signal"
 )
-
-var tracer = otel.Tracer("bffsrv")
 
 // TODO: Better, more granular, env configuration.
 // A `inGCP` would make more sense rather than `isProduction`
@@ -48,19 +51,23 @@ func getMode() (mode, error) {
 
 func main() {
 	log, _ := zap.NewProduction()
-	err := runE(log)
-	if err != nil {
+
+	if err := godotenv.Load(); err != nil && !errors.Is(err, os.ErrNotExist) {
+		log.Fatal("could not load existing .env file", zap.Error(err))
+	}
+
+	if err := runE(log); err != nil {
 		log.Fatal("exited with error", zap.Error(err))
 	}
 }
 
-func tracerProvider(ctx context.Context, url string, mode mode) (*tracesdk.TracerProvider, error) {
+func setupTracing(ctx context.Context, url string, mode mode) (func(), error) {
 	var exp tracesdk.SpanExporter
 	var err error
 	if mode == productionMode {
-		exp, err = texporter.New()
+		exp, err = otlptracehttp.New(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("creating gcp trace exporter: %w", err)
+			return nil, fmt.Errorf("creating http trace exporter: %w", err)
 		}
 	} else {
 		exp, err = jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(url)))
@@ -81,27 +88,27 @@ func tracerProvider(ctx context.Context, url string, mode mode) (*tracesdk.Trace
 		return nil, fmt.Errorf("creating resource attributes: %w", err)
 	}
 
-	tpOpts := []tracesdk.TracerProviderOption{
+	tracerProvider := tracesdk.NewTracerProvider(
 		tracesdk.WithBatcher(exp),
 		tracesdk.WithResource(r),
-	}
-	if mode == productionMode {
-		tpOpts = append(tpOpts, tracesdk.WithSampler(tracesdk.TraceIDRatioBased(0.001)))
-	}
-
-	tp := tracesdk.NewTracerProvider(
-		tpOpts...,
 	)
-	otel.SetTracerProvider(tp)
-	// TODO: Tracer shutdown
+	otel.SetTracerProvider(tracerProvider)
 
-	return tp, nil
+	return func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+		defer cancel()
+		_ = tracerProvider.Shutdown(ctx)
+	}, nil
 }
 
 func runE(log *zap.Logger) error {
 	mode, err := getMode()
 	if err != nil {
 		return err
+	}
+	bskyCredentials, err := bluesky.CredentialsFromEnv()
+	if err != nil {
+		return fmt.Errorf("loading bsky credentials: %w", err)
 	}
 
 	log.Info("starting", zap.String("mode", string(mode)))
@@ -110,52 +117,53 @@ func runE(log *zap.Logger) error {
 	defer cancel()
 
 	log.Info("setting up services")
-	_, err = tracerProvider(
+	shutdownTrace, err := setupTracing(
 		ctx,
 		"http://localhost:14268/api/traces",
 		mode,
 	)
 	if err != nil {
-		return fmt.Errorf("creating tracer provider: %w", err)
+		return fmt.Errorf("creating tracer providers: %w", err)
 	}
+	defer shutdownTrace()
 
-	var storeConfig store.Config
+	var poolConnector store.PoolConnector
 	switch mode {
 	case productionMode:
-		storeConfig.CloudSQL = &store.CloudSQLConnectorConfig{
+		poolConnector = &store.CloudSQLConnector{
 			Instance: "bsky-furry-feed:us-east1:main-us-east",
 			Database: "bff",
 			// TODO: Fetch this from an env var or from adc
 			Username: "849144245446-compute@developer",
 		}
 	case feedDevMode:
-		storeConfig.CloudSQL = &store.CloudSQLConnectorConfig{
+		poolConnector = &store.CloudSQLConnector{
 			Instance: "bsky-furry-feed:us-east1:main-us-east",
 			Database: "bff",
 			// TODO: Fetch this from an env var or from adc
 			Username: "noah@noahstride.co.uk",
 		}
 	case devMode:
-		storeConfig.Direct = &store.DirectConnectorConfig{
+		poolConnector = &store.DirectConnector{
 			URI: "postgres://bff:bff@localhost:5432/bff?sslmode=disable",
 		}
 	default:
 		return fmt.Errorf("unhandled mode: %s", mode)
 	}
-	queries, queriesClose, err := storeConfig.Connect(ctx)
+	pgxStore, err := store.ConnectPGXStore(ctx, log.Named("store"), poolConnector)
 	if err != nil {
 		return fmt.Errorf("connecting to store: %w", err)
 	}
-	defer queriesClose()
+	defer pgxStore.Close()
 
-	crc := ingester.NewCandidateActorCache(
-		log.Named("candidate_actor_cache"),
-		queries,
+	actorCache := ingester.NewActorCache(
+		log.Named("actor_cache"),
+		pgxStore,
 	)
-	// Prefill the CRC before we proceed to ensure all candidate actors
+	// Prefill the actor cache before we proceed to ensure all actors
 	// are available to sub-services. This eliminates some potential weirdness
 	// when handling events/requests shortly after process startup.
-	if err := crc.Sync(ctx); err != nil {
+	if err := actorCache.Sync(ctx); err != nil {
 		return fmt.Errorf("filling candidate actor cache: %w", err)
 	}
 
@@ -163,20 +171,20 @@ func runE(log *zap.Logger) error {
 	// If one exits, all will exit.
 	eg, ctx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
-		return crc.Start(ctx)
+		return actorCache.Start(ctx)
 	})
 
 	// Setup ingester if not running in feed developer mode
 	if mode != feedDevMode {
 		fi := ingester.NewFirehoseIngester(
-			log.Named("firehose_ingester"), queries, crc,
+			log.Named("firehose_ingester"), pgxStore, actorCache,
 		)
 		eg.Go(func() error {
 			return fi.Start(ctx)
 		})
 	}
 
-	feedService := feed.ServiceWithDefaultFeeds(queries)
+	feedService := feed.ServiceWithDefaultFeeds(pgxStore)
 
 	// Setup the public HTTP/XRPC server
 	// TODO: Make these externally configurable
@@ -190,6 +198,8 @@ func runE(log *zap.Logger) error {
 		hostname,
 		listenAddr,
 		feedService,
+		pgxStore,
+		bskyCredentials,
 	)
 	if err != nil {
 		return fmt.Errorf("creating feed server: %w", err)

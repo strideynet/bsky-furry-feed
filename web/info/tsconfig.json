@@ -1,0 +1,33 @@
+{
+  "extends": "./.svelte-kit/tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strict": true,
+    "paths": {
+      "$lib": ["src/lib"],
+      "$lib/*": ["src/lib/*"],
+      "$components/*": ["src/components/*"],
+      "$stores/*": ["src/stores/*"],
+      "$routes/*": ["src/routes/*"],
+      "$assets/*": ["src/static/*"],
+      "$styles": ["src/styles"],
+      "$styles/*": ["src/styles/*"],
+      "$types": ["types/app/index.d.ts"],
+      "$types/*": ["types/app/*"],
+      "*": ["types/*"]
+    },
+    "removeComments": true,
+    "rootDir": "./",
+    "baseUrl": "./",
+    "types": ["vitest/globals", "node"],
+    "typeRoots": ["./node_modules/@types", "./types"]
+  },
+  "include": ["src/**/*", "test/**/*", "types/**/*", "*.js", "*.ts"],
+  "exclude": ["**/node_modules"]
+}

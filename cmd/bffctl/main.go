@@ -1,11 +1,15 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"os"
+
+	"github.com/joho/godotenv"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
-	"os"
 )
 
 type environment struct {
@@ -25,11 +29,21 @@ var environments = map[string]environment{
 }
 
 // TODO: Have a `login` and `logout` command that persists auth state to disk.
-var username = os.Getenv("BSKY_USERNAME")
-var password = os.Getenv("BSKY_PASSWORD")
+func getBlueskyClient(ctx context.Context) (*bluesky.Client, error) {
+	creds, err := bluesky.CredentialsFromEnv()
+	if err != nil {
+		return nil, err
+	}
+	return bluesky.ClientFromCredentials(ctx, creds)
+}
 
 func main() {
 	log, _ := zap.NewDevelopment()
+
+	if err := godotenv.Load(); err != nil && !errors.Is(err, os.ErrNotExist) {
+		log.Info("could not load .env file", zap.Error(err))
+	}
+
 	var env = &environment{}
 	app := &cli.App{
 		Name:  "bffctl",
@@ -55,8 +69,6 @@ func main() {
 		Commands: []*cli.Command{
 			dbCmd(log, env),
 			findDIDCmd(log),
-			followCmd(log, env),
-			scanCmd(log, env),
 			queueCmd(log, env),
 		},
 	}
@@ -79,7 +91,10 @@ func findDIDCmd(log *zap.Logger) *cli.Command {
 			},
 		},
 		Action: func(cctx *cli.Context) error {
-			client := bluesky.NewClient(nil)
+			client, err := getBlueskyClient(cctx.Context)
+			if err != nil {
+				return err
+			}
 			did, err := client.ResolveHandle(cctx.Context, handle)
 			if err != nil {
 				return err
