@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
+
+	"github.com/joho/godotenv"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
-	"os"
 )
 
 type environment struct {
@@ -36,6 +39,10 @@ func getBlueskyClient(ctx context.Context) (*bluesky.Client, error) {
 
 func main() {
 	log, _ := zap.NewDevelopment()
+
+	if err := godotenv.Load(); err != nil && !errors.Is(err, os.ErrNotExist) {
+		log.Info("could not load .env file", zap.Error(err))
+	}
 
 	var env = &environment{}
 	app := &cli.App{
