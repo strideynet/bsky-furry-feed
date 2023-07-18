@@ -8,7 +8,7 @@ importers:
 
   .: {}
 
-  admin:
+  info:
     devDependencies:
       '@atproto/api':
         specifier: ^0.4.0
