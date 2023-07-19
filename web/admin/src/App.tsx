@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { AppBskyActorDefs, AtpAgent } from "@atproto/api";
+import { useContext, useEffect, useState } from "react";
+import { AppBskyActorDefs, AtpAgent, AtpSessionData } from "@atproto/api";
 import {
   ActionIcon,
   AppShell,
@@ -11,6 +11,7 @@ import {
   NavLink,
   rem,
   Text,
+  TextInput,
   Title,
   useMantineColorScheme,
   useMantineTheme,
@@ -21,42 +22,16 @@ import {
   IconSun,
   IconTicket,
 } from "@tabler/icons-react";
-import { Outlet, NavLink as RouterNavLink } from "react-router-dom";
+import { Outlet, NavLink as RouterNavLink, Navigate } from "react-router-dom";
+import { AgentContext } from "./auth.tsx";
 
-interface session {
-  did: string;
-}
-
-const useSession = (agent: AtpAgent) => {
-  const [session, setSession] = useState<session | undefined>();
-
-  useEffect(() => {
-    agent
-      .login({
-        identifier: import.meta.env.VITE_BSKY_USERNAME,
-        password: import.meta.env.VITE_BSKY_PASSWORD,
-      })
-      .then((res) => {
-        setSession({
-          did: res.data.did,
-        });
-      })
-      .catch((err) => {
-        console.error(err);
-      });
-  }, [agent]);
-
-  return session;
-};
-
-const useGetProfile = (agent: AtpAgent, session?: session) => {
+const useGetProfile = (agent: AtpAgent, session?: AtpSessionData) => {
   const [profile, setProfile] = useState<
     AppBskyActorDefs.ProfileViewDetailed | undefined
   >();
 
   useEffect(() => {
     if (!session) {
-      console.debug("no session");
       return;
     }
 
@@ -68,7 +43,7 @@ const useGetProfile = (agent: AtpAgent, session?: session) => {
       .catch((err) => {
         console.error(err);
       });
-  }, [session]);
+  }, [agent, session]);
 
   return profile;
 };
@@ -77,11 +52,12 @@ export const Shell = () => {
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const theme = useMantineTheme();
 
-  const agent = useMemo(() => {
-    return new AtpAgent({ service: "https://bsky.social" });
-  }, []);
-  const session = useSession(agent);
-  const profile = useGetProfile(agent, session);
+  const agentCtx = useContext(AgentContext);
+  const profile = useGetProfile(agentCtx.agent, agentCtx.session);
+
+  if (!agentCtx.session) {
+    return <Navigate to={"/login"} replace />;
+  }
 
   return (
     <>
@@ -180,6 +156,34 @@ export const ApprovalQueuePage = () => {
 };
 
 export const LoginPage = () => {
+  const agentCtx = useContext(AgentContext);
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+  if (agentCtx.session) {
+    return <Navigate to={"/"} replace />;
+  }
+
+  const login = () => {
+    agentCtx.agent.login({
+      identifier: identifier,
+      password: password,
+    });
+  };
+
   // LoginPage is rendered outside of Shell unlike most pages.
-  return <h1>oooh you want to log in</h1>;
+  return (
+    <>
+      <TextInput
+        label="identifier"
+        value={identifier}
+        onChange={(evt) => setIdentifier(evt.currentTarget.value)}
+      />
+      <TextInput
+        label="password"
+        value={password}
+        onChange={(evt) => setPassword(evt.currentTarget.value)}
+      />
+      <button onClick={login}>Log In</button>
+    </>
+  );
 };

@@ -6,16 +6,14 @@ import {
   MantineProvider,
 } from "@mantine/core";
 
-import {ApprovalQueuePage, HomePage, Shell} from "./App.tsx";
-import {
-  createBrowserRouter,
-  RouterProvider,
-} from "react-router-dom";
+import { ApprovalQueuePage, HomePage, LoginPage, Shell } from "./App.tsx";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { AgentProvider } from "./auth.tsx";
 
 const router = createBrowserRouter([
   {
     path: "/",
-    element: < Shell />,
+    element: <Shell />,
     children: [
       {
         path: "/",
@@ -24,13 +22,13 @@ const router = createBrowserRouter([
       {
         path: "/approval-queue",
         element: <ApprovalQueuePage />,
-      }
-    ]
+      },
+    ],
   },
   {
     path: "/login",
-    element: <h1> LOG IN NOW!!</h1>
-  }
+    element: <LoginPage />,
+  },
 ]);
 
 const Root = () => {
@@ -40,14 +38,16 @@ const Root = () => {
 
   return (
     <React.StrictMode>
-      <ColorSchemeProvider
-        colorScheme={colorScheme}
-        toggleColorScheme={toggleColorScheme}
-      >
-        <MantineProvider withGlobalStyles withNormalizeCSS>
-          <RouterProvider router={router} />
-        </MantineProvider>
-      </ColorSchemeProvider>
+      <AgentProvider>
+        <ColorSchemeProvider
+          colorScheme={colorScheme}
+          toggleColorScheme={toggleColorScheme}
+        >
+          <MantineProvider withGlobalStyles withNormalizeCSS>
+            <RouterProvider router={router} />
+          </MantineProvider>
+        </ColorSchemeProvider>
+      </AgentProvider>
     </React.StrictMode>
   );
 };
