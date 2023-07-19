@@ -1,0 +1,23 @@
+{
+  "name": "nuxt-app",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "devDependencies": {
+    "@nuxt/devtools": "latest",
+    "@nuxtjs/tailwindcss": "^6.8.0",
+    "@types/node": "^18.16.19",
+    "nuxt": "^3.6.3"
+  },
+  "dependencies": {
+    "@atproto/api": "^0.4.0",
+    "@bufbuild/connect": "^0.11.0",
+    "@bufbuild/connect-web": "^0.11.0",
+    "@bufbuild/protobuf": "1.2.0"
+  }
+}
