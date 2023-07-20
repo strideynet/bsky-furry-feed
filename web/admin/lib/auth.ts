@@ -52,19 +52,39 @@ export async function fetchUser(): Promise<AtpSessionData | null> {
   const cookie = useCookie<AtpSessionData | null>(COOKIE_NAME, {
     expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
   });
-  const session = cookie.value;
 
-  if (!session) {
+  if (!cookie.value) {
     return null;
   }
 
-  const { data, success } = await newAgent().resumeSession(session);
-
-  if (!success) {
-    return null;
+  const agent = newAgent();
+  agent.setPersistSessionHandler((evt, session) => {
+    switch (evt) {
+      case "create":
+      case "update":
+        if (session) {
+          cookie.value = session;
+          agent.session = session;
+        }
+        break;
+      case "expired":
+        cookie.value = null;
+        useState("user").value = null;
+      default:
+        break;
+    }
+  });
+  try {
+    const { data, success } = await agent.resumeSession(cookie.value);
+    if (!success) {
+      return null;
+    }
+    cookie.value = { ...cookie.value, ...data };
+  } catch (error) {
+    if (!String(error).includes("XRPC ERROR 400: ExpiredToken")) {
+      throw error;
+    }
   }
-
-  cookie.value = { ...session, ...data };
 
   return cookie.value;
 }
