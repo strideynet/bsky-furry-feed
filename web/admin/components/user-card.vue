@@ -1,13 +1,25 @@
 <script lang="ts" setup>
+import { ProfileViewDetailed } from "@atproto/api/dist/client/types/app/bsky/actor/defs";
 import { newAgent } from "~/lib/auth";
 
-const props = defineProps<{ did: string }>();
+const props = defineProps<{ did: string; loading: boolean }>();
 defineEmits(["accept", "reject"]);
 
 const agent = newAgent();
-const { data } = await agent.getProfile({
-  actor: props.did,
-});
+const data = ref<ProfileViewDetailed>();
+const loadProfile = async () => {
+  const result = await agent.getProfile({
+    actor: props.did,
+  });
+  data.value = result.data;
+};
+
+watch(
+  () => props.did,
+  () => loadProfile()
+);
+
+await loadProfile();
 </script>
 
 <template>
@@ -49,12 +61,14 @@ const { data } = await agent.getProfile({
     <div class="flex gap-3 mt-5">
       <button
         class="px-3 py-2 bg-blue-400 dark:bg-blue-500 rounded-lg"
+        :disabled="loading"
         @click="$emit('accept')"
       >
         Accept
       </button>
       <button
         class="px-3 py-2 bg-red-500 dark:bg-red-600 rounded-lg"
+        :disabled="loading"
         @click="$emit('reject')"
       >
         Reject

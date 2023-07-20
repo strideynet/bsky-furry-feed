@@ -5,14 +5,18 @@ import { newAgent } from "~/lib/auth";
 const props = defineProps<{ description: string }>();
 
 const segments = ref();
-onMounted(async () => {
+
+const updateDescription = async () => {
   const descriptionRichText = new RichText(
     { text: props.description },
     { cleanNewlines: true }
   );
   await descriptionRichText.detectFacets(newAgent());
   segments.value = [...descriptionRichText.segments()];
-});
+};
+
+onMounted(updateDescription);
+watch(() => props.description, updateDescription);
 </script>
 <template>
   <div>
