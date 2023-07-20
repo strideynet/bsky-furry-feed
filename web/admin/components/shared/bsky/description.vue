@@ -20,7 +20,11 @@ watch(() => props.description, updateDescription);
 </script>
 <template>
   <div>
-    <shared-bsky-text v-for="segment in segments" :segment="segment" />
+    <shared-bsky-text
+      v-for="(segment, index) in segments"
+      :key="index"
+      :segment="segment"
+    />
     <div v-if="!segments" class="whitespace-pre-line">
       {{ description }}
     </div>

@@ -75,7 +75,7 @@ await loadProfile();
       </button>
     </div>
   </shared-card>
-  <shared-card class="bg-red-200 dark:bg-red-700" v-else>
+  <shared-card v-else class="bg-red-200 dark:bg-red-700">
     Profile with did {{ did }} was not found.
   </shared-card>
 </template>

@@ -41,8 +41,6 @@ await nextActor();
       @accept="accept"
       @reject="reject"
     />
-    <shared-card v-else>
-      No user is in the queue.
-    </shared-card>
+    <shared-card v-else> No user is in the queue. </shared-card>
   </div>
 </template>

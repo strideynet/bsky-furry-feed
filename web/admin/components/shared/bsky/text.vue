@@ -21,5 +21,5 @@ defineProps<{ segment: RichTextSegment }>();
   >
     {{ segment.text }}
   </nuxt-link>
-  <span class="whitespace-pre-line" v-else>{{ segment.text }}</span>
+  <span v-else class="whitespace-pre-line">{{ segment.text }}</span>
 </template>

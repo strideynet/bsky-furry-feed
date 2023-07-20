@@ -34,7 +34,7 @@ async function login() {
 
 <template>
   <NuxtPage v-if="user" />
-  <div class="flex items-center justify-center fixed w-full h-full" v-else>
+  <div v-else class="flex items-center justify-center fixed w-full h-full">
     <div
       class="mx-auto bg-gray-50 border border-gray-400 dark:border-gray-700 dark:bg-gray-800 py-4 px-5 rounded-lg w-[400px] max-w-[80vw]"
     >
@@ -43,20 +43,20 @@ async function login() {
       <div class="flex flex-col mb-4">
         <label class="font-bold mb-1" for="name">Handle</label>
         <input
-          class="bg-white dark:bg-gray-900 rounded border border-gray-400 dark:border-gray-700 px-2 py-1"
           id="name"
-          type="text"
           v-model="identifier"
+          class="bg-white dark:bg-gray-900 rounded border border-gray-400 dark:border-gray-700 px-2 py-1"
+          type="text"
         />
       </div>
 
       <div class="flex flex-col mb-4">
         <label class="font-bold mb-1" for="password">App password</label>
         <input
-          class="bg-white dark:bg-gray-900 rounded border border-gray-400 dark:border-gray-700 px-2 py-1"
           id="password"
-          type="password"
           v-model="password"
+          class="bg-white dark:bg-gray-900 rounded border border-gray-400 dark:border-gray-700 px-2 py-1"
+          type="password"
         />
       </div>
 
