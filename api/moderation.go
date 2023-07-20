@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+
 	"github.com/bufbuild/connect-go"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
@@ -89,7 +90,7 @@ func (m *ModerationServiceHandler) ProcessApprovalQueue(ctx context.Context, req
 	case v1.ApprovalQueueAction_APPROVAL_QUEUE_ACTION_APPROVE:
 		statusToSet = v1.ActorStatus_ACTOR_STATUS_APPROVED
 	case v1.ApprovalQueueAction_APPROVAL_QUEUE_ACTION_REJECT:
-		statusToSet = v1.ActorStatus_ACTOR_STATUS_UNSPECIFIED
+		statusToSet = v1.ActorStatus_ACTOR_STATUS_NONE
 	default:
 		return nil, fmt.Errorf("unsupported 'action': %s", req.Msg.Action)
 	}
