@@ -6,11 +6,13 @@ import {
 } from "../../proto/bff/v1/moderation_service_pb";
 
 const api = await useAPI();
+const pending = ref(0);
 const actor = ref<Actor>();
 const loading = ref(false);
 
 const nextActor = async () => {
   const queue = await api.listActors({ filterStatus: ActorStatus.PENDING });
+  pending.value = queue.actors.length - 1;
   actor.value = queue.actors[0];
 };
 
@@ -38,6 +40,7 @@ await nextActor();
       v-if="actor"
       :did="actor.did"
       :loading="loading"
+      :pending="pending"
       @accept="accept"
       @reject="reject"
     />
