@@ -11,9 +11,23 @@ import (
 	"github.com/strideynet/bsky-furry-feed/feed"
 	"github.com/strideynet/bsky-furry-feed/proto/bff/v1/bffv1pbconnect"
 	"github.com/strideynet/bsky-furry-feed/store"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"net/http"
+	"time"
 )
+
+var tracer = otel.Tracer("github.com/strideynet/bsky-furry-feed/api")
+
+func endSpan(span trace.Span, err error) {
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+	}
+	span.End()
+}
 
 func handleErr(w http.ResponseWriter, log *zap.Logger, err error) {
 	log.Error("failed to handle request", zap.Error(err))
@@ -68,9 +82,12 @@ func New(
 
 	// Mount Buf Connect services
 	modSvcHandler := &ModerationServiceHandler{
-		store:              pgxStore,
-		log:                log,
-		blueskyCredentials: bskyCredentials,
+		store: pgxStore,
+		log:   log,
+		clientCache: &cachedBlueSkyClient{
+			creds:            bskyCredentials,
+			renewalThreshold: time.Minute * 5,
+		},
 	}
 
 	mux.Handle(

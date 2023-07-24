@@ -5,16 +5,15 @@ import (
 	"fmt"
 
 	"github.com/bufbuild/connect-go"
-	"github.com/strideynet/bsky-furry-feed/bluesky"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.uber.org/zap"
 )
 
 type ModerationServiceHandler struct {
-	store              *store.PGXStore
-	log                *zap.Logger
-	blueskyCredentials *bluesky.Credentials
+	store       *store.PGXStore
+	log         *zap.Logger
+	clientCache *cachedBlueSkyClient
 }
 
 func (m *ModerationServiceHandler) Ping(ctx context.Context, req *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error) {
@@ -118,11 +117,11 @@ func (m *ModerationServiceHandler) ProcessApprovalQueue(ctx context.Context, req
 
 	// Follow them if its an approval
 	if statusToSet == v1.ActorStatus_ACTOR_STATUS_APPROVED {
-		bskyClient, err := bluesky.ClientFromCredentials(ctx, m.blueskyCredentials)
+		c, err := m.clientCache.Get(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("creating bsky client: %w", err)
 		}
-		if err := bskyClient.Follow(ctx, actorDID); err != nil {
+		if err := c.Follow(ctx, actorDID); err != nil {
 			return nil, fmt.Errorf("following approved actor: %w", err)
 		}
 	}
