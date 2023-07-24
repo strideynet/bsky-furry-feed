@@ -105,6 +105,19 @@ await loadProfile();
   animation: 1.25s loading linear infinite;
 }
 
+@media (prefers-color-scheme: light) {
+  .loading {
+    background: linear-gradient(
+      120deg,
+      transparent 5%,
+      rgb(243, 244, 246) 20%,
+      transparent 30%
+    );
+    background-size: 200% 100%;
+    background-position-y: bottom;
+  }
+}
+
 @keyframes loading {
   from {
     background-position-x: 50%;
