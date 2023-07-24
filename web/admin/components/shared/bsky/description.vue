@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { RichText } from "@atproto/api";
+import * as atproto from "@atproto/api";
 import { newAgent } from "~/lib/auth";
 
 const props = defineProps<{ description: string }>();
@@ -7,7 +7,7 @@ const props = defineProps<{ description: string }>();
 const segments = ref();
 
 const updateDescription = async () => {
-  const descriptionRichText = new RichText(
+  const descriptionRichText = new atproto.RichText(
     { text: props.description },
     { cleanNewlines: true }
   );
