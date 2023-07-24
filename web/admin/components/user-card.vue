@@ -2,7 +2,7 @@
 import { ProfileViewDetailed } from "@atproto/api/dist/client/types/app/bsky/actor/defs";
 import { newAgent } from "~/lib/auth";
 
-const props = defineProps<{ did: string; loading: boolean }>();
+const props = defineProps<{ did: string; loading: boolean; pending: number }>();
 defineEmits(["accept", "reject"]);
 
 const agent = newAgent();
@@ -24,7 +24,7 @@ await loadProfile();
 
 <template>
   <shared-card v-if="data">
-    <div class="flex gap-3 pt-2 mb-5">
+    <div class="flex items-center gap-3 pt-2 mb-5">
       <button
         class="px-3 py-2 bg-blue-400 dark:bg-blue-500 rounded-lg"
         :disabled="loading"
@@ -39,6 +39,12 @@ await loadProfile();
       >
         Reject
       </button>
+
+      <span
+        v-if="pending > 0"
+        class="ml-auto text-sm text-gray-600 dark:text-gray-400"
+        >and {{ pending }} more...</span
+      >
     </div>
 
     <div class="flex gap-3 items-center">
