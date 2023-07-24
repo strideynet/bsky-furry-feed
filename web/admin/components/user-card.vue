@@ -24,6 +24,23 @@ await loadProfile();
 
 <template>
   <shared-card v-if="data">
+    <div class="flex gap-3 pt-2 mb-5">
+      <button
+        class="px-3 py-2 bg-blue-400 dark:bg-blue-500 rounded-lg"
+        :disabled="loading"
+        @click="$emit('accept')"
+      >
+        Accept
+      </button>
+      <button
+        class="px-3 py-2 bg-red-500 dark:bg-red-600 rounded-lg"
+        :disabled="loading"
+        @click="$emit('reject')"
+      >
+        Reject
+      </button>
+    </div>
+
     <div class="flex gap-3 items-center">
       <shared-avatar :url="data.avatar" />
       <div class="flex flex-col">
@@ -57,22 +74,6 @@ await loadProfile();
         v-if="data.description"
         :description="data.description"
       />
-    </div>
-    <div class="flex gap-3 mt-5">
-      <button
-        class="px-3 py-2 bg-blue-400 dark:bg-blue-500 rounded-lg"
-        :disabled="loading"
-        @click="$emit('accept')"
-      >
-        Accept
-      </button>
-      <button
-        class="px-3 py-2 bg-red-500 dark:bg-red-600 rounded-lg"
-        :disabled="loading"
-        @click="$emit('reject')"
-      >
-        Reject
-      </button>
     </div>
   </shared-card>
   <shared-card v-else class="bg-red-200 dark:bg-red-700">
