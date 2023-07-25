@@ -33,7 +33,10 @@ async function login() {
 </script>
 
 <template>
-  <NuxtPage v-if="user" />
+  <div v-if="user" class="max-w-[800px] py-4 px-3 mx-auto">
+    <core-nav />
+    <NuxtPage />
+  </div>
   <div v-else class="flex items-center justify-center fixed w-full h-full">
     <div
       class="mx-auto bg-gray-50 border border-gray-400 dark:border-gray-700 dark:bg-gray-800 py-4 px-5 rounded-lg w-[400px] max-w-[80vw]"

@@ -1,10 +1,19 @@
 <script lang="ts" setup>
 import { ProfileViewDetailed } from "@atproto/api/dist/client/types/app/bsky/actor/defs";
 import { newAgent } from "~/lib/auth";
+import { ActorStatus } from "../../proto/bff/v1/moderation_service_pb";
 
-const props = defineProps<{ did: string; loading: boolean; pending: number }>();
+const props = defineProps<{
+  did: string;
+  loading: boolean;
+  pending: number;
+  variant: "queue" | "profile";
+}>();
 defineEmits(["accept", "reject"]);
 
+const api = await useAPI();
+const isArtist = ref(false);
+const status = ref<ActorStatus | undefined>();
 const agent = newAgent();
 const data = ref<ProfileViewDetailed>();
 const loadProfile = async () => {
@@ -12,6 +21,11 @@ const loadProfile = async () => {
     actor: props.did,
   });
   data.value = result.data;
+  const { actor } = await api
+    .getActor({ did: result.data.did })
+    .catch(() => ({ actor: undefined }));
+  isArtist.value = Boolean(actor?.isArtist);
+  status.value = actor?.status;
 };
 
 watch(
@@ -24,7 +38,7 @@ await loadProfile();
 
 <template>
   <shared-card v-if="data" :class="{ loading }">
-    <div class="flex items-center gap-3 pt-2 mb-5">
+    <div v-if="variant === 'queue'" class="flex items-center gap-3 pt-2 mb-5">
       <button
         class="px-3 py-2 bg-blue-400 dark:bg-blue-600 rounded-lg hover:bg-blue-500 dark:hover:bg-blue-700 disabled:bg-blue-300 disabled:dark:bg-blue-500 disabled:cursor-not-allowed"
         :disabled="loading"
@@ -47,7 +61,7 @@ await loadProfile();
       >
     </div>
 
-    <div class="flex gap-3 items-center">
+    <div class="flex gap-3 items-center mb-5">
       <shared-avatar :url="data.avatar" />
       <div class="flex flex-col">
         <div class="text-lg">{{ data.displayName || data.handle }}</div>
@@ -73,9 +87,25 @@ await loadProfile();
             <span class="text-gray-600 dark:text-gray-400">posts</span>
           </span>
         </div>
+        <div v-if="variant === 'profile'" class="meta">
+          <span class="meta-item inline-flex items-center">
+            <icon-check
+              v-if="status === ActorStatus.APPROVED"
+              class="text-green-500"
+            />
+            <icon-cross v-else class="text-red-500" />
+            <span class="text-gray-600 dark:text-gray-400">In list</span>
+          </span>
+          <span class="meta-item inline-flex items-center">
+            <icon-check v-if="isArtist" class="text-green-500" />
+            <icon-cross v-else class="text-red-500" />
+            <span class="text-gray-600 dark:text-gray-400">Artist</span>
+          </span>
+        </div>
       </div>
     </div>
-    <div class="mt-5">
+
+    <div>
       <shared-bsky-description
         v-if="data.description"
         :description="data.description"
@@ -89,7 +119,9 @@ await loadProfile();
 
 <style scoped>
 .meta .meta-item:not(:last-child)::after {
-  content: " · ";
+  content: "·";
+  @apply px-1;
+  @apply inline-block;
   text-decoration: none;
 }
 
