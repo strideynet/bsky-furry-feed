@@ -37,11 +37,6 @@ resource "google_sql_database_instance" "main_us_east" {
       value = "on"
     }
 
-    database_flags {
-      name = "work_mem"
-      value = "10MB"
-    }
-
     insights_config {
       query_insights_enabled = true
     }
