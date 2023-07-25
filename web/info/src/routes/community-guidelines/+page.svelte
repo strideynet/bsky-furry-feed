@@ -77,7 +77,7 @@
     <li>Marking all past and future posts by an account as NSFW</li>
     <li>
       Banning an account entirely from the feeds. This means their posts will no longer
-      show on the feeds/li>
+      show on the feeds
     </li>
     <li>
       Adding a user to the furryli.st maintained mute/block list. This is reserved for
