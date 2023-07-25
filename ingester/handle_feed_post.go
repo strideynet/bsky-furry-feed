@@ -38,6 +38,10 @@ func isNSFW(data *bsky.FeedPost) bool {
 	return hasKeyword(data, "#nsfw")
 }
 
+func isCommissionsOpen(data *bsky.FeedPost) bool {
+	return hasKeyword(data, "#commsopen")
+}
+
 func (fi *FirehoseIngester) handleFeedPostCreate(
 	ctx context.Context,
 	repoDID string,
@@ -65,6 +69,9 @@ func (fi *FirehoseIngester) handleFeedPostCreate(
 		}
 		if isNSFW(data) {
 			tags = append(tags, bff.TagNSFW)
+		}
+		if isCommissionsOpen(data) {
+			tags = append(tags, bff.TagCommissionsOpen)
 		}
 
 		err = fi.store.CreatePost(
