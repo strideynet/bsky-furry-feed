@@ -29,7 +29,7 @@ spec:
       serviceAccountName: bff-ingester
       containers:
       - name: ingester
-        image: ghcr.io/strideynet/bsky-furry-feed/bffsrv:7d8b9befacf04a11575d8d1c6e95fcc86fcecf24
+        image: ghcr.io/strideynet/bsky-furry-feed/bffsrv:0724a54482143d5c33a9b499636c15d08fd08081
         env:
           - name: ENV
             value: production
