@@ -23,17 +23,17 @@ await loadProfile();
 </script>
 
 <template>
-  <shared-card v-if="data">
+  <shared-card v-if="data" :class="{ loading }">
     <div class="flex items-center gap-3 pt-2 mb-5">
       <button
-        class="px-3 py-2 bg-blue-400 dark:bg-blue-500 rounded-lg"
+        class="px-3 py-2 bg-blue-400 dark:bg-blue-600 rounded-lg hover:bg-blue-500 dark:hover:bg-blue-700 disabled:bg-blue-300 disabled:dark:bg-blue-500 disabled:cursor-not-allowed"
         :disabled="loading"
         @click="$emit('accept')"
       >
         Accept
       </button>
       <button
-        class="px-3 py-2 bg-red-500 dark:bg-red-600 rounded-lg"
+        class="px-3 py-2 bg-red-500 dark:bg-red-600 hover:bg-red-600 dark:hover:bg-red-700 disabled:bg-red-400 disabled:dark:bg-red-500 rounded-lg disabled:cursor-not-allowed"
         :disabled="loading"
         @click="$emit('reject')"
       >
@@ -91,5 +91,39 @@ await loadProfile();
 .meta .meta-item:not(:last-child)::after {
   content: " · ";
   text-decoration: none;
+}
+
+.loading {
+  background: linear-gradient(
+    120deg,
+    transparent 5%,
+    rgb(31, 41, 55) 20%,
+    transparent 30%
+  );
+  background-size: 200% 100%;
+  background-position-y: bottom;
+  animation: 1.25s loading linear infinite;
+}
+
+@media (prefers-color-scheme: light) {
+  .loading {
+    background: linear-gradient(
+      120deg,
+      transparent 5%,
+      rgb(243, 244, 246) 20%,
+      transparent 30%
+    );
+    background-size: 200% 100%;
+    background-position-y: bottom;
+  }
+}
+
+@keyframes loading {
+  from {
+    background-position-x: 50%;
+  }
+  to {
+    background-position-x: -150%;
+  }
 }
 </style>
