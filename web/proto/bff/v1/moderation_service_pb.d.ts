@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage, Timestamp } from "@bufbuild/protobuf";
+import type { Any, BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage, Timestamp } from "@bufbuild/protobuf";
 import { Message, proto3 } from "@bufbuild/protobuf";
 
 /**
@@ -411,5 +411,95 @@ export declare class ProcessApprovalQueueResponse extends Message<ProcessApprova
   static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ProcessApprovalQueueResponse;
 
   static equals(a: ProcessApprovalQueueResponse | PlainMessage<ProcessApprovalQueueResponse> | undefined, b: ProcessApprovalQueueResponse | PlainMessage<ProcessApprovalQueueResponse> | undefined): boolean;
+}
+
+/**
+ * @generated from message bff.v1.AuditEntry
+ */
+export declare class AuditEntry extends Message<AuditEntry> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 2;
+   */
+  createdAt?: Timestamp;
+
+  /**
+   * @generated from field: string creator_did = 3;
+   */
+  creatorDid: string;
+
+  /**
+   * @generated from field: string subject_actor_did = 4;
+   */
+  subjectActorDid: string;
+
+  /**
+   * subject_uri allows an audit entry to be linked to a specific bluesky
+   * entity. This is an optional field and can be empty if targetting just
+   * an actor.
+   *
+   * @generated from field: optional string subject_uri = 5;
+   */
+  subjectUri?: string;
+
+  /**
+   * comment is a comment left by the creator of the audit event to explain
+   * the action.
+   *
+   * @generated from field: string comment = 6;
+   */
+  comment: string;
+
+  /**
+   * @generated from field: google.protobuf.Any payload = 7;
+   */
+  payload?: Any;
+
+  constructor(data?: PartialMessage<AuditEntry>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "bff.v1.AuditEntry";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AuditEntry;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AuditEntry;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AuditEntry;
+
+  static equals(a: AuditEntry | PlainMessage<AuditEntry> | undefined, b: AuditEntry | PlainMessage<AuditEntry> | undefined): boolean;
+}
+
+/**
+ * @generated from message bff.v1.QueueApprovalAuditPayload
+ */
+export declare class QueueApprovalAuditPayload extends Message<QueueApprovalAuditPayload> {
+  /**
+   * @generated from field: bff.v1.ApprovalQueueAction action = 1;
+   */
+  action: ApprovalQueueAction;
+
+  /**
+   * @generated from field: bool is_artist = 2;
+   */
+  isArtist: boolean;
+
+  constructor(data?: PartialMessage<QueueApprovalAuditPayload>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "bff.v1.QueueApprovalAuditPayload";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): QueueApprovalAuditPayload;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): QueueApprovalAuditPayload;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): QueueApprovalAuditPayload;
+
+  static equals(a: QueueApprovalAuditPayload | PlainMessage<QueueApprovalAuditPayload> | undefined, b: QueueApprovalAuditPayload | PlainMessage<QueueApprovalAuditPayload> | undefined): boolean;
 }
 

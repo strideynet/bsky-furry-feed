@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/any.proto";
 
 package bff.v1;
 
@@ -98,3 +99,25 @@ message ProcessApprovalQueueRequest {
 }
 
 message ProcessApprovalQueueResponse {}
+
+message AuditEntry {
+  string id = 1;
+  google.protobuf.Timestamp created_at = 2;
+  string creator_did = 3;
+
+  string subject_actor_did = 4;
+  // subject_uri allows an audit entry to be linked to a specific bluesky
+  // entity. This is an optional field and can be empty if targetting just
+  // an actor.
+  string subject_uri = 5;
+  // comment is a comment left by the creator of the audit event to explain
+  // the action.
+  string comment = 6;
+
+  google.protobuf.Any payload = 7;
+}
+
+message QueueApprovalAuditPayload {
+  ApprovalQueueAction action = 1;
+  bool is_artist = 2;
+}

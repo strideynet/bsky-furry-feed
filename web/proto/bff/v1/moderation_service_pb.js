@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { proto3, Timestamp } from "@bufbuild/protobuf";
+import { Any, proto3, Timestamp } from "@bufbuild/protobuf";
 
 /**
  * @generated from enum bff.v1.ActorStatus
@@ -154,5 +154,32 @@ export const ProcessApprovalQueueRequest = proto3.makeMessageType(
 export const ProcessApprovalQueueResponse = proto3.makeMessageType(
   "bff.v1.ProcessApprovalQueueResponse",
   [],
+);
+
+/**
+ * @generated from message bff.v1.AuditEntry
+ */
+export const AuditEntry = proto3.makeMessageType(
+  "bff.v1.AuditEntry",
+  () => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "created_at", kind: "message", T: Timestamp },
+    { no: 3, name: "creator_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "subject_actor_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "subject_uri", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "comment", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "payload", kind: "message", T: Any },
+  ],
+);
+
+/**
+ * @generated from message bff.v1.QueueApprovalAuditPayload
+ */
+export const QueueApprovalAuditPayload = proto3.makeMessageType(
+  "bff.v1.QueueApprovalAuditPayload",
+  () => [
+    { no: 1, name: "action", kind: "enum", T: proto3.getEnumType(ApprovalQueueAction) },
+    { no: 2, name: "is_artist", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ],
 );
 
