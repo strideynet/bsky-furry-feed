@@ -161,6 +161,11 @@ export declare class Post extends Message<Post> {
  * @generated from message bff.v1.GetActorRequest
  */
 export declare class GetActorRequest extends Message<GetActorRequest> {
+  /**
+   * @generated from field: string did = 1;
+   */
+  did: string;
+
   constructor(data?: PartialMessage<GetActorRequest>);
 
   static readonly runtime: typeof proto3;

@@ -51,7 +51,9 @@ message Post {
   google.protobuf.Timestamp indexed_at = 3;
 }
 
-message GetActorRequest {}
+message GetActorRequest {
+  string did = 1;
+}
 
 message GetActorResponse {
   Actor actor = 1;

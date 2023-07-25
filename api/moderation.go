@@ -51,8 +51,16 @@ func (m *ModerationServiceHandler) GetActor(ctx context.Context, req *connect.Re
 	if err != nil {
 		return nil, fmt.Errorf("authenticating: %w", err)
 	}
-	//TODO implement me
-	return nil, fmt.Errorf("unimplemented")
+
+	actor, err := m.store.GetActorByDID(ctx, req.Msg.Did)
+	if err != nil {
+		return nil, fmt.Errorf("getting actor: %w", err)
+	}
+
+	res := connect.NewResponse(&v1.GetActorResponse{
+		Actor: actor,
+	})
+	return res, nil
 }
 
 func (m *ModerationServiceHandler) GetApprovalQueue(ctx context.Context, req *connect.Request[v1.GetApprovalQueueRequest]) (*connect.Response[v1.GetApprovalQueueResponse], error) {

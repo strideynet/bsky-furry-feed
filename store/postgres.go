@@ -140,6 +140,25 @@ func (s *PGXStore) ListActors(ctx context.Context, opts ListActorsOpts) (out []*
 	return out, nil
 }
 
+func (s *PGXStore) GetActorByDID(ctx context.Context, did string) (out *v1.Actor, err error) {
+	ctx, span := tracer.Start(ctx, "pgx_store.get_actor_by_did")
+	defer func() {
+		endSpan(span, err)
+	}()
+
+	actor, err := s.queries.GetCandidateActorByDID(ctx, s.pool, did)
+	if err != nil {
+		return nil, fmt.Errorf("executing GetCandidateActorByDID query: %w", err)
+	}
+
+	out, err = actorToProto(actor)
+	if err != nil {
+		return nil, fmt.Errorf("converting actor (%s): %w", actor.DID, err)
+	}
+
+	return out, nil
+}
+
 type CreateActorOpts struct {
 	DID     string
 	Comment string

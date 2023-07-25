@@ -63,7 +63,9 @@ export const Post = proto3.makeMessageType(
  */
 export const GetActorRequest = proto3.makeMessageType(
   "bff.v1.GetActorRequest",
-  [],
+  () => [
+    { no: 1, name: "did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ],
 );
 
 /**
