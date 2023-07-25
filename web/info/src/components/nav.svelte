@@ -1,25 +1,35 @@
 <script lang="ts">
+  import NavLink from '$components/nav/link.svelte';
+
   export let hasSession: boolean,
     isAtTop = false;
+
+  $: navLinks = hasSession
+    ? [
+        { href: '/dash', text: 'Dashboard' },
+        { href: '/auth/logout', text: 'Logout' }
+      ]
+    : [{ href: '/auth/login', text: 'Login' }];
 </script>
 
 <div
   class="sticky left-0 top-0 w-screen border-b-4 transition-colors duration-75"
   class:isAtTop
 >
-  <div class="flex h-fit w-full flex-row items-center justify-between px-8 py-6">
-    <div class="flex flex-row items-center justify-start gap-4">
-      <a class="text-2xl font-bold" href="/">🐕 furryli.st</a>
-    </div>
-    <div class="flex flex-row gap-4">
-      <a href="/community-guidelines">Community Guidelines</a>
-      <a href="https://discord.gg/7X467r4UXF">Discord</a>
-      {#if hasSession}
-        <a href="/dash">Dashboard</a>
-        <a href="/auth/logout">Logout</a>
-      {:else}
-        <a href="/auth/login">Login</a>
-      {/if}
+  <div
+    class="flex h-fit w-full flex-col flex-wrap items-center justify-center gap-6 px-8 py-6 md:flex-row md:justify-start"
+  >
+    <a class="w-fit text-2xl font-bold md:mb-1" href="/">🐕 furryli.st</a>
+    <div class="flex flex-1 flex-row flex-wrap justify-between gap-6 md:flex-nowrap">
+      <div class="flex flex-row gap-4">
+        <NavLink href="/community-guidelines">Community Guidelines</NavLink>
+        <NavLink href="https://discord.gg/7X467r4UXF" target="_blank">Discord</NavLink>
+      </div>
+      <div class="flex flex-row gap-4">
+        {#each navLinks as link}
+          <NavLink href={link.href}>{link.text}</NavLink>
+        {/each}
+      </div>
     </div>
   </div>
 </div>

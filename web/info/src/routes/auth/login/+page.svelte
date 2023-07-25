@@ -14,7 +14,7 @@
     error = '';
     const form = e.target as HTMLFormElement;
 
-    const username = form.username.value as string,
+    const username = (form.username.value as string)?.replace(/^@/, ''),
       password = form.password.value as string;
 
     if (!username.trim() || !password.trim()) {
@@ -34,8 +34,6 @@
         password
       })
       .then((res) => {
-        console.log({ res });
-
         if (!res.success) {
           console.error('Login failed', res);
           error = 'Login failed';
@@ -47,15 +45,31 @@
       })
       .catch((err) => {
         console.error('Login failed', err);
-        error = 'Login failed';
+        if (err.message) {
+          error = err.message;
+        } else {
+          error = 'Login failed';
+        }
       });
   };
 </script>
 
 <div class="mx-auto mt-8 max-w-xl">
-  <form on:submit={handleLogin} class="flex flex-col items-center justify-center">
-    <Field type="text" name="username" placeholder="Identifier" required />
-    <Field type="password" name="password" placeholder="Password" required />
+  <form on:submit={handleLogin} class="flex flex-col items-center justify-center gap-y-4">
+    <Field
+      type="text"
+      name="username"
+      title="Identifier"
+      placeholder="@me.bsky.social"
+      required
+    />
+    <Field
+      type="password"
+      name="password"
+      title="Password"
+      placeholder="********"
+      required
+    />
     {#if error}
       <p class="my-2 text-red-500">{error}</p>
     {/if}

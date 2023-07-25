@@ -1,9 +1,10 @@
 <script lang="ts">
+  import StaticPage from '$components/layouts/static-page.svelte';
   import Heading from '$components/text/heading.svelte';
   import Link from '$components/text/link.svelte';
 </script>
 
-<div>
+<StaticPage>
   <Heading level={2}>The purremier furry feed for BlueSky</Heading>
 
   <p>
@@ -109,23 +110,23 @@
   <Heading level={5}>What else should I check out?</Heading>
 
   <p>
-    BlueSky has a thriving furry community, there's a "Fursky" Discord that's worth
-    joining to learn more about other resources in the Furry community. <br />
-    <Link href="https://discord.gg/fursky">Click to join the Fursky Discord</Link>
+    BlueSky has a thriving furry community, there's a <Link
+      href="https://discord.gg/fursky">"Fursky" Discord</Link
+    > that's worth joining to learn more about other resources in the Furry community.
   </p>
 
   <Heading level={5}>I have more questions!</Heading>
 
   <p>
-    First of all, that's not a question! But, yes, you can find our support channel in our <Link
-      href="https://discord.gg/7X467r4UXF">Discord</Link
+    First of all, that's not a question! But, yes, you can find our support channel in <Link
+      href="https://discord.gg/7X467r4UXF">our Discord</Link
     >
   </p>
-</div>
+</StaticPage>
 
 <style lang="scss">
   p {
-    @apply my-3;
+    @apply mb-3 mt-2;
   }
 
   ul {
