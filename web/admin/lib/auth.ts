@@ -1,12 +1,12 @@
-import { AtpSessionData, BskyAgent } from "@atproto/api";
+import * as atproto from "@atproto/api";
 
 export const COOKIE_NAME = "furrylist-bsky-session";
 const BSKY_API = "https://bsky.social";
 
-export function newAgent(): BskyAgent {
-  const agent = new BskyAgent({ service: BSKY_API });
+export function newAgent(): atproto.BskyAgent {
+  const agent = new atproto.BskyAgent({ service: BSKY_API });
 
-  const user = useState<AtpSessionData>("user").value;
+  const user = useState<atproto.AtpSessionData>("user").value;
 
   if (user) {
     agent.session = user;
@@ -28,7 +28,7 @@ export async function login(
 ): Promise<{ error: any; success: boolean }> {
   const agent = newAgent();
   let success: boolean;
-  let data: AtpSessionData;
+  let data: atproto.AtpSessionData;
 
   try {
     const result = await agent.login({ identifier, password });
@@ -42,14 +42,14 @@ export async function login(
     return { success, error: "Invalid identifier or password" };
   }
 
-  useCookie<AtpSessionData>(COOKIE_NAME).value = data;
+  useCookie<atproto.AtpSessionData>(COOKIE_NAME).value = data;
   useState("user").value = data;
 
   return { success, error: null };
 }
 
-export async function fetchUser(): Promise<AtpSessionData | null> {
-  const cookie = useCookie<AtpSessionData | null>(COOKIE_NAME, {
+export async function fetchUser(): Promise<atproto.AtpSessionData | null> {
+  const cookie = useCookie<atproto.AtpSessionData | null>(COOKIE_NAME, {
     expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
   });
 
@@ -70,6 +70,7 @@ export async function fetchUser(): Promise<AtpSessionData | null> {
       case "expired":
         cookie.value = null;
         useState("user").value = null;
+        break;
       default:
         break;
     }

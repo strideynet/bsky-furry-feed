@@ -2,12 +2,12 @@ import { writable } from 'svelte/store';
 
 import { ATP_API, ATP_SESSION_COOKIE } from '$lib/constants';
 
-import { BskyAgent } from '@atproto/api';
+import * as atproto from '@atproto/api';
 
 import type { AtpSessionData, AtpSessionEvent } from '@atproto/api';
 
 const session = writable<AtpSessionData | null>(null),
-  agent = writable<BskyAgent | null>(null);
+  agent = writable<atproto.BskyAgent | null>(null);
 
 const setupSession = () => {
   let session: AtpSessionData | null = null;
@@ -70,7 +70,7 @@ const setupAgent = () => {
     }
   };
 
-  return new BskyAgent({ service: ATP_API, persistSession: persistSessionWith });
+  return new atproto.BskyAgent({ service: ATP_API, persistSession: persistSessionWith });
 };
 
 export { agent, session, setupAgent, setupSession };
