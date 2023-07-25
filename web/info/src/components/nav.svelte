@@ -12,6 +12,8 @@
       <a class="text-2xl font-bold" href="/">🐕 furryli.st</a>
     </div>
     <div class="flex flex-row gap-4">
+      <a href="/community-guidelines">Community Guidelines</a>
+      <a href="https://discord.gg/7X467r4UXF">Discord</a>
       {#if hasSession}
         <a href="/dash">Dashboard</a>
         <a href="/auth/logout">Logout</a>
