@@ -24,14 +24,12 @@
 
   $: hasSession = !!($session !== null && $agent?.hasSession);
   $: ({ pathname } = data.url ?? { pathname: '' });
-  $: browser && setTimeout(() => checkScroll(), 50), [pathname];
+  $: browser && setTimeout(() => checkScroll(), 100), [pathname];
 </script>
 
-<svelte:body
-  use:classList={'light bg-gray-100'}
-  on:scroll={checkScroll}
-  on:wheel={checkScroll}
-/>
+<svelte:window on:scroll={checkScroll} on:wheel={checkScroll} />
+
+<svelte:body use:classList={'light bg-gray-100'} />
 
 <svelte:head>
   <title>furryli.st</title>
@@ -41,7 +39,7 @@
 <div class="relative flex flex-col" bind:this={pageContainer}>
   <Nav {hasSession} {isAtTop} />
   <PageTransitionWrapper key={pathname}>
-    <div class="mx-auto w-full max-w-7xl px-6 py-4">
+    <div class="w-full px-6 py-4">
       <slot />
     </div>
   </PageTransitionWrapper>
