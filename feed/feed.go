@@ -88,7 +88,7 @@ func PostsFromStorePosts(storePosts []gen.CandidatePost) []Post {
 	for _, p := range storePosts {
 		posts = append(posts, Post{
 			URI:    p.URI,
-			Cursor: bluesky.FormatTime(p.CreatedAt.Time),
+			Cursor: bluesky.FormatTime(p.IndexedAt.Time),
 		})
 	}
 	return posts
@@ -96,15 +96,17 @@ func PostsFromStorePosts(storePosts []gen.CandidatePost) []Post {
 
 func newGenerator() GenerateFunc {
 	return func(ctx context.Context, pgxStore *store.PGXStore, cursor string, limit int) ([]Post, error) {
-		params := store.ListPostsForNewFeedOpts{
-			Limit: limit,
-		}
+		cursorTime := time.Now().UTC()
 		if cursor != "" {
-			cursorTime, err := bluesky.ParseTime(cursor)
+			parsedTime, err := bluesky.ParseTime(cursor)
 			if err != nil {
 				return nil, fmt.Errorf("parsing cursor: %w", err)
 			}
-			params.CursorTime = &cursorTime
+			cursorTime = parsedTime
+		}
+		params := store.ListPostsForNewFeedOpts{
+			Limit:      limit,
+			CursorTime: cursorTime,
 		}
 
 		posts, err := pgxStore.ListPostsForNewFeed(ctx, params)
@@ -117,16 +119,18 @@ func newGenerator() GenerateFunc {
 
 func newWithTagGenerator(tag string) GenerateFunc {
 	return func(ctx context.Context, pgxStore *store.PGXStore, cursor string, limit int) ([]Post, error) {
-		params := store.ListPostsForNewFeedOpts{
-			Limit:     limit,
-			FilterTag: tag,
-		}
+		cursorTime := time.Now().UTC()
 		if cursor != "" {
-			cursorTime, err := bluesky.ParseTime(cursor)
+			parsedTime, err := bluesky.ParseTime(cursor)
 			if err != nil {
 				return nil, fmt.Errorf("parsing cursor: %w", err)
 			}
-			params.CursorTime = &cursorTime
+			cursorTime = parsedTime
+		}
+		params := store.ListPostsForNewFeedOpts{
+			Limit:      limit,
+			FilterTag:  tag,
+			CursorTime: cursorTime,
 		}
 
 		posts, err := pgxStore.ListPostsForNewFeed(ctx, params)
@@ -154,7 +158,7 @@ func scoreBasedGenerator(gravity float64, postAgeOffset time.Duration) GenerateF
 
 		rows, err := pgxStore.ListPostsWithLikes(ctx, store.ListPostsWithLikesOpts{
 			Limit:      2000,
-			CursorTime: &cursorTime,
+			CursorTime: cursorTime,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("executing sql: %w", err)

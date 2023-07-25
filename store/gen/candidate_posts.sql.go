@@ -47,11 +47,10 @@ WHERE
       cp.is_hidden = false
   AND ca.status = 'approved'
   AND ($1::TEXT = '' OR $1::TEXT = ANY (cp.tags))
-  AND ($2::TIMESTAMPTZ IS NULL OR
-       cp.created_at < $2)
+  AND (cp.indexed_at < $2)
   AND cp.deleted_at IS NULL
 ORDER BY
-    cp.created_at DESC
+    cp.indexed_at DESC
 LIMIT $3
 `
 
@@ -99,8 +98,7 @@ SELECT
          candidate_likes cl
      WHERE
            cl.subject_uri = cp.uri
-       AND ($1::TIMESTAMPTZ IS NULL OR
-            cl.indexed_at < $1)
+       AND (cl.indexed_at < $1)
        AND cl.deleted_at IS NULL) AS likes
 FROM
     candidate_posts cp

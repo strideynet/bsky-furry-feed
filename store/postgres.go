@@ -416,7 +416,7 @@ func (s *PGXStore) DeleteFollow(ctx context.Context, opts DeleteFollowOpts) (err
 }
 
 type ListPostsForNewFeedOpts struct {
-	CursorTime *time.Time
+	CursorTime time.Time
 	FilterTag  string
 	Limit      int
 }
@@ -428,12 +428,11 @@ func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNew
 		endSpan(span, err)
 	}()
 
-	queryParams := gen.GetFurryNewFeedParams{}
-	if opts.CursorTime != nil {
-		queryParams.CursorTimestamp = pgtype.Timestamptz{
+	queryParams := gen.GetFurryNewFeedParams{
+		CursorTimestamp: pgtype.Timestamptz{
 			Valid: true,
-			Time:  *opts.CursorTime,
-		}
+			Time:  opts.CursorTime,
+		},
 	}
 	if opts.FilterTag != "" {
 		queryParams.Tag = opts.FilterTag
@@ -451,7 +450,7 @@ func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNew
 }
 
 type ListPostsWithLikesOpts struct {
-	CursorTime *time.Time
+	CursorTime time.Time
 	Limit      int
 }
 
@@ -462,13 +461,13 @@ func (s *PGXStore) ListPostsWithLikes(ctx context.Context, opts ListPostsWithLik
 		endSpan(span, err)
 	}()
 
-	queryParams := gen.GetPostsWithLikesParams{}
-	if opts.CursorTime != nil {
-		queryParams.CursorTimestamp = pgtype.Timestamptz{
+	queryParams := gen.GetPostsWithLikesParams{
+		CursorTimestamp: pgtype.Timestamptz{
 			Valid: true,
-			Time:  *opts.CursorTime,
-		}
+			Time:  opts.CursorTime,
+		},
 	}
+
 	if opts.Limit != 0 {
 		queryParams.Limit = int32(opts.Limit)
 	}
