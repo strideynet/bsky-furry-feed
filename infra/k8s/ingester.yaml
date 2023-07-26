@@ -33,6 +33,10 @@ spec:
         env:
           - name: ENV
             value: production
+          - name: BFF_INGESTER_ENABLED
+            value: "1"
+          - name: BFF_API_ENABLED
+            value: "1"
         envFrom:
           - secretRef:
               name: shared-env
@@ -43,21 +47,7 @@ spec:
         resources:
           requests:
             memory: 512Mi # 512Mi is minimum
-            cpu: 500m # 250m is minimum
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: bff-ingester
-spec:
-  ports:
-    - port: 80
-      protocol: TCP
-      targetPort: 1337
-  selector:
-    app.kubernetes.io/name: ingester
-    app.kubernetes.io/part-of: bff
-  type: ClusterIP
+            cpu: 300m # 250m is minimum
 ---
 apiVersion: monitoring.googleapis.com/v1
 kind: PodMonitoring
