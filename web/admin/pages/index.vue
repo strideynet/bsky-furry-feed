@@ -34,16 +34,14 @@ await nextActor();
 </script>
 
 <template>
-  <div class="max-w-[800px] py-4 px-3 mx-auto">
-    <core-nav />
-    <user-card
-      v-if="actor"
-      :did="actor.did"
-      :loading="loading"
-      :pending="pending"
-      @accept="accept"
-      @reject="reject"
-    />
-    <shared-card v-else> No user is in the queue. </shared-card>
-  </div>
+  <user-card
+    v-if="actor"
+    :did="actor.did"
+    :loading="loading"
+    :pending="pending"
+    variant="queue"
+    @accept="accept"
+    @reject="reject"
+  />
+  <shared-card v-else> No user is in the queue. </shared-card>
 </template>

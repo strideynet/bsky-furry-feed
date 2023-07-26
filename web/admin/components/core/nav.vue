@@ -1,9 +1,7 @@
 <script setup>
-import { logout, newAgent } from "~/lib/auth";
+import { logout } from "~/lib/auth";
 
-const user = await useUser();
-const agent = newAgent();
-const profile = await agent.getProfile({ actor: user.value.did });
+const profile = await useProfile();
 </script>
 
 <template>
@@ -21,9 +19,10 @@ const profile = await agent.getProfile({ actor: user.value.did });
     </nuxt-link>
     <h1 class="text-xl font-bold">Admin</h1>
     <div class="ml-auto flex items-center gap-2">
+      <shared-search />
       <img
         class="rounded-full"
-        :src="profile.data.avatar"
+        :src="profile.avatar"
         height="32"
         width="32"
         alt=""
