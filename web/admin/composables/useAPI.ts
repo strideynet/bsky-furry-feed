@@ -5,7 +5,7 @@ import { ModerationService } from "../../proto/bff/v1/moderation_service_connect
 export default async function () {
   const user = await useUser();
   const transport = createConnectTransport({
-    baseUrl: "http://localhost:1337",
+    baseUrl: "https://feed.furryli.st",
 
     fetch(input, data = {}) {
       (data.headers as Headers).set(
