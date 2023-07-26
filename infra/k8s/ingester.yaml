@@ -35,8 +35,6 @@ spec:
             value: production
           - name: BFF_INGESTER_ENABLED
             value: "1"
-          - name: BFF_API_ENABLED
-            value: "1"
         envFrom:
           - secretRef:
               name: shared-env
