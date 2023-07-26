@@ -13,6 +13,8 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"time"
 )
@@ -497,4 +499,43 @@ func (s *PGXStore) ListPostsWithLikes(ctx context.Context, opts ListPostsWithLik
 	}
 
 	return posts, nil
+}
+
+type ListAuditEventsOpts struct {
+	FilterSubjectDID string
+}
+
+func (s *PGXStore) ListAuditEvents(ctx context.Context, opts ListAuditEventsOpts) (out []*v1.AuditEvent, err error) {
+	ctx, span := tracer.Start(ctx, "pgx_store.list_audit_events")
+	defer func() {
+		endSpan(span, err)
+	}()
+
+	queryParams := gen.ListAuditEventsParams{
+		SubjectDid: opts.FilterSubjectDID,
+	}
+
+	data, err := s.queries.ListAuditEvents(ctx, s.pool, queryParams)
+	if err != nil {
+		return nil, fmt.Errorf("executing ListAuditEvents query: %w", err)
+	}
+	out := make([]*v1.AuditEvent, 0, len(data))
+	for _, d := range data {
+		ae := &v1.AuditEvent{
+			Id:               d.ID,
+			CreatedAt:        timestamppb.New(d.CreatedAt.Time),
+			ActorDid:         d.ActorDID,
+			SubjectDid:       d.SubjectDid,
+			SubjectRecordUri: d.SubjectRecordUri.String,
+		}
+		anyPayload := &anypb.Any{}
+		err := protojson.Unmarshal(d.Payload, anyPayload)
+		if err != nil {
+			return nil, fmt.Errorf("unmarshalling payload: %w", err)
+		}
+		ae.Payload = anyPayload
+		out = append(out, ae)
+	}
+
+	return out, nil
 }

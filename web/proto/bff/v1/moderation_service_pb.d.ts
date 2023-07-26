@@ -414,10 +414,128 @@ export declare class ProcessApprovalQueueResponse extends Message<ProcessApprova
 }
 
 /**
- * @generated from message bff.v1.AuditEntry
+ * @generated from message bff.v1.ListAuditEventsRequest
  */
-export declare class AuditEntry extends Message<AuditEntry> {
+export declare class ListAuditEventsRequest extends Message<ListAuditEventsRequest> {
   /**
+   * @generated from field: string actor_did = 1;
+   */
+  actorDid: string;
+
+  /**
+   * @generated from field: string record_uri = 2;
+   */
+  recordUri: string;
+
+  /**
+   * @generated from field: string moderator_did = 3;
+   */
+  moderatorDid: string;
+
+  constructor(data?: PartialMessage<ListAuditEventsRequest>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "bff.v1.ListAuditEventsRequest";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListAuditEventsRequest;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListAuditEventsRequest;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListAuditEventsRequest;
+
+  static equals(a: ListAuditEventsRequest | PlainMessage<ListAuditEventsRequest> | undefined, b: ListAuditEventsRequest | PlainMessage<ListAuditEventsRequest> | undefined): boolean;
+}
+
+/**
+ * @generated from message bff.v1.ListAuditEventsResponse
+ */
+export declare class ListAuditEventsResponse extends Message<ListAuditEventsResponse> {
+  /**
+   * @generated from field: repeated bff.v1.AuditEvent audit_events = 1;
+   */
+  auditEvents: AuditEvent[];
+
+  constructor(data?: PartialMessage<ListAuditEventsResponse>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "bff.v1.ListAuditEventsResponse";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListAuditEventsResponse;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListAuditEventsResponse;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListAuditEventsResponse;
+
+  static equals(a: ListAuditEventsResponse | PlainMessage<ListAuditEventsResponse> | undefined, b: ListAuditEventsResponse | PlainMessage<ListAuditEventsResponse> | undefined): boolean;
+}
+
+/**
+ * @generated from message bff.v1.CreateCommentAuditEventRequest
+ */
+export declare class CreateCommentAuditEventRequest extends Message<CreateCommentAuditEventRequest> {
+  /**
+   * @generated from field: string subject_did = 1;
+   */
+  subjectDid: string;
+
+  /**
+   * @generated from field: string subject_record_uri = 2;
+   */
+  subjectRecordUri: string;
+
+  /**
+   * @generated from field: string comment = 3;
+   */
+  comment: string;
+
+  constructor(data?: PartialMessage<CreateCommentAuditEventRequest>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "bff.v1.CreateCommentAuditEventRequest";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateCommentAuditEventRequest;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateCommentAuditEventRequest;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateCommentAuditEventRequest;
+
+  static equals(a: CreateCommentAuditEventRequest | PlainMessage<CreateCommentAuditEventRequest> | undefined, b: CreateCommentAuditEventRequest | PlainMessage<CreateCommentAuditEventRequest> | undefined): boolean;
+}
+
+/**
+ * @generated from message bff.v1.CreateCommentAuditEventResponse
+ */
+export declare class CreateCommentAuditEventResponse extends Message<CreateCommentAuditEventResponse> {
+  /**
+   * @generated from field: bff.v1.AuditEvent audit_event = 1;
+   */
+  auditEvent?: AuditEvent;
+
+  constructor(data?: PartialMessage<CreateCommentAuditEventResponse>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "bff.v1.CreateCommentAuditEventResponse";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateCommentAuditEventResponse;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateCommentAuditEventResponse;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateCommentAuditEventResponse;
+
+  static equals(a: CreateCommentAuditEventResponse | PlainMessage<CreateCommentAuditEventResponse> | undefined, b: CreateCommentAuditEventResponse | PlainMessage<CreateCommentAuditEventResponse> | undefined): boolean;
+}
+
+/**
+ * @generated from message bff.v1.AuditEvent
+ */
+export declare class AuditEvent extends Message<AuditEvent> {
+  /**
+   * id is a unique identifier of this audit event.
+   *
    * @generated from field: string id = 1;
    */
   id: string;
@@ -428,78 +546,99 @@ export declare class AuditEntry extends Message<AuditEntry> {
   createdAt?: Timestamp;
 
   /**
-   * @generated from field: string creator_did = 3;
-   */
-  creatorDid: string;
-
-  /**
-   * @generated from field: string subject_actor_did = 4;
-   */
-  subjectActorDid: string;
-
-  /**
-   * subject_uri allows an audit entry to be linked to a specific bluesky
-   * entity. This is an optional field and can be empty if targetting just
-   * an actor.
+   * actor_did is the DID of the actor whose action caused this audit event
+   * to be emitted.
    *
-   * @generated from field: optional string subject_uri = 5;
+   * @generated from field: string actor_did = 3;
    */
-  subjectUri?: string;
+  actorDid: string;
 
   /**
-   * comment is a comment left by the creator of the audit event to explain
-   * the action.
+   * subject_did is the DID of the actor who the action was done to.
    *
-   * @generated from field: string comment = 6;
+   * @generated from field: string subject_did = 4;
    */
-  comment: string;
+  subjectDid: string;
 
   /**
-   * @generated from field: google.protobuf.Any payload = 7;
+   * subject_record_uri is the optional AT URI of a specific ATProto record
+   * that the action was taken against.
+   *
+   * @generated from field: string subject_record_uri = 5;
+   */
+  subjectRecordUri: string;
+
+  /**
+   * @generated from field: google.protobuf.Any payload = 6;
    */
   payload?: Any;
 
-  constructor(data?: PartialMessage<AuditEntry>);
+  constructor(data?: PartialMessage<AuditEvent>);
 
   static readonly runtime: typeof proto3;
-  static readonly typeName = "bff.v1.AuditEntry";
+  static readonly typeName = "bff.v1.AuditEvent";
   static readonly fields: FieldList;
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AuditEntry;
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AuditEvent;
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AuditEntry;
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AuditEvent;
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AuditEntry;
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AuditEvent;
 
-  static equals(a: AuditEntry | PlainMessage<AuditEntry> | undefined, b: AuditEntry | PlainMessage<AuditEntry> | undefined): boolean;
+  static equals(a: AuditEvent | PlainMessage<AuditEvent> | undefined, b: AuditEvent | PlainMessage<AuditEvent> | undefined): boolean;
 }
 
 /**
- * @generated from message bff.v1.QueueApprovalAuditPayload
+ * CommentAuditPayload is the payload for the `comment`audit event. This is
+ * empty, as the comment is actually held within `AuditEvent`
+ *
+ * @generated from message bff.v1.CommentAuditPayload
  */
-export declare class QueueApprovalAuditPayload extends Message<QueueApprovalAuditPayload> {
+export declare class CommentAuditPayload extends Message<CommentAuditPayload> {
+  /**
+   * @generated from field: string comment = 1;
+   */
+  comment: string;
+
+  constructor(data?: PartialMessage<CommentAuditPayload>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "bff.v1.CommentAuditPayload";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CommentAuditPayload;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CommentAuditPayload;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CommentAuditPayload;
+
+  static equals(a: CommentAuditPayload | PlainMessage<CommentAuditPayload> | undefined, b: CommentAuditPayload | PlainMessage<CommentAuditPayload> | undefined): boolean;
+}
+
+/**
+ * ProcessApprovalQueueAuditPayload is the payload for the
+ * `process_approval_queue` audit event.
+ *
+ * @generated from message bff.v1.ProcessApprovalQueueAuditPayload
+ */
+export declare class ProcessApprovalQueueAuditPayload extends Message<ProcessApprovalQueueAuditPayload> {
   /**
    * @generated from field: bff.v1.ApprovalQueueAction action = 1;
    */
   action: ApprovalQueueAction;
 
-  /**
-   * @generated from field: bool is_artist = 2;
-   */
-  isArtist: boolean;
-
-  constructor(data?: PartialMessage<QueueApprovalAuditPayload>);
+  constructor(data?: PartialMessage<ProcessApprovalQueueAuditPayload>);
 
   static readonly runtime: typeof proto3;
-  static readonly typeName = "bff.v1.QueueApprovalAuditPayload";
+  static readonly typeName = "bff.v1.ProcessApprovalQueueAuditPayload";
   static readonly fields: FieldList;
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): QueueApprovalAuditPayload;
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ProcessApprovalQueueAuditPayload;
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): QueueApprovalAuditPayload;
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ProcessApprovalQueueAuditPayload;
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): QueueApprovalAuditPayload;
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ProcessApprovalQueueAuditPayload;
 
-  static equals(a: QueueApprovalAuditPayload | PlainMessage<QueueApprovalAuditPayload> | undefined, b: QueueApprovalAuditPayload | PlainMessage<QueueApprovalAuditPayload> | undefined): boolean;
+  static equals(a: ProcessApprovalQueueAuditPayload | PlainMessage<ProcessApprovalQueueAuditPayload> | undefined, b: ProcessApprovalQueueAuditPayload | PlainMessage<ProcessApprovalQueueAuditPayload> | undefined): boolean;
 }
 

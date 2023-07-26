@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { GetActorRequest, GetActorResponse, GetApprovalQueueRequest, GetApprovalQueueResponse, ListActorsRequest, ListActorsResponse, PingRequest, PingResponse, ProcessApprovalQueueRequest, ProcessApprovalQueueResponse } from "./moderation_service_pb.js";
+import { CreateCommentAuditEventRequest, CreateCommentAuditEventResponse, GetActorRequest, GetActorResponse, GetApprovalQueueRequest, GetApprovalQueueResponse, ListActorsRequest, ListActorsResponse, ListAuditEventsRequest, ListAuditEventsResponse, PingRequest, PingResponse, ProcessApprovalQueueRequest, ProcessApprovalQueueResponse } from "./moderation_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -31,6 +31,8 @@ export const ModerationService = {
       kind: MethodKind.Unary,
     },
     /**
+     * TODO: Refactor ProcessApprovalQueue to something more like "ApproveActor"
+     *
      * @generated from rpc bff.v1.ModerationService.ProcessApprovalQueue
      */
     processApprovalQueue: {
@@ -55,6 +57,24 @@ export const ModerationService = {
       name: "GetActor",
       I: GetActorRequest,
       O: GetActorResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc bff.v1.ModerationService.ListAuditEvents
+     */
+    listAuditEvents: {
+      name: "ListAuditEvents",
+      I: ListAuditEventsRequest,
+      O: ListAuditEventsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc bff.v1.ModerationService.CreateCommentAuditEvent
+     */
+    createCommentAuditEvent: {
+      name: "CreateCommentAuditEvent",
+      I: CreateCommentAuditEventRequest,
+      O: CreateCommentAuditEventResponse,
       kind: MethodKind.Unary,
     },
   }

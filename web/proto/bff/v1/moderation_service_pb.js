@@ -157,29 +157,87 @@ export const ProcessApprovalQueueResponse = proto3.makeMessageType(
 );
 
 /**
- * @generated from message bff.v1.AuditEntry
+ * @generated from message bff.v1.ListAuditEventsRequest
  */
-export const AuditEntry = proto3.makeMessageType(
-  "bff.v1.AuditEntry",
+export const ListAuditEventsRequest = proto3.makeMessageType(
+  "bff.v1.ListAuditEventsRequest",
   () => [
-    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "created_at", kind: "message", T: Timestamp },
-    { no: 3, name: "creator_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "subject_actor_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "subject_uri", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 6, name: "comment", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 7, name: "payload", kind: "message", T: Any },
+    { no: 1, name: "actor_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "record_uri", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "moderator_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ],
 );
 
 /**
- * @generated from message bff.v1.QueueApprovalAuditPayload
+ * @generated from message bff.v1.ListAuditEventsResponse
  */
-export const QueueApprovalAuditPayload = proto3.makeMessageType(
-  "bff.v1.QueueApprovalAuditPayload",
+export const ListAuditEventsResponse = proto3.makeMessageType(
+  "bff.v1.ListAuditEventsResponse",
+  () => [
+    { no: 1, name: "audit_events", kind: "message", T: AuditEvent, repeated: true },
+  ],
+);
+
+/**
+ * @generated from message bff.v1.CreateCommentAuditEventRequest
+ */
+export const CreateCommentAuditEventRequest = proto3.makeMessageType(
+  "bff.v1.CreateCommentAuditEventRequest",
+  () => [
+    { no: 1, name: "subject_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "subject_record_uri", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "comment", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ],
+);
+
+/**
+ * @generated from message bff.v1.CreateCommentAuditEventResponse
+ */
+export const CreateCommentAuditEventResponse = proto3.makeMessageType(
+  "bff.v1.CreateCommentAuditEventResponse",
+  () => [
+    { no: 1, name: "audit_event", kind: "message", T: AuditEvent },
+  ],
+);
+
+/**
+ * @generated from message bff.v1.AuditEvent
+ */
+export const AuditEvent = proto3.makeMessageType(
+  "bff.v1.AuditEvent",
+  () => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "created_at", kind: "message", T: Timestamp },
+    { no: 3, name: "actor_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "subject_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "subject_record_uri", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "payload", kind: "message", T: Any },
+  ],
+);
+
+/**
+ * CommentAuditPayload is the payload for the `comment`audit event. This is
+ * empty, as the comment is actually held within `AuditEvent`
+ *
+ * @generated from message bff.v1.CommentAuditPayload
+ */
+export const CommentAuditPayload = proto3.makeMessageType(
+  "bff.v1.CommentAuditPayload",
+  () => [
+    { no: 1, name: "comment", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ],
+);
+
+/**
+ * ProcessApprovalQueueAuditPayload is the payload for the
+ * `process_approval_queue` audit event.
+ *
+ * @generated from message bff.v1.ProcessApprovalQueueAuditPayload
+ */
+export const ProcessApprovalQueueAuditPayload = proto3.makeMessageType(
+  "bff.v1.ProcessApprovalQueueAuditPayload",
   () => [
     { no: 1, name: "action", kind: "enum", T: proto3.getEnumType(ApprovalQueueAction) },
-    { no: 2, name: "is_artist", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ],
 );
 
