@@ -76,6 +76,12 @@ resource "google_service_account_iam_member" "bff_ingester_workload_identity_bin
   member             = "serviceAccount:bsky-furry-feed.svc.id.goog[default/bff-ingester]"
 }
 
+resource "google_service_account_iam_member" "bff_api_workload_identity_binding" {
+  service_account_id = data.google_compute_default_service_account.default.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "serviceAccount:bsky-furry-feed.svc.id.goog[default/bff-api]"
+}
+
 resource "google_compute_global_address" "ingress" {
   name         = "ingress"
   address_type = "EXTERNAL"

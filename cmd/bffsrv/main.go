@@ -111,6 +111,9 @@ func runE(log *zap.Logger) error {
 		return fmt.Errorf("loading bsky credentials: %w", err)
 	}
 
+	ingesterEnabled := os.Getenv("BFF_INGESTER_ENABLED") == "1"
+	apiEnabled := os.Getenv("BFF_API_ENABLED") == "1"
+
 	log.Info("starting", zap.String("mode", string(mode)))
 
 	ctx, cancel := signal.NotifyContext(context.Background(), unix.SIGINT)
@@ -156,26 +159,26 @@ func runE(log *zap.Logger) error {
 	}
 	defer pgxStore.Close()
 
-	actorCache := ingester.NewActorCache(
-		log.Named("actor_cache"),
-		pgxStore,
-	)
-	// Prefill the actor cache before we proceed to ensure all actors
-	// are available to sub-services. This eliminates some potential weirdness
-	// when handling events/requests shortly after process startup.
-	if err := actorCache.Sync(ctx); err != nil {
-		return fmt.Errorf("filling candidate actor cache: %w", err)
-	}
-
 	// Create an errgroup to manage the lifetimes of the subservices.
 	// If one exits, all will exit.
 	eg, ctx := errgroup.WithContext(ctx)
-	eg.Go(func() error {
-		return actorCache.Start(ctx)
-	})
 
-	// Setup ingester if not running in feed developer mode
-	if mode != feedDevMode {
+	if ingesterEnabled {
+		log.Info("setting up ingester")
+		actorCache := ingester.NewActorCache(
+			log.Named("actor_cache"),
+			pgxStore,
+		)
+		// Prefill the actor cache before we proceed to ensure all actors
+		// are available to sub-services. This eliminates some potential weirdness
+		// when handling events/requests shortly after process startup.
+		if err := actorCache.Sync(ctx); err != nil {
+			return fmt.Errorf("filling candidate actor cache: %w", err)
+		}
+		eg.Go(func() error {
+			return actorCache.Start(ctx)
+		})
+
 		fi := ingester.NewFirehoseIngester(
 			log.Named("firehose_ingester"), pgxStore, actorCache,
 		)
@@ -184,50 +187,53 @@ func runE(log *zap.Logger) error {
 		})
 	}
 
-	feedService := feed.ServiceWithDefaultFeeds(pgxStore)
+	if apiEnabled {
+		log.Info("setting up api")
+		feedService := feed.ServiceWithDefaultFeeds(pgxStore)
 
-	// Setup the public HTTP/XRPC server
-	// TODO: Make these externally configurable
-	hostname := "dev-feed.ottr.sh"
-	if mode == productionMode {
-		hostname = "feed.furryli.st"
+		// Setup the public HTTP/XRPC server
+		// TODO: Make these externally configurable
+		hostname := "dev-feed.ottr.sh"
+		if mode == productionMode {
+			hostname = "feed.furryli.st"
+		}
+		listenAddr := ":1337"
+		srv, err := api.New(
+			log.Named("api"),
+			hostname,
+			listenAddr,
+			feedService,
+			pgxStore,
+			bskyCredentials,
+		)
+		if err != nil {
+			return fmt.Errorf("creating feed server: %w", err)
+		}
+
+		eg.Go(func() error {
+			log.Info("feed server listening", zap.String("addr", srv.Addr))
+			go func() {
+				<-ctx.Done()
+				if err := srv.Close(); err != nil {
+					log.Error("failed to close feed server", zap.Error(err))
+				}
+			}()
+			return srv.ListenAndServe()
+		})
+
+		// Setup private diagnostics/metrics server
+		debugSrv := debugServer()
+		eg.Go(func() error {
+			log.Info("debug server listening", zap.String("addr", debugSrv.Addr))
+			go func() {
+				<-ctx.Done()
+				if err := debugSrv.Close(); err != nil {
+					log.Error("failed to close debug server", zap.Error(err))
+				}
+			}()
+			return debugSrv.ListenAndServe()
+		})
 	}
-	listenAddr := ":1337"
-	srv, err := api.New(
-		log.Named("api"),
-		hostname,
-		listenAddr,
-		feedService,
-		pgxStore,
-		bskyCredentials,
-	)
-	if err != nil {
-		return fmt.Errorf("creating feed server: %w", err)
-	}
-
-	eg.Go(func() error {
-		log.Info("feed server listening", zap.String("addr", srv.Addr))
-		go func() {
-			<-ctx.Done()
-			if err := srv.Close(); err != nil {
-				log.Error("failed to close feed server", zap.Error(err))
-			}
-		}()
-		return srv.ListenAndServe()
-	})
-
-	// Setup private diagnostics/metrics server
-	debugSrv := debugServer()
-	eg.Go(func() error {
-		log.Info("debug server listening", zap.String("addr", debugSrv.Addr))
-		go func() {
-			<-ctx.Done()
-			if err := debugSrv.Close(); err != nil {
-				log.Error("failed to close debug server", zap.Error(err))
-			}
-		}()
-		return debugSrv.ListenAndServe()
-	})
 
 	log.Info("setup complete. running services")
 	return eg.Wait()

@@ -7,14 +7,14 @@ defineProps<{ url?: string }>();
     v-if="url"
     class="rounded-full"
     :src="url"
-    height="64"
-    width="64"
+    height="72"
+    width="72"
     alt=""
   />
   <svg
     v-else
-    width="64"
-    height="64"
+    width="72"
+    height="72"
     viewBox="0 0 24 24"
     fill="none"
     stroke="none"

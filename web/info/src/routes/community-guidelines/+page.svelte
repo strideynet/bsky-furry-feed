@@ -1,8 +1,9 @@
 <script lang="ts">
+  import StaticPage from '$components/layouts/static-page.svelte';
   import Heading from '$components/text/heading.svelte';
 </script>
 
-<div>
+<StaticPage>
   <Heading level={2}>Community Guidelines</Heading>
 
   <p>
@@ -98,7 +99,7 @@
     are concerns with an action that has been taken, or not taken, this should be raised
     with the Director of Furryli.st.
   </p>
-</div>
+</StaticPage>
 
 <style lang="scss">
   p {

@@ -29,10 +29,12 @@ spec:
       serviceAccountName: bff-ingester
       containers:
       - name: ingester
-        image: ghcr.io/strideynet/bsky-furry-feed/bffsrv:0724a54482143d5c33a9b499636c15d08fd08081
+        image: ghcr.io/strideynet/bsky-furry-feed/bffsrv:6a5a97ee660cfffbd9584b8337533f3bec35bf0f
         env:
           - name: ENV
             value: production
+          - name: BFF_INGESTER_ENABLED
+            value: "1"
         envFrom:
           - secretRef:
               name: shared-env
@@ -43,21 +45,7 @@ spec:
         resources:
           requests:
             memory: 512Mi # 512Mi is minimum
-            cpu: 500m # 250m is minimum
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: bff-ingester
-spec:
-  ports:
-    - port: 80
-      protocol: TCP
-      targetPort: 1337
-  selector:
-    app.kubernetes.io/name: ingester
-    app.kubernetes.io/part-of: bff
-  type: ClusterIP
+            cpu: 300m # 250m is minimum
 ---
 apiVersion: monitoring.googleapis.com/v1
 kind: PodMonitoring
