@@ -33,8 +33,9 @@ func (m *ModerationServiceHandler) CreateCommentAuditEvent(ctx context.Context, 
 		Payload: &v1.CommentAuditPayload{
 			Comment: req.Msg.Comment,
 		},
-		ActorDID:   authCtx.DID,
-		SubjectDID: req.Msg.SubjectDid,
+		ActorDID:         authCtx.DID,
+		SubjectDID:       req.Msg.SubjectDid,
+		SubjectRecordURI: req.Msg.SubjectRecordUri,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("creating audit event: %w", err)

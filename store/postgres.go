@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rs/xid"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store/gen"
 	"go.opentelemetry.io/otel"
@@ -571,6 +572,7 @@ func (s *PGXStore) CreateAuditEvent(ctx context.Context, opts CreateAuditEventOp
 		return nil, fmt.Errorf("marshalling anypb: %w", err)
 	}
 	queryParams := gen.CreateAuditEventParams{
+		ID: xid.New().String(),
 		CreatedAt: pgtype.Timestamptz{
 			Time:  time.Now(),
 			Valid: true,
