@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/any.proto";
 
 package bff.v1;
 
@@ -10,10 +11,14 @@ service ModerationService {
   rpc Ping(PingRequest) returns (PingResponse) {}
 
   rpc GetApprovalQueue(GetApprovalQueueRequest) returns (GetApprovalQueueResponse) {}
+  // TODO: Refactor ProcessApprovalQueue to something more like "ApproveActor"
   rpc ProcessApprovalQueue(ProcessApprovalQueueRequest) returns (ProcessApprovalQueueResponse) {}
 
   rpc ListActors(ListActorsRequest) returns (ListActorsResponse) {}
   rpc GetActor(GetActorRequest) returns (GetActorResponse) {}
+
+  rpc ListAuditEvents(ListAuditEventsRequest) returns (ListAuditEventsResponse) {}
+  rpc CreateCommentAuditEvent(CreateCommentAuditEventRequest) returns (CreateCommentAuditEventResponse) {}
 }
 
 enum ActorStatus {
@@ -98,3 +103,51 @@ message ProcessApprovalQueueRequest {
 }
 
 message ProcessApprovalQueueResponse {}
+
+message ListAuditEventsRequest {
+  string actor_did = 1;
+  string subject_did = 2;
+  string subject_record_uri = 3;
+}
+
+message ListAuditEventsResponse {
+  repeated AuditEvent audit_events = 1;
+}
+
+message CreateCommentAuditEventRequest {
+  string subject_did = 1;
+  string subject_record_uri = 2;
+  string comment = 3;
+}
+
+message CreateCommentAuditEventResponse {
+  AuditEvent audit_event = 1;
+}
+
+message AuditEvent {
+  // id is a unique identifier of this audit event.
+  string id = 1;
+  google.protobuf.Timestamp created_at = 2;
+  // actor_did is the DID of the actor whose action caused this audit event
+  // to be emitted.
+  string actor_did = 3;
+  // subject_did is the DID of the actor who the action was done to.
+  string subject_did = 4;
+  // subject_record_uri is the optional AT URI of a specific ATProto record
+  // that the action was taken against.
+  string subject_record_uri = 5;
+
+  google.protobuf.Any payload = 6;
+}
+
+// CommentAuditPayload is the payload for the `comment`audit event. This is
+// empty, as the comment is actually held within `AuditEvent`
+message CommentAuditPayload {
+  string comment = 1;
+}
+
+// ProcessApprovalQueueAuditPayload is the payload for the
+// `process_approval_queue` audit event.
+message ProcessApprovalQueueAuditPayload {
+  ApprovalQueueAction action = 1;
+}
