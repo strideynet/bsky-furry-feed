@@ -31,7 +31,7 @@ func isFursuitMedia(data *bsky.FeedPost) bool {
 }
 
 func isArt(data *bsky.FeedPost) bool {
-	return hasImage(data) && hasKeyword(data, "#art")
+	return hasImage(data) && hasKeyword(data, "#art", "#furryart")
 }
 
 func isNSFW(data *bsky.FeedPost) bool {
