@@ -423,14 +423,14 @@ export declare class ListAuditEventsRequest extends Message<ListAuditEventsReque
   actorDid: string;
 
   /**
-   * @generated from field: string record_uri = 2;
+   * @generated from field: string subject_did = 2;
    */
-  recordUri: string;
+  subjectDid: string;
 
   /**
-   * @generated from field: string moderator_did = 3;
+   * @generated from field: string subject_record_uri = 3;
    */
-  moderatorDid: string;
+  subjectRecordUri: string;
 
   constructor(data?: PartialMessage<ListAuditEventsRequest>);
 

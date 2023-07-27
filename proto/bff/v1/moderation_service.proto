@@ -106,8 +106,8 @@ message ProcessApprovalQueueResponse {}
 
 message ListAuditEventsRequest {
   string actor_did = 1;
-  string record_uri = 2;
-  string moderator_did = 3;
+  string subject_did = 2;
+  string subject_record_uri = 3;
 }
 
 message ListAuditEventsResponse {

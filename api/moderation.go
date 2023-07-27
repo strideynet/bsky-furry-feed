@@ -31,8 +31,23 @@ func (m *ModerationServiceHandler) ListAuditEvents(ctx context.Context, req *con
 		return nil, fmt.Errorf("authenticating: %w", err)
 	}
 
-	//TODO implement me
-	panic("implement me")
+	switch {
+	case req.Msg.ActorDid != "":
+		return nil, fmt.Errorf("filtering by actor_did is not implemented")
+	case req.Msg.SubjectRecordUri != "":
+		return nil, fmt.Errorf("filtering by subject_record_uri is not implemented")
+	}
+
+	out, err := m.store.ListAuditEvents(ctx, store.ListAuditEventsOpts{
+		FilterSubjectDID: req.Msg.SubjectDid,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("listing audit events: %w", err)
+	}
+
+	return connect.NewResponse(&v1.ListAuditEventsResponse{
+		AuditEvents: out,
+	}), nil
 }
 
 func (m *ModerationServiceHandler) Ping(ctx context.Context, req *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error) {

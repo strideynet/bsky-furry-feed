@@ -163,8 +163,8 @@ export const ListAuditEventsRequest = proto3.makeMessageType(
   "bff.v1.ListAuditEventsRequest",
   () => [
     { no: 1, name: "actor_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "record_uri", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "moderator_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "subject_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "subject_record_uri", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ],
 );
 
