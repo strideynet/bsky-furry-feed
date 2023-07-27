@@ -5,8 +5,8 @@ import { ActorStatus } from "../../proto/bff/v1/moderation_service_pb";
 
 const props = defineProps<{
   did: string;
-  loading: boolean;
-  pending: number;
+  loading?: boolean;
+  pending?: number;
   variant: "queue" | "profile";
 }>();
 defineEmits(["accept", "reject"]);
@@ -38,7 +38,10 @@ await loadProfile();
 
 <template>
   <shared-card v-if="data" :class="{ loading }">
-    <div v-if="variant === 'queue'" class="flex items-center gap-3 pt-2 mb-5">
+    <div
+      v-if="variant === 'queue' && status === ActorStatus.PENDING"
+      class="flex items-center gap-3 pt-2 mb-5"
+    >
       <button
         class="px-3 py-2 bg-blue-400 dark:bg-blue-600 rounded-lg hover:bg-blue-500 dark:hover:bg-blue-700 disabled:bg-blue-300 disabled:dark:bg-blue-500 disabled:cursor-not-allowed"
         :disabled="loading"

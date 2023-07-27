@@ -1,6 +1,11 @@
 import { createPromiseClient } from "@bufbuild/connect";
 import { createConnectTransport } from "@bufbuild/connect-web";
 import { ModerationService } from "../../proto/bff/v1/moderation_service_connectweb";
+import { createRegistry } from "@bufbuild/protobuf";
+import {
+  CommentAuditPayload,
+  ProcessApprovalQueueAuditPayload,
+} from "../../proto/bff/v1/moderation_service_pb";
 
 export default async function () {
   const user = await useUser();
@@ -14,6 +19,13 @@ export default async function () {
       );
 
       return globalThis.fetch(input, { ...data });
+    },
+
+    jsonOptions: {
+      typeRegistry: createRegistry(
+        ProcessApprovalQueueAuditPayload,
+        CommentAuditPayload
+      ),
     },
   });
 
