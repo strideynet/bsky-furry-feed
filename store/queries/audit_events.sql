@@ -11,3 +11,10 @@ WHERE
      ae.subject_record_uri = @subject_record_uri)
 ORDER BY
     ae.created_at DESC;
+
+-- name: CreateAuditEvent :one
+INSERT INTO
+    audit_events (id, created_at, actor_did, subject_did, subject_record_uri, payload)
+VALUES
+    ($1, $2, $3, $4, $5, $6)
+RETURNING *;

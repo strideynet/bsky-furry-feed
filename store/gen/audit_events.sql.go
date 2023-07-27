@@ -7,7 +7,47 @@ package gen
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const createAuditEvent = `-- name: CreateAuditEvent :one
+INSERT INTO
+    audit_events (id, created_at, actor_did, subject_did, subject_record_uri, payload)
+VALUES
+    ($1, $2, $3, $4, $5, $6)
+RETURNING id, actor_did, subject_did, subject_record_uri, created_at, payload
+`
+
+type CreateAuditEventParams struct {
+	ID               string
+	CreatedAt        pgtype.Timestamptz
+	ActorDID         string
+	SubjectDid       string
+	SubjectRecordUri string
+	Payload          []byte
+}
+
+func (q *Queries) CreateAuditEvent(ctx context.Context, db DBTX, arg CreateAuditEventParams) (AuditEvent, error) {
+	row := db.QueryRow(ctx, createAuditEvent,
+		arg.ID,
+		arg.CreatedAt,
+		arg.ActorDID,
+		arg.SubjectDid,
+		arg.SubjectRecordUri,
+		arg.Payload,
+	)
+	var i AuditEvent
+	err := row.Scan(
+		&i.ID,
+		&i.ActorDID,
+		&i.SubjectDid,
+		&i.SubjectRecordUri,
+		&i.CreatedAt,
+		&i.Payload,
+	)
+	return i, err
+}
 
 const listAuditEvents = `-- name: ListAuditEvents :many
 SELECT id, actor_did, subject_did, subject_record_uri, created_at, payload

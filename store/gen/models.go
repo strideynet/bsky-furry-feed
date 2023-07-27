@@ -59,7 +59,7 @@ type AuditEvent struct {
 	ID               string
 	ActorDID         string
 	SubjectDid       string
-	SubjectRecordUri pgtype.Text
+	SubjectRecordUri string
 	CreatedAt        pgtype.Timestamptz
 	Payload          []byte
 }
