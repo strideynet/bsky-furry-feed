@@ -519,7 +519,7 @@ func (s *PGXStore) ListAuditEvents(ctx context.Context, opts ListAuditEventsOpts
 	if err != nil {
 		return nil, fmt.Errorf("executing ListAuditEvents query: %w", err)
 	}
-	out := make([]*v1.AuditEvent, 0, len(data))
+	out = make([]*v1.AuditEvent, 0, len(data))
 	for _, d := range data {
 		ae := &v1.AuditEvent{
 			Id:               d.ID,
