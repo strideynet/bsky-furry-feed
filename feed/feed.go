@@ -105,8 +105,10 @@ func newGenerator() GenerateFunc {
 			cursorTime = parsedTime
 		}
 		params := store.ListPostsForNewFeedOpts{
-			Limit:      limit,
-			CursorTime: cursorTime,
+			Limit:       limit,
+			CursorTime:  cursorTime,
+			RequireTags: []string{},
+			ExcludeTags: []string{},
 		}
 
 		posts, err := pgxStore.ListPostsForNewFeed(ctx, params)
@@ -117,7 +119,7 @@ func newGenerator() GenerateFunc {
 	}
 }
 
-func newWithTagGenerator(tag string) GenerateFunc {
+func newWithTagGenerator(requireTags []string, excludeTags []string) GenerateFunc {
 	return func(ctx context.Context, pgxStore *store.PGXStore, cursor string, limit int) ([]Post, error) {
 		cursorTime := time.Now().UTC()
 		if cursor != "" {
@@ -128,9 +130,10 @@ func newWithTagGenerator(tag string) GenerateFunc {
 			cursorTime = parsedTime
 		}
 		params := store.ListPostsForNewFeedOpts{
-			Limit:      limit,
-			FilterTag:  tag,
-			CursorTime: cursorTime,
+			Limit:       limit,
+			RequireTags: requireTags,
+			ExcludeTags: excludeTags,
+			CursorTime:  cursorTime,
 		}
 
 		posts, err := pgxStore.ListPostsForNewFeed(ctx, params)
@@ -245,10 +248,14 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 
 	r.Register(Meta{ID: "furry-new"}, newGenerator())
 	r.Register(Meta{ID: "furry-hot"}, scoreBasedGenerator(1.85, time.Hour*2))
-	r.Register(Meta{ID: "furry-fursuit"}, newWithTagGenerator(bff.TagFursuitMedia))
-	r.Register(Meta{ID: "furry-art"}, newWithTagGenerator(bff.TagArt))
-	r.Register(Meta{ID: "furry-nsfw"}, newWithTagGenerator(bff.TagNSFW))
-	r.Register(Meta{ID: "furry-comms"}, newWithTagGenerator(bff.TagCommissionsOpen))
+	r.Register(Meta{ID: "furry-fursuit"}, newWithTagGenerator([]string{bff.TagFursuitMedia}, []string{}))
+	r.Register(Meta{ID: "fursuit-nsfw"}, newWithTagGenerator([]string{bff.TagFursuitMedia, bff.TagNSFW}, []string{}))
+	r.Register(Meta{ID: "fursuit-clean"}, newWithTagGenerator([]string{bff.TagFursuitMedia}, []string{bff.TagNSFW}))
+	r.Register(Meta{ID: "furry-art"}, newWithTagGenerator([]string{bff.TagArt}, []string{}))
+	r.Register(Meta{ID: "art-clean"}, newWithTagGenerator([]string{bff.TagArt}, []string{bff.TagNSFW}))
+	r.Register(Meta{ID: "art-nsfw"}, newWithTagGenerator([]string{bff.TagNSFW, bff.TagArt}, []string{}))
+	r.Register(Meta{ID: "furry-nsfw"}, newWithTagGenerator([]string{bff.TagNSFW}, []string{}))
+	r.Register(Meta{ID: "furry-comms"}, newWithTagGenerator([]string{bff.TagCommissionsOpen}, []string{}))
 	r.Register(Meta{ID: "furry-test"}, func(_ context.Context, _ *store.PGXStore, _ string, limit int) ([]Post, error) {
 		return []Post{
 			{
