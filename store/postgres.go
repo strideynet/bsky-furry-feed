@@ -439,9 +439,10 @@ func (s *PGXStore) DeleteFollow(ctx context.Context, opts DeleteFollowOpts) (err
 }
 
 type ListPostsForNewFeedOpts struct {
-	CursorTime time.Time
-	FilterTag  string
-	Limit      int
+	CursorTime  time.Time
+	RequireTags []string
+	ExcludeTags []string
+	Limit       int
 }
 
 func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNewFeedOpts) (out []gen.CandidatePost, err error) {
@@ -456,9 +457,8 @@ func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNew
 			Valid: true,
 			Time:  opts.CursorTime,
 		},
-	}
-	if opts.FilterTag != "" {
-		queryParams.Tag = opts.FilterTag
+		RequireTags: opts.RequireTags,
+		ExcludeTags: opts.ExcludeTags,
 	}
 	if opts.Limit != 0 {
 		queryParams.Limit = int32(opts.Limit)

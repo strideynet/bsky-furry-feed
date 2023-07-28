@@ -27,7 +27,7 @@ func hasKeyword(data *bsky.FeedPost, keywords ...string) bool {
 }
 
 func isFursuitMedia(data *bsky.FeedPost) bool {
-	return hasImage(data) && hasKeyword(data, "#fursuitfriday", "#fursuit")
+	return hasImage(data) && hasKeyword(data, "#fursuitfriday", "#fursuit", "#murrsuit", "#mursuit")
 }
 
 func isArt(data *bsky.FeedPost) bool {
@@ -35,7 +35,7 @@ func isArt(data *bsky.FeedPost) bool {
 }
 
 func isNSFW(data *bsky.FeedPost) bool {
-	return hasKeyword(data, "#nsfw")
+	return hasKeyword(data, "#nsfw", "#murrsuit", "#mursuit")
 }
 
 func isCommissionsOpen(data *bsky.FeedPost) bool {
