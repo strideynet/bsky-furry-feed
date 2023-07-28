@@ -220,20 +220,20 @@ func runE(log *zap.Logger) error {
 			}()
 			return srv.ListenAndServe()
 		})
-
-		// Setup private diagnostics/metrics server
-		debugSrv := debugServer()
-		eg.Go(func() error {
-			log.Info("debug server listening", zap.String("addr", debugSrv.Addr))
-			go func() {
-				<-ctx.Done()
-				if err := debugSrv.Close(); err != nil {
-					log.Error("failed to close debug server", zap.Error(err))
-				}
-			}()
-			return debugSrv.ListenAndServe()
-		})
 	}
+
+	// Setup private diagnostics/metrics server
+	debugSrv := debugServer()
+	eg.Go(func() error {
+		log.Info("debug server listening", zap.String("addr", debugSrv.Addr))
+		go func() {
+			<-ctx.Done()
+			if err := debugSrv.Close(); err != nil {
+				log.Error("failed to close debug server", zap.Error(err))
+			}
+		}()
+		return debugSrv.ListenAndServe()
+	})
 
 	log.Info("setup complete. running services")
 	return eg.Wait()
