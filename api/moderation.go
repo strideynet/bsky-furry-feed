@@ -21,6 +21,16 @@ func (m *ModerationServiceHandler) BanActor(ctx context.Context, req *connect.Re
 	if err != nil {
 		return nil, fmt.Errorf("authenticating: %w", err)
 	}
+
+	/**
+	go m.emitAudit(store.CreateAuditEventOpts{
+		Payload: &v1.BanActorAuditPayload{
+			Reason: req.Msg.Reason,
+		},
+		ActorDID:   authCtx.DID,
+		SubjectDID: req.Msg.ActorDid,
+	})*/
+
 	return nil, fmt.Errorf("BanActor is unimplemented")
 }
 
@@ -29,15 +39,45 @@ func (m *ModerationServiceHandler) UnapproveActor(ctx context.Context, req *conn
 	if err != nil {
 		return nil, fmt.Errorf("authenticating: %w", err)
 	}
+
+	/**
+	go m.emitAudit(store.CreateAuditEventOpts{
+		Payload: &v1.UnapproveActorAuditPayload{
+			Reason: req.Msg.Reason,
+		},
+		ActorDID:   authCtx.DID,
+		SubjectDID: req.Msg.ActorDid,
+	})*/
+
 	return nil, fmt.Errorf("UnapproveActor is unimplemented")
 }
 
 func (m *ModerationServiceHandler) CreateActor(ctx context.Context, req *connect.Request[v1.CreateActorRequest]) (*connect.Response[v1.CreateActorResponse], error) {
-	_, err := auth(ctx, req)
+	authCtx, err := auth(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("authenticating: %w", err)
 	}
-	return nil, fmt.Errorf("CreateActor is unimplemented")
+
+	actor, err := m.store.CreateActor(ctx, store.CreateActorOpts{
+		Status:  v1.ActorStatus_ACTOR_STATUS_NONE,
+		DID:     req.Msg.ActorDid,
+		Comment: "",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("creating actor: %w", err)
+	}
+
+	go m.emitAudit(store.CreateAuditEventOpts{
+		Payload: &v1.CreateActorAuditPayload{
+			Reason: req.Msg.Reason,
+		},
+		ActorDID:   authCtx.DID,
+		SubjectDID: req.Msg.ActorDid,
+	})
+
+	return connect.NewResponse(&v1.CreateActorResponse{
+		Actor: actor,
+	}), nil
 }
 
 func (m *ModerationServiceHandler) CreateCommentAuditEvent(ctx context.Context, req *connect.Request[v1.CreateCommentAuditEventRequest]) (*connect.Response[v1.CreateCommentAuditEventResponse], error) {
@@ -190,20 +230,23 @@ func (m *ModerationServiceHandler) ProcessApprovalQueue(ctx context.Context, req
 		}
 	}
 
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
-		_, err := m.store.CreateAuditEvent(ctx, store.CreateAuditEventOpts{
-			Payload: &v1.ProcessApprovalQueueAuditPayload{
-				Action: req.Msg.Action,
-			},
-			ActorDID:   authCtx.DID,
-			SubjectDID: actorDID, // actor here is subject
-		})
-		if err != nil {
-			m.log.Error("failed to emit audit event", zap.Error(err))
-		}
-	}()
+	go m.emitAudit(store.CreateAuditEventOpts{
+		Payload: &v1.ProcessApprovalQueueAuditPayload{
+			Action: req.Msg.Action,
+		},
+		ActorDID:   authCtx.DID,
+		SubjectDID: actorDID,
+	})
 
 	return connect.NewResponse(&v1.ProcessApprovalQueueResponse{}), nil
+}
+
+func (m *ModerationServiceHandler) emitAudit(opts store.CreateAuditEventOpts) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	_, err := m.store.CreateAuditEvent(ctx, opts)
+	if err != nil {
+		m.log.Error("failed to emit audit event", zap.Error(err))
+	}
+	return
 }
