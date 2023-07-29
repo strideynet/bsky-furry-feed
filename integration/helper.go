@@ -60,9 +60,10 @@ func StartDatabase(ctx context.Context) (db *Database, err error) {
 		return nil, fmt.Errorf("getting postgres host: %w", err)
 	}
 
-	db.container = container
-	db.url = fmt.Sprintf("postgres://bff:bff@%s:%d/bff?sslmode=disable", host, port.Int())
-	return db, nil
+	return &Database{
+		container: container,
+		url:       fmt.Sprintf("postgres://bff:bff@%s:%d/bff?sslmode=disable", host, port.Int()),
+	}, nil
 }
 
 func (db *Database) Close(ctx context.Context) error {
