@@ -3,6 +3,7 @@ package integration_test
 import (
 	"context"
 	"flag"
+	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
 	"time"
@@ -18,7 +19,7 @@ import (
 )
 
 var log, _ = zap.NewDevelopment()
-var db integration.Database
+var db *integration.Database
 
 func TestMain(m *testing.M) {
 	flag.Parse()
@@ -32,7 +33,6 @@ func TestMain(m *testing.M) {
 
 	var err error
 	db, err = integration.StartDatabase(ctx)
-
 	if err != nil {
 		log.Fatal("could not start integration database", zap.Error(err))
 	}
@@ -54,7 +54,6 @@ func TestIntegration(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	assert := assert.New(t)
 	didr := TestPLC(t)
 
 	pds := MustSetupPDS(t, ".tpds", didr)
@@ -68,29 +67,29 @@ func TestIntegration(t *testing.T) {
 	bob := pds.MustNewUser(t, "bob.tpds")
 	furry := pds.MustNewUser(t, "furry.tpds")
 
-	assert.NoError(db.Refresh(ctx))
+	require.NoError(t, db.Refresh(ctx))
 
 	poolConnector := &store.DirectConnector{URI: db.URL()}
 	pgxStore, err := store.ConnectPGXStore(ctx, log.Named("store"), poolConnector)
-	assert.NoError(err)
+	require.NoError(t, err)
 	cac := ingester.NewActorCache(log, pgxStore)
-	os.Setenv("BLUESKY_USERNAME", bob.DID())
-	os.Setenv("BLUESKY_PASSWORD", "password")
+	require.NoError(t, os.Setenv("BLUESKY_USERNAME", bob.DID()))
+	require.NoError(t, os.Setenv("BLUESKY_PASSWORD", "password"))
 	_, err = pgxStore.CreateActor(ctx, store.CreateActorOpts{
 		Status:  bffv1pb.ActorStatus_ACTOR_STATUS_APPROVED,
 		Comment: "furry.tpds",
 		DID:     furry.DID(),
 	})
-	assert.NoError(err)
-	assert.NoError(cac.Sync(ctx))
+	require.NoError(t, err)
+	require.NoError(t, cac.Sync(ctx))
 
-	ingester := ingester.NewFirehoseIngester(log, pgxStore, cac, "ws://"+pds.RawHost())
+	fi := ingester.NewFirehoseIngester(log, pgxStore, cac, "ws://"+pds.RawHost())
 	ended := false
 	defer func() { ended = true }()
 	go func() {
-		err := ingester.Start(ctx)
+		err := fi.Start(ctx)
 		if !ended {
-			assert.NoError(err)
+			require.NoError(t, err)
 		}
 	}()
 
@@ -100,20 +99,20 @@ func TestIntegration(t *testing.T) {
 	var postURIs []string
 
 	con, err := db.Connect(ctx)
-	assert.NoError(err)
+	require.NoError(t, err)
 	// ensure ingester has processed posts
-	assert.Eventually(func() bool {
+	require.Eventually(t, func() bool {
 		rows, err := con.Query(ctx, "select uri from candidate_posts")
-		assert.NoError(err)
+		require.NoError(t, err)
 		postURIs, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (s string, err error) {
 			err = row.Scan(&s)
 			return
 		})
-		assert.NoError(err)
+		require.NoError(t, err)
 		return len(postURIs) > 0
 	}, time.Second, 10*time.Millisecond)
 
-	assert.Equal(1, len(postURIs))
-	assert.Contains(postURIs, trackedPost.Uri)
-	assert.NotContains(postURIs, ignoredPost.Uri)
+	assert.Equal(t, 1, len(postURIs))
+	assert.Contains(t, postURIs, trackedPost.Uri)
+	assert.NotContains(t, postURIs, ignoredPost.Uri)
 }

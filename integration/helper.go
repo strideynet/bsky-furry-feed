@@ -40,60 +40,59 @@ type Database struct {
 	url       string
 }
 
-func StartDatabase(ctx context.Context) (db Database, err error) {
+func StartDatabase(ctx context.Context) (db *Database, err error) {
 	container, err := postgres.RunContainer(ctx,
 		postgres.WithDatabase("bff"),
 		postgres.WithUsername("bff"),
 		postgres.WithPassword("bff"),
 		testcontainers.WithWaitStrategy(wait.ForListeningPort(nat.Port("5432/tcp"))),
 	)
-
 	if err != nil {
-		err = fmt.Errorf("could not start postgres: %w", err)
-		return
+		err = fmt.Errorf("starting postgres container: %w", err)
+		return nil, nil
 	}
 
 	port, err := container.MappedPort(ctx, "5432/tcp")
 	if err != nil {
-		err = fmt.Errorf("could not get postgres port: %w", err)
-		return
+		err = fmt.Errorf("getting postgres port: %w", err)
+		return nil, nil
 	}
 
 	host, err := container.Host(ctx)
 	if err != nil {
-		err = fmt.Errorf("could not get postgres host: %w", err)
-		return
+		err = fmt.Errorf("getting postgres host: %w", err)
+		return nil, nil
 	}
 
 	db.container = container
 	db.url = fmt.Sprintf("postgres://bff:bff@%s:%d/bff?sslmode=disable", host, port.Int())
-	return
+	return db, nil
 }
 
-func (db Database) Close(ctx context.Context) error {
+func (db *Database) Close(ctx context.Context) error {
 	return db.container.Terminate(ctx)
 }
 
-func (db Database) URL() string {
+func (db *Database) URL() string {
 	return db.url
 }
 
-func (db Database) Connect(ctx context.Context) (*pgx.Conn, error) {
+func (db *Database) Connect(ctx context.Context) (*pgx.Conn, error) {
 	return pgx.Connect(ctx, db.URL())
 }
 
-func (db Database) Refresh(ctx context.Context) error {
+func (db *Database) Refresh(ctx context.Context) error {
 	con, err := db.Connect(ctx)
 	if err != nil {
 		return fmt.Errorf("connecting to test database: %w", err)
 	}
 	defer con.Close(ctx)
 
-	migrate, err := migrate.New("file://../store/migrations", db.URL())
+	migrator, err := migrate.New("file://../store/migrations", db.URL())
 	if err != nil {
 		return fmt.Errorf("initializing migration runner: %w", err)
 	}
-	err = migrate.Up()
+	err = migrator.Up()
 	if err != nil {
 		return fmt.Errorf("applying migrations: %w", err)
 	}
