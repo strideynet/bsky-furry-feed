@@ -8,7 +8,6 @@ import (
 	"unsafe"
 
 	"github.com/bluesky-social/indigo/testing"
-	"github.com/docker/go-connections/nat"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -45,23 +44,20 @@ func StartDatabase(ctx context.Context) (db *Database, err error) {
 		postgres.WithDatabase("bff"),
 		postgres.WithUsername("bff"),
 		postgres.WithPassword("bff"),
-		testcontainers.WithWaitStrategy(wait.ForListeningPort(nat.Port("5432/tcp"))),
+		testcontainers.WithWaitStrategy(wait.ForListeningPort("5432/tcp")),
 	)
 	if err != nil {
-		err = fmt.Errorf("starting postgres container: %w", err)
-		return nil, nil
+		return nil, fmt.Errorf("starting postgres container: %w", err)
 	}
 
 	port, err := container.MappedPort(ctx, "5432/tcp")
 	if err != nil {
-		err = fmt.Errorf("getting postgres port: %w", err)
-		return nil, nil
+		return nil, fmt.Errorf("getting postgres port: %w", err)
 	}
 
 	host, err := container.Host(ctx)
 	if err != nil {
-		err = fmt.Errorf("getting postgres host: %w", err)
-		return nil, nil
+		return nil, fmt.Errorf("getting postgres host: %w", err)
 	}
 
 	db.container = container
