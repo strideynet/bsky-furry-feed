@@ -8,9 +8,10 @@ import {
 } from "../../proto/bff/v1/moderation_service_pb";
 
 export default async function () {
+  const { apiUrl } = useRuntimeConfig().public;
   const user = await useUser();
   const transport = createConnectTransport({
-    baseUrl: "https://feed.furryli.st",
+    baseUrl: apiUrl,
 
     fetch(input, data = {}) {
       (data.headers as Headers).set(
