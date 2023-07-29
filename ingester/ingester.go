@@ -5,6 +5,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
+	"net/http"
+	"sync"
+	"time"
+
+	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/bluesky-social/indigo/events"
@@ -15,18 +25,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
-	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store"
 	typegen "github.com/whyrusleeping/cbor-gen"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
-	"net/http"
-	"sync"
-	"time"
 )
 
 // tracer is the BFF wide tracer. This is different to the tracer used in
@@ -51,14 +54,14 @@ type FirehoseIngester struct {
 }
 
 func NewFirehoseIngester(
-	log *zap.Logger, store *store.PGXStore, crc *ActorCache,
+	log *zap.Logger, store *store.PGXStore, crc *ActorCache, pdsHost string,
 ) *FirehoseIngester {
 	return &FirehoseIngester{
 		log:   log,
 		crc:   crc,
 		store: store,
 
-		subscribeURL:    "wss://bsky.social/xrpc/com.atproto.sync.subscribeRepos",
+		subscribeURL:    pdsHost + "/xrpc/com.atproto.sync.subscribeRepos",
 		workerCount:     8,
 		workItemTimeout: time.Second * 30,
 	}
