@@ -17,39 +17,67 @@ type ModerationServiceHandler struct {
 }
 
 func (m *ModerationServiceHandler) BanActor(ctx context.Context, req *connect.Request[v1.BanActorRequest]) (*connect.Response[v1.BanActorResponse], error) {
-	_, err := auth(ctx, req)
+	authCtx, err := auth(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("authenticating: %w", err)
 	}
 
-	/**
-	go m.emitAudit(store.CreateAuditEventOpts{
-		Payload: &v1.BanActorAuditPayload{
-			Reason: req.Msg.Reason,
-		},
-		ActorDID:   authCtx.DID,
-		SubjectDID: req.Msg.ActorDid,
-	})*/
-
-	return nil, fmt.Errorf("BanActor is unimplemented")
-}
-
-func (m *ModerationServiceHandler) UnapproveActor(ctx context.Context, req *connect.Request[v1.UnapproveActorRequest]) (*connect.Response[v1.UnapproveActorResponse], error) {
-	_, err := auth(ctx, req)
+	actor, err := m.store.UpdateActor(ctx, store.UpdateActorOpts{
+		DID:          req.Msg.ActorDid,
+		UpdateStatus: v1.ActorStatus_ACTOR_STATUS_BANNED,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("authenticating: %w", err)
+		return nil, fmt.Errorf("updating actor: %w", err)
 	}
 
-	/**
 	go m.emitAudit(store.CreateAuditEventOpts{
 		Payload: &v1.UnapproveActorAuditPayload{
 			Reason: req.Msg.Reason,
 		},
 		ActorDID:   authCtx.DID,
 		SubjectDID: req.Msg.ActorDid,
-	})*/
+	})
 
-	return nil, fmt.Errorf("UnapproveActor is unimplemented")
+	// TODO: Unfollow ?
+
+	return connect.NewResponse(&v1.BanActorResponse{
+		Actor: actor,
+	}), nil
+}
+
+func (m *ModerationServiceHandler) UnapproveActor(ctx context.Context, req *connect.Request[v1.UnapproveActorRequest]) (*connect.Response[v1.UnapproveActorResponse], error) {
+	authCtx, err := auth(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("authenticating: %w", err)
+	}
+
+	actor, err := m.store.UpdateActor(ctx, store.UpdateActorOpts{
+		DID: req.Msg.ActorDid,
+		Predicate: func(actor *v1.Actor) error {
+			if actor.Status != v1.ActorStatus_ACTOR_STATUS_APPROVED {
+				return fmt.Errorf("candidate actor status was %q not %q", actor.Status, v1.ActorStatus_ACTOR_STATUS_APPROVED)
+			}
+			return nil
+		},
+		UpdateStatus: v1.ActorStatus_ACTOR_STATUS_NONE,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("updating actor: %w", err)
+	}
+
+	go m.emitAudit(store.CreateAuditEventOpts{
+		Payload: &v1.UnapproveActorAuditPayload{
+			Reason: req.Msg.Reason,
+		},
+		ActorDID:   authCtx.DID,
+		SubjectDID: req.Msg.ActorDid,
+	})
+
+	// TODO: Unfollow ?
+
+	return connect.NewResponse(&v1.UnapproveActorResponse{
+		Actor: actor,
+	}), nil
 }
 
 func (m *ModerationServiceHandler) CreateActor(ctx context.Context, req *connect.Request[v1.CreateActorRequest]) (*connect.Response[v1.CreateActorResponse], error) {
