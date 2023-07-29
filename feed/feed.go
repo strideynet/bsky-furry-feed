@@ -94,32 +94,7 @@ func PostsFromStorePosts(storePosts []gen.CandidatePost) []Post {
 	return posts
 }
 
-func newGenerator() GenerateFunc {
-	return func(ctx context.Context, pgxStore *store.PGXStore, cursor string, limit int) ([]Post, error) {
-		cursorTime := time.Now().UTC()
-		if cursor != "" {
-			parsedTime, err := bluesky.ParseTime(cursor)
-			if err != nil {
-				return nil, fmt.Errorf("parsing cursor: %w", err)
-			}
-			cursorTime = parsedTime
-		}
-		params := store.ListPostsForNewFeedOpts{
-			Limit:       limit,
-			CursorTime:  cursorTime,
-			RequireTags: []string{},
-			ExcludeTags: []string{},
-		}
-
-		posts, err := pgxStore.ListPostsForNewFeed(ctx, params)
-		if err != nil {
-			return nil, fmt.Errorf("executing ListPostsForNewFeed: %w", err)
-		}
-		return PostsFromStorePosts(posts), nil
-	}
-}
-
-func newWithTagGenerator(requireTags []string, excludeTags []string) GenerateFunc {
+func chronologicalGenerator(requireTags []string, excludeTags []string) GenerateFunc {
 	return func(ctx context.Context, pgxStore *store.PGXStore, cursor string, limit int) ([]Post, error) {
 		cursorTime := time.Now().UTC()
 		if cursor != "" {
@@ -246,16 +221,19 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		store: pgxStore,
 	}
 
-	r.Register(Meta{ID: "furry-new"}, newGenerator())
+	// Hot based feeds
 	r.Register(Meta{ID: "furry-hot"}, scoreBasedGenerator(1.85, time.Hour*2))
-	r.Register(Meta{ID: "furry-fursuit"}, newWithTagGenerator([]string{bff.TagFursuitMedia}, []string{}))
-	r.Register(Meta{ID: "fursuit-nsfw"}, newWithTagGenerator([]string{bff.TagFursuitMedia, bff.TagNSFW}, []string{}))
-	r.Register(Meta{ID: "fursuit-clean"}, newWithTagGenerator([]string{bff.TagFursuitMedia}, []string{bff.TagNSFW}))
-	r.Register(Meta{ID: "furry-art"}, newWithTagGenerator([]string{bff.TagArt}, []string{}))
-	r.Register(Meta{ID: "art-clean"}, newWithTagGenerator([]string{bff.TagArt}, []string{bff.TagNSFW}))
-	r.Register(Meta{ID: "art-nsfw"}, newWithTagGenerator([]string{bff.TagNSFW, bff.TagArt}, []string{}))
-	r.Register(Meta{ID: "furry-nsfw"}, newWithTagGenerator([]string{bff.TagNSFW}, []string{}))
-	r.Register(Meta{ID: "furry-comms"}, newWithTagGenerator([]string{bff.TagCommissionsOpen}, []string{}))
+
+	// Reverse chronological based feeds
+	r.Register(Meta{ID: "furry-new"}, chronologicalGenerator([]string{}, []string{}))
+	r.Register(Meta{ID: "furry-fursuit"}, chronologicalGenerator([]string{bff.TagFursuitMedia}, []string{}))
+	r.Register(Meta{ID: "fursuit-nsfw"}, chronologicalGenerator([]string{bff.TagFursuitMedia, bff.TagNSFW}, []string{}))
+	r.Register(Meta{ID: "fursuit-clean"}, chronologicalGenerator([]string{bff.TagFursuitMedia}, []string{bff.TagNSFW}))
+	r.Register(Meta{ID: "furry-art"}, chronologicalGenerator([]string{bff.TagArt}, []string{}))
+	r.Register(Meta{ID: "art-clean"}, chronologicalGenerator([]string{bff.TagArt}, []string{bff.TagNSFW}))
+	r.Register(Meta{ID: "art-nsfw"}, chronologicalGenerator([]string{bff.TagNSFW, bff.TagArt}, []string{}))
+	r.Register(Meta{ID: "furry-nsfw"}, chronologicalGenerator([]string{bff.TagNSFW}, []string{}))
+	r.Register(Meta{ID: "furry-comms"}, chronologicalGenerator([]string{bff.TagCommissionsOpen}, []string{}))
 	r.Register(Meta{ID: "furry-test"}, func(_ context.Context, _ *store.PGXStore, _ string, limit int) ([]Post, error) {
 		return []Post{
 			{
