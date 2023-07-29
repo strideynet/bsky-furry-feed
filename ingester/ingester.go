@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"net/http"
 	"sync"
 	"time"
@@ -28,7 +29,6 @@ import (
 	typegen "github.com/whyrusleeping/cbor-gen"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
-	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -51,8 +51,6 @@ type FirehoseIngester struct {
 	subscribeURL    string
 	workerCount     int
 	workItemTimeout time.Duration
-
-	furryFeeds []string
 }
 
 func NewFirehoseIngester(
@@ -66,13 +64,6 @@ func NewFirehoseIngester(
 		subscribeURL:    pdsHost + "/xrpc/com.atproto.sync.subscribeRepos",
 		workerCount:     8,
 		workItemTimeout: time.Second * 30,
-		furryFeeds: []string{
-			"at://did:plc:jdkvwye2lf4mingzk7qdebzc/app.bsky.feed.generator/furry-new",
-			"at://did:plc:jdkvwye2lf4mingzk7qdebzc/app.bsky.feed.generator/furry-hot",
-			"at://did:plc:jdkvwye2lf4mingzk7qdebzc/app.bsky.feed.generator/furry-fursuit",
-			"at://did:plc:jdkvwye2lf4mingzk7qdebzc/app.bsky.feed.generator/furry-art",
-			"at://did:plc:jdkvwye2lf4mingzk7qdebzc/app.bsky.feed.generator/furry-nsfw",
-		},
 	}
 }
 
@@ -215,15 +206,6 @@ func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncS
 	return nil
 }
 
-func (fi *FirehoseIngester) isFurryFeedLike(record typegen.CBORMarshaler) bool {
-	like, ok := record.(*bsky.FeedLike)
-	if !ok {
-		return false
-	}
-
-	return slices.Contains(fi.furryFeeds, like.Subject.Uri)
-}
-
 func (fi *FirehoseIngester) isFurryFeedFollow(record typegen.CBORMarshaler) bool {
 	follow, ok := record.(*bsky.GraphFollow)
 	if !ok {
@@ -257,18 +239,16 @@ func (fi *FirehoseIngester) handleRecordCreate(
 
 	actor := fi.crc.GetByDID(repoDID)
 	if actor == nil {
-		feedLike := fi.isFurryFeedLike(record)
 		feedFollow := fi.isFurryFeedFollow(record)
 		// If it's an unknown actor, and they've interacted, add em to
 		// the candidate actor store with pending status. Otherwise, ignore
 		// them.
-		if !(feedLike || feedFollow) {
+		if !(feedFollow) {
 			return nil
 		}
 		fi.log.Info(
 			"unknown actor interacted, adding to db as pending",
 			zap.String("did", repoDID),
-			zap.Bool("feed_like", feedLike),
 			zap.Bool("feed_follow", feedFollow),
 		)
 		if err := fi.crc.CreatePendingCandidateActor(ctx, repoDID); err != nil {

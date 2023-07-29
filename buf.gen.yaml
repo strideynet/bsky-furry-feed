@@ -1,18 +1,18 @@
 version: v1
 plugins:
   - name: go
-    out: .
+    out: ./proto
     opt: paths=source_relative
   - name: connect-go
-    out: .
+    out: ./proto
     opt: paths=source_relative
   - name: es
-    out: ./web
+    out: ./web/proto
     # With target=ts, we generate TypeScript files.
     # Use target=js+dts to generate JavaScript and TypeScript declaration files
     # like remote generation does.
     opt: target=js+dts
   - name: connect-web
-    out: ./web
+    out: ./web/proto
     # With target=ts, we generate TypeScript files.
     opt: target=js+dts

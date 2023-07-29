@@ -21,12 +21,12 @@ FROM
 WHERE
       cp.is_hidden = false
   AND ca.status = 'approved'
-  AND (@tag::TEXT = '' OR @tag::TEXT = ANY (cp.tags))
-  AND (@cursor_timestamp::TIMESTAMPTZ IS NULL OR
-       cp.created_at < @cursor_timestamp)
+  AND (@require_tags::TEXT[] = '{}' OR @require_tags::TEXT[] <@ cp.tags)
+  AND (@exclude_tags::TEXT[] = '{}' OR NOT (@exclude_tags::TEXT[] && cp.tags))
+  AND (cp.indexed_at < @cursor_timestamp)
   AND cp.deleted_at IS NULL
 ORDER BY
-    cp.created_at DESC
+    cp.indexed_at DESC
 LIMIT @_limit;
 
 -- name: GetPostsWithLikes :many
@@ -38,8 +38,7 @@ SELECT
          candidate_likes cl
      WHERE
            cl.subject_uri = cp.uri
-       AND (@cursor_timestamp::TIMESTAMPTZ IS NULL OR
-            cl.indexed_at < @cursor_timestamp)
+       AND (cl.indexed_at < @cursor_timestamp)
        AND cl.deleted_at IS NULL) AS likes
 FROM
     candidate_posts cp

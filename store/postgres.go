@@ -7,12 +7,16 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rs/xid"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store/gen"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"time"
 )
@@ -135,6 +139,25 @@ func (s *PGXStore) ListActors(ctx context.Context, opts ListActorsOpts) (out []*
 			return nil, fmt.Errorf("converting actor (%s): %w", a.DID, err)
 		}
 		out = append(out, convertedActor)
+	}
+
+	return out, nil
+}
+
+func (s *PGXStore) GetActorByDID(ctx context.Context, did string) (out *v1.Actor, err error) {
+	ctx, span := tracer.Start(ctx, "pgx_store.get_actor_by_did")
+	defer func() {
+		endSpan(span, err)
+	}()
+
+	actor, err := s.queries.GetCandidateActorByDID(ctx, s.pool, did)
+	if err != nil {
+		return nil, fmt.Errorf("executing GetCandidateActorByDID query: %w", err)
+	}
+
+	out, err = actorToProto(actor)
+	if err != nil {
+		return nil, fmt.Errorf("converting actor (%s): %w", actor.DID, err)
 	}
 
 	return out, nil
@@ -416,9 +439,10 @@ func (s *PGXStore) DeleteFollow(ctx context.Context, opts DeleteFollowOpts) (err
 }
 
 type ListPostsForNewFeedOpts struct {
-	CursorTime *time.Time
-	FilterTag  string
-	Limit      int
+	CursorTime  time.Time
+	RequireTags []string
+	ExcludeTags []string
+	Limit       int
 }
 
 func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNewFeedOpts) (out []gen.CandidatePost, err error) {
@@ -428,15 +452,13 @@ func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNew
 		endSpan(span, err)
 	}()
 
-	queryParams := gen.GetFurryNewFeedParams{}
-	if opts.CursorTime != nil {
-		queryParams.CursorTimestamp = pgtype.Timestamptz{
+	queryParams := gen.GetFurryNewFeedParams{
+		CursorTimestamp: pgtype.Timestamptz{
 			Valid: true,
-			Time:  *opts.CursorTime,
-		}
-	}
-	if opts.FilterTag != "" {
-		queryParams.Tag = opts.FilterTag
+			Time:  opts.CursorTime,
+		},
+		RequireTags: opts.RequireTags,
+		ExcludeTags: opts.ExcludeTags,
 	}
 	if opts.Limit != 0 {
 		queryParams.Limit = int32(opts.Limit)
@@ -451,7 +473,7 @@ func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNew
 }
 
 type ListPostsWithLikesOpts struct {
-	CursorTime *time.Time
+	CursorTime time.Time
 	Limit      int
 }
 
@@ -462,13 +484,13 @@ func (s *PGXStore) ListPostsWithLikes(ctx context.Context, opts ListPostsWithLik
 		endSpan(span, err)
 	}()
 
-	queryParams := gen.GetPostsWithLikesParams{}
-	if opts.CursorTime != nil {
-		queryParams.CursorTimestamp = pgtype.Timestamptz{
+	queryParams := gen.GetPostsWithLikesParams{
+		CursorTimestamp: pgtype.Timestamptz{
 			Valid: true,
-			Time:  *opts.CursorTime,
-		}
+			Time:  opts.CursorTime,
+		},
 	}
+
 	if opts.Limit != 0 {
 		queryParams.Limit = int32(opts.Limit)
 	}
@@ -479,4 +501,96 @@ func (s *PGXStore) ListPostsWithLikes(ctx context.Context, opts ListPostsWithLik
 	}
 
 	return posts, nil
+}
+
+func auditEventToProto(in gen.AuditEvent) (*v1.AuditEvent, error) {
+	ae := &v1.AuditEvent{
+		Id:               in.ID,
+		CreatedAt:        timestamppb.New(in.CreatedAt.Time),
+		ActorDid:         in.ActorDID,
+		SubjectDid:       in.SubjectDid,
+		SubjectRecordUri: in.SubjectRecordUri,
+	}
+	anyPayload := &anypb.Any{}
+	err := protojson.Unmarshal(in.Payload, anyPayload)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshalling payload: %w", err)
+	}
+	ae.Payload = anyPayload
+	return ae, nil
+}
+
+type ListAuditEventsOpts struct {
+	FilterSubjectDID string
+}
+
+func (s *PGXStore) ListAuditEvents(ctx context.Context, opts ListAuditEventsOpts) (out []*v1.AuditEvent, err error) {
+	ctx, span := tracer.Start(ctx, "pgx_store.list_audit_events")
+	defer func() {
+		endSpan(span, err)
+	}()
+
+	queryParams := gen.ListAuditEventsParams{
+		SubjectDid: opts.FilterSubjectDID,
+	}
+	data, err := s.queries.ListAuditEvents(ctx, s.pool, queryParams)
+	if err != nil {
+		return nil, fmt.Errorf("executing ListAuditEvents query: %w", err)
+	}
+
+	out = make([]*v1.AuditEvent, 0, len(data))
+	for _, d := range data {
+		ae, err := auditEventToProto(d)
+		if err != nil {
+			return nil, fmt.Errorf("converting audit event: %w", err)
+		}
+		out = append(out, ae)
+	}
+
+	return out, nil
+}
+
+type CreateAuditEventOpts struct {
+	ActorDID         string
+	SubjectDID       string
+	SubjectRecordURI string
+	Payload          proto.Message
+}
+
+func (s *PGXStore) CreateAuditEvent(ctx context.Context, opts CreateAuditEventOpts) (out *v1.AuditEvent, err error) {
+	ctx, span := tracer.Start(ctx, "pgx_store.create_audit_event")
+	defer func() {
+		endSpan(span, err)
+	}()
+
+	payload, err := anypb.New(opts.Payload)
+	if err != nil {
+		return nil, fmt.Errorf("creating anypb: %w", err)
+	}
+	payloadBytes, err := protojson.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("marshalling anypb: %w", err)
+	}
+	queryParams := gen.CreateAuditEventParams{
+		ID: xid.New().String(),
+		CreatedAt: pgtype.Timestamptz{
+			Time:  time.Now(),
+			Valid: true,
+		},
+		ActorDID:         opts.ActorDID,
+		SubjectDid:       opts.SubjectDID,
+		SubjectRecordUri: opts.SubjectRecordURI,
+		Payload:          payloadBytes,
+	}
+	data, err := s.queries.CreateAuditEvent(ctx, s.pool, queryParams)
+	if err != nil {
+		return nil, fmt.Errorf("executing CreateAuditEvent query: %w", err)
+	}
+
+	out, err = auditEventToProto(data)
+	if err != nil {
+		return nil, fmt.Errorf("converting inserted audit event to proto: %w", err)
+	}
+
+	return out, nil
 }

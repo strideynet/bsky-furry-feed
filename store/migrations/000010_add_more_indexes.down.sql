@@ -1,0 +1,1 @@
+DROP INDEX candidate_posts_indexed_at_idx;

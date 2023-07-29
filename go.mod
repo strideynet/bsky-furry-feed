@@ -13,6 +13,7 @@ require (
 	github.com/jackc/pgx/v5 v5.3.1
 	github.com/prometheus/client_golang v1.14.0
 	github.com/rs/cors v1.9.0
+	github.com/rs/xid v1.5.0
 	github.com/testcontainers/testcontainers-go v0.21.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.21.0
 	github.com/urfave/cli/v2 v2.25.1
@@ -47,7 +48,6 @@ require (
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
-	github.com/golang-migrate/migrate v3.5.4+incompatible // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect

@@ -1,19 +1,24 @@
 <script lang="ts">
+  import StaticPage from '$components/layouts/static-page.svelte';
   import Heading from '$components/text/heading.svelte';
   import Link from '$components/text/link.svelte';
 </script>
 
-<div>
-  <Heading level={2}>The purremier furry feed for Bluesky</Heading>
-
-  <p>Ever wanted to scroll a feed of content from furries just like you?</p>
+<StaticPage>
+  <Heading level={2}>The purremier furry feed for BlueSky</Heading>
 
   <p>
-    Furryli.st wants to be the best custom feed for furries who use Bluesky. We'll be
-    doing our best to show you the freshest furry content.
+    Want to find your fellow furs and view the hottest furry posts on BlueSky? <strong
+      >You're in the right place.</strong
+    >
   </p>
 
-  <Heading level={3}>How do I get started?</Heading>
+  <p>
+    We operate a set of feeds which serve up furry content straight to your BlueSky
+    client. Read on to find out more!
+  </p>
+
+  <Heading level={3}>Getting started</Heading>
   <p>Click any of the following links to open the feed in your client:</p>
 
   <ul>
@@ -41,60 +46,87 @@
         >Art</Link
       >
     </li>
+    <li>
+      <Link
+        href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-nsfw"
+        >NSFW</Link
+      >
+    </li>
+    <li>
+      <Link
+        href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-comms"
+        >Commissions Open</Link
+      >
+    </li>
   </ul>
 
-  <Heading level={3}>How does it work?</Heading>
+  <p>
+    After opening the feed, you'll be able to pin it in your client. We'd love it if you
+    also gave the feed a like!
+  </p>
+
+  <Heading level={4}>Joining the feed</Heading>
 
   <p>
-    Our moderation team, with the help of a few tools, manually approve new furries to be
-    added to the list. Once added, we start tracking the posts, reposts, likes and follows
-    of these furries. Using this data we can then compile a feed of furry content!
+    Only approved furries will show up in our feeds. To request approval, follow the
+    @furryli.st account. Once you are approved, that account will follow you back.
   </p>
 
   <p>
-    If you want to make sure you are opted-in, or opted-out, please contact us and we'll
-    make sure everything is in order.
+    Certain feeds will only show posts including special hashtags. Include these in your
+    post to make sure it shows up in the right place. These are:
   </p>
+  <ul>
+    <li>
+      NSFW <ul><li>#nsfw</li></ul>
+    </li>
+    <li>
+      Art <ul><li>#art</li></ul>
+    </li>
+    <li>
+      Fursuits <ul><li>#fursuit</li></ul>
+    </li>
+    <li>
+      Commissions Open <ul><li>#commsopen</li></ul>
+    </li>
+  </ul>
 
   <Heading level={3}>Moderation policy</Heading>
 
   <p>
-    It's important to us that the furry feed is a welcoming environment all can enjoy.
+    Read our <Link href="/community-guidelines">Community Guidelines.</Link>
   </p>
-
-  <p>
-    Right now, we haven't formalised our moderation policy, but we intend to do so soon.
-    We won't be tolerating hateful content.
-  </p>
-
-  <p>To moderate the feed, we'll be making use of a few different actions:</p>
-
-  <ul>
-    <li>Hiding a post from our feeds</li>
-    <li>
-      Hiding all posts by a user from our feeds, either temporarily (a suspension) or
-      permanently (a ban)
-    </li>
-  </ul>
 
   <Heading level={3}>FAQs</Heading>
 
   <Heading level={5}>Can I read the code??</Heading>
 
-  <p>Yup - everything is open-source and can be found on GitHub</p>
+  <p>
+    Yup - everything is open-source and can be found on <Link
+      href="https://github.com/strideynet/bsky-furry-feed">GitHub</Link
+    >
+  </p>
+
+  <Heading level={5}>What else should I check out?</Heading>
+
+  <p>
+    BlueSky has a thriving furry community, there's a <Link
+      href="https://discord.gg/fursky">"Fursky" Discord</Link
+    > that's worth joining to learn more about other resources in the Furry community.
+  </p>
 
   <Heading level={5}>I have more questions!</Heading>
 
   <p>
-    First of all, that's not a question! But, yes, you can find our support channel in the <Link
-      href="https://discord.gg/5UNyBtnwKy">Bluesky Furry Discord</Link
+    First of all, that's not a question! But, yes, you can find our support channel in <Link
+      href="https://discord.gg/7X467r4UXF">our Discord</Link
     >
   </p>
-</div>
+</StaticPage>
 
 <style lang="scss">
   p {
-    @apply my-3;
+    @apply mb-3 mt-2;
   }
 
   ul {

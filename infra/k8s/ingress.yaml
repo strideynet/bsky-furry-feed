@@ -16,6 +16,6 @@ metadata:
 spec:
   defaultBackend:
     service:
-      name: bff-ingester
+      name: bff-api
       port:
         number: 80

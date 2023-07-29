@@ -46,23 +46,29 @@ FROM
 WHERE
       cp.is_hidden = false
   AND ca.status = 'approved'
-  AND ($1::TEXT = '' OR $1::TEXT = ANY (cp.tags))
-  AND ($2::TIMESTAMPTZ IS NULL OR
-       cp.created_at < $2)
+  AND ($1::TEXT[] = '{}' OR $1::TEXT[] <@ cp.tags)
+  AND ($2::TEXT[] = '{}' OR NOT ($2::TEXT[] && cp.tags))
+  AND (cp.indexed_at < $3)
   AND cp.deleted_at IS NULL
 ORDER BY
-    cp.created_at DESC
-LIMIT $3
+    cp.indexed_at DESC
+LIMIT $4
 `
 
 type GetFurryNewFeedParams struct {
-	Tag             string
+	RequireTags     []string
+	ExcludeTags     []string
 	CursorTimestamp pgtype.Timestamptz
 	Limit           int32
 }
 
 func (q *Queries) GetFurryNewFeed(ctx context.Context, db DBTX, arg GetFurryNewFeedParams) ([]CandidatePost, error) {
-	rows, err := db.Query(ctx, getFurryNewFeed, arg.Tag, arg.CursorTimestamp, arg.Limit)
+	rows, err := db.Query(ctx, getFurryNewFeed,
+		arg.RequireTags,
+		arg.ExcludeTags,
+		arg.CursorTimestamp,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -99,8 +105,7 @@ SELECT
          candidate_likes cl
      WHERE
            cl.subject_uri = cp.uri
-       AND ($1::TIMESTAMPTZ IS NULL OR
-            cl.indexed_at < $1)
+       AND (cl.indexed_at < $1)
        AND cl.deleted_at IS NULL) AS likes
 FROM
     candidate_posts cp

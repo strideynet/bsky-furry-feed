@@ -27,15 +27,19 @@ func hasKeyword(data *bsky.FeedPost, keywords ...string) bool {
 }
 
 func isFursuitMedia(data *bsky.FeedPost) bool {
-	return hasImage(data) && hasKeyword(data, "#fursuitfriday", "#fursuit")
+	return hasImage(data) && hasKeyword(data, "#fursuitfriday", "#fursuit", "#murrsuit", "#mursuit")
 }
 
 func isArt(data *bsky.FeedPost) bool {
-	return hasImage(data) && hasKeyword(data, "#art")
+	return hasImage(data) && hasKeyword(data, "#art", "#furryart")
 }
 
 func isNSFW(data *bsky.FeedPost) bool {
-	return hasKeyword(data, "#nsfw")
+	return hasKeyword(data, "#nsfw", "#murrsuit", "#mursuit")
+}
+
+func isCommissionsOpen(data *bsky.FeedPost) bool {
+	return hasKeyword(data, "#commsopen")
 }
 
 func (fi *FirehoseIngester) handleFeedPostCreate(
@@ -65,6 +69,9 @@ func (fi *FirehoseIngester) handleFeedPostCreate(
 		}
 		if isNSFW(data) {
 			tags = append(tags, bff.TagNSFW)
+		}
+		if isCommissionsOpen(data) {
+			tags = append(tags, bff.TagCommissionsOpen)
 		}
 
 		err = fi.store.CreatePost(

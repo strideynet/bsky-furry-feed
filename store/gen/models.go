@@ -55,6 +55,15 @@ func (ns NullActorStatus) Value() (driver.Value, error) {
 	return string(ns.ActorStatus), nil
 }
 
+type AuditEvent struct {
+	ID               string
+	ActorDID         string
+	SubjectDid       string
+	SubjectRecordUri string
+	CreatedAt        pgtype.Timestamptz
+	Payload          []byte
+}
+
 type CandidateActor struct {
 	DID       string
 	CreatedAt pgtype.Timestamptz
