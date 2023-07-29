@@ -8,14 +8,26 @@ package bff.v1;
 option go_package = "github.com/strideynet/bsky-furry-feed/proto/bff/v1;bffv1pb";
 
 service ModerationService {
+  // Ping is a test RPC that checks that the user is authenticated and then
+  // returns an empty response. Ideal for health checking the moderation service.
   rpc Ping(PingRequest) returns (PingResponse) {}
 
-  rpc GetApprovalQueue(GetApprovalQueueRequest) returns (GetApprovalQueueResponse) {}
-  // TODO: Refactor ProcessApprovalQueue to something more like "ApproveActor"
+  // TODO: Refactor ProcessApprovalQueue to something more like "ProcessPendingActor"
   rpc ProcessApprovalQueue(ProcessApprovalQueueRequest) returns (ProcessApprovalQueueResponse) {}
 
+  // ListActors fetches multiple actors from the database. It allows this to be
+  // filtered by certain attributes.
   rpc ListActors(ListActorsRequest) returns (ListActorsResponse) {}
+  // GetActor fetches a single actor from the database.
   rpc GetActor(GetActorRequest) returns (GetActorResponse) {}
+  // BanActor changes an actors status to "banned".
+  // Actor can be in any status before they are banned.
+  rpc BanActor(BanActorRequest) returns (BanActorResponse) {}
+  // UnapproveActor changes an actor from "approved" status to "none" status.
+  rpc UnapproveActor(UnapproveActorRequest) returns (UnapproveActorResponse) {}
+  // CreateActor creates a database entry for an actor who does not currently exist.
+  // By default, their status will be set to none.
+  rpc CreateActor(CreateActorRequest) returns (CreateActorResponse) {}
 
   rpc ListAuditEvents(ListAuditEventsRequest) returns (ListAuditEventsResponse) {}
   rpc CreateCommentAuditEvent(CreateCommentAuditEventRequest) returns (CreateCommentAuditEventResponse) {}
@@ -59,7 +71,6 @@ message Post {
 message GetActorRequest {
   string did = 1;
 }
-
 message GetActorResponse {
   Actor actor = 1;
 }
@@ -69,26 +80,13 @@ message ListActorsRequest {
   int32  limit = 2;
   ActorStatus filter_status = 3;
 }
-
 message ListActorsResponse {
   repeated Actor actors = 1;
   string cursor = 2;
 }
 
 message PingRequest {}
-
 message PingResponse {}
-
-message GetApprovalQueueRequest {}
-
-message GetApprovalQueueResponse {
-  // queue_entry is the actor that needs to be processed by a mod. process the
-  // queue entry using the ProcessApprovalQueue RPC.
-  Actor queue_entry = 1;
-  // queue_entries_remaining indicates how many queue entries are left including
-  // the one returned in this response.
-  int32 queue_entries_remaining = 2;
-}
 
 enum ApprovalQueueAction {
   APPROVAL_QUEUE_ACTION_UNSPECIFIED = 0;
@@ -101,15 +99,18 @@ message ProcessApprovalQueueRequest {
   ApprovalQueueAction action = 2;
   bool is_artist = 3;
 }
-
 message ProcessApprovalQueueResponse {}
-
-message ListAuditEventsRequest {
-  string actor_did = 1;
-  string subject_did = 2;
-  string subject_record_uri = 3;
+// ProcessApprovalQueueAuditPayload is the payload for the
+// `process_approval_queue` audit event.
+message ProcessApprovalQueueAuditPayload {
+  ApprovalQueueAction action = 1;
 }
 
+message ListAuditEventsRequest {
+  string filter_actor_did = 1;
+  string filter_subject_did = 2;
+  string filter_subject_record_uri = 3;
+}
 message ListAuditEventsResponse {
   repeated AuditEvent audit_events = 1;
 }
@@ -119,9 +120,48 @@ message CreateCommentAuditEventRequest {
   string subject_record_uri = 2;
   string comment = 3;
 }
-
 message CreateCommentAuditEventResponse {
   AuditEvent audit_event = 1;
+}
+// CommentAuditPayload is the payload for the `comment`audit event. This is
+// empty, as the comment is actually held within `AuditEvent`
+message CommentAuditPayload {
+  string comment = 1;
+}
+
+message CreateActorRequest {
+  string actor_did = 1;
+  string reason = 2;
+}
+message CreateActorResponse {
+  Actor actor = 1;
+}
+message CreateActorAuditPayload {
+  string reason = 1;
+}
+
+
+message UnapproveActorRequest {
+  string actor_did = 1;
+  string reason = 2;
+}
+message UnapproveActorResponse {
+  Actor actor = 1;
+}
+message UnapproveActorAuditPayload {
+  string reason = 1;
+}
+
+
+message BanActorRequest {
+  string actor_did = 1;
+  string reason = 2;
+}
+message BanActorResponse {
+  Actor actor = 1;
+}
+message BanActorAuditPayload {
+  string reason = 1;
 }
 
 message AuditEvent {
@@ -138,16 +178,4 @@ message AuditEvent {
   string subject_record_uri = 5;
 
   google.protobuf.Any payload = 6;
-}
-
-// CommentAuditPayload is the payload for the `comment`audit event. This is
-// empty, as the comment is actually held within `AuditEvent`
-message CommentAuditPayload {
-  string comment = 1;
-}
-
-// ProcessApprovalQueueAuditPayload is the payload for the
-// `process_approval_queue` audit event.
-message ProcessApprovalQueueAuditPayload {
-  ApprovalQueueAction action = 1;
 }

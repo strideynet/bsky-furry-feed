@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreateCommentAuditEventRequest, CreateCommentAuditEventResponse, GetActorRequest, GetActorResponse, GetApprovalQueueRequest, GetApprovalQueueResponse, ListActorsRequest, ListActorsResponse, ListAuditEventsRequest, ListAuditEventsResponse, PingRequest, PingResponse, ProcessApprovalQueueRequest, ProcessApprovalQueueResponse } from "./moderation_service_pb.js";
+import { BanActorRequest, BanActorResponse, CreateActorRequest, CreateActorResponse, CreateCommentAuditEventRequest, CreateCommentAuditEventResponse, GetActorRequest, GetActorResponse, ListActorsRequest, ListActorsResponse, ListAuditEventsRequest, ListAuditEventsResponse, PingRequest, PingResponse, ProcessApprovalQueueRequest, ProcessApprovalQueueResponse, UnapproveActorRequest, UnapproveActorResponse } from "./moderation_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -13,6 +13,9 @@ export const ModerationService = {
   typeName: "bff.v1.ModerationService",
   methods: {
     /**
+     * Ping is a test RPC that checks that the user is authenticated and then
+     * returns an empty response. Ideal for health checking the moderation service.
+     *
      * @generated from rpc bff.v1.ModerationService.Ping
      */
     ping: {
@@ -22,16 +25,7 @@ export const ModerationService = {
       kind: MethodKind.Unary,
     },
     /**
-     * @generated from rpc bff.v1.ModerationService.GetApprovalQueue
-     */
-    getApprovalQueue: {
-      name: "GetApprovalQueue",
-      I: GetApprovalQueueRequest,
-      O: GetApprovalQueueResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * TODO: Refactor ProcessApprovalQueue to something more like "ApproveActor"
+     * TODO: Refactor ProcessApprovalQueue to something more like "ProcessPendingActor"
      *
      * @generated from rpc bff.v1.ModerationService.ProcessApprovalQueue
      */
@@ -42,6 +36,9 @@ export const ModerationService = {
       kind: MethodKind.Unary,
     },
     /**
+     * ListActors fetches multiple actors from the database. It allows this to be
+     * filtered by certain attributes.
+     *
      * @generated from rpc bff.v1.ModerationService.ListActors
      */
     listActors: {
@@ -51,12 +48,49 @@ export const ModerationService = {
       kind: MethodKind.Unary,
     },
     /**
+     * GetActor fetches a single actor from the database.
+     *
      * @generated from rpc bff.v1.ModerationService.GetActor
      */
     getActor: {
       name: "GetActor",
       I: GetActorRequest,
       O: GetActorResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * BanActor changes an actors status to "banned".
+     * Actor can be in any status before they are banned.
+     *
+     * @generated from rpc bff.v1.ModerationService.BanActor
+     */
+    banActor: {
+      name: "BanActor",
+      I: BanActorRequest,
+      O: BanActorResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * UnapproveActor changes an actor from "approved" status to "none" status.
+     *
+     * @generated from rpc bff.v1.ModerationService.UnapproveActor
+     */
+    unapproveActor: {
+      name: "UnapproveActor",
+      I: UnapproveActorRequest,
+      O: UnapproveActorResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * CreateActor creates a database entry for an actor who does not currently exist.
+     * By default, their status will be set to none.
+     *
+     * @generated from rpc bff.v1.ModerationService.CreateActor
+     */
+    createActor: {
+      name: "CreateActor",
+      I: CreateActorRequest,
+      O: CreateActorResponse,
       kind: MethodKind.Unary,
     },
     /**

@@ -16,6 +16,30 @@ type ModerationServiceHandler struct {
 	clientCache *cachedBlueSkyClient
 }
 
+func (m *ModerationServiceHandler) BanActor(ctx context.Context, req *connect.Request[v1.BanActorRequest]) (*connect.Response[v1.BanActorResponse], error) {
+	_, err := auth(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("authenticating: %w", err)
+	}
+	return nil, fmt.Errorf("BanActor is unimplemented")
+}
+
+func (m *ModerationServiceHandler) UnapproveActor(ctx context.Context, req *connect.Request[v1.UnapproveActorRequest]) (*connect.Response[v1.UnapproveActorResponse], error) {
+	_, err := auth(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("authenticating: %w", err)
+	}
+	return nil, fmt.Errorf("UnapproveActor is unimplemented")
+}
+
+func (m *ModerationServiceHandler) CreateActor(ctx context.Context, req *connect.Request[v1.CreateActorRequest]) (*connect.Response[v1.CreateActorResponse], error) {
+	_, err := auth(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("authenticating: %w", err)
+	}
+	return nil, fmt.Errorf("CreateActor is unimplemented")
+}
+
 func (m *ModerationServiceHandler) CreateCommentAuditEvent(ctx context.Context, req *connect.Request[v1.CreateCommentAuditEventRequest]) (*connect.Response[v1.CreateCommentAuditEventResponse], error) {
 	authCtx, err := auth(ctx, req)
 	if err != nil {
@@ -53,14 +77,14 @@ func (m *ModerationServiceHandler) ListAuditEvents(ctx context.Context, req *con
 	}
 
 	switch {
-	case req.Msg.ActorDid != "":
-		return nil, fmt.Errorf("filtering by actor_did is not implemented")
-	case req.Msg.SubjectRecordUri != "":
-		return nil, fmt.Errorf("filtering by subject_record_uri is not implemented")
+	case req.Msg.FilterActorDid != "":
+		return nil, fmt.Errorf("filter_actor_did is not implemented")
+	case req.Msg.FilterSubjectRecordUri != "":
+		return nil, fmt.Errorf("filter_subject_record_uri is not implemented")
 	}
 
 	out, err := m.store.ListAuditEvents(ctx, store.ListAuditEventsOpts{
-		FilterSubjectDID: req.Msg.SubjectDid,
+		FilterSubjectDID: req.Msg.FilterSubjectDid,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("listing audit events: %w", err)
@@ -116,28 +140,6 @@ func (m *ModerationServiceHandler) GetActor(ctx context.Context, req *connect.Re
 		Actor: actor,
 	})
 	return res, nil
-}
-
-func (m *ModerationServiceHandler) GetApprovalQueue(ctx context.Context, req *connect.Request[v1.GetApprovalQueueRequest]) (*connect.Response[v1.GetApprovalQueueResponse], error) {
-	_, err := auth(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("authenticating: %w", err)
-	}
-
-	actors, err := m.store.ListActors(ctx, store.ListActorsOpts{
-		FilterStatus: v1.ActorStatus_ACTOR_STATUS_PENDING,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("listing pending candidate actors: %w", err)
-	}
-
-	res := &v1.GetApprovalQueueResponse{}
-	res.QueueEntriesRemaining = int32(len(actors))
-	if len(actors) > 0 {
-		res.QueueEntry = actors[0]
-	}
-
-	return connect.NewResponse(res), nil
 }
 
 func (m *ModerationServiceHandler) ProcessApprovalQueue(ctx context.Context, req *connect.Request[v1.ProcessApprovalQueueRequest]) (*connect.Response[v1.ProcessApprovalQueueResponse], error) {

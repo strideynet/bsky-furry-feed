@@ -118,25 +118,6 @@ export const PingResponse = proto3.makeMessageType(
 );
 
 /**
- * @generated from message bff.v1.GetApprovalQueueRequest
- */
-export const GetApprovalQueueRequest = proto3.makeMessageType(
-  "bff.v1.GetApprovalQueueRequest",
-  [],
-);
-
-/**
- * @generated from message bff.v1.GetApprovalQueueResponse
- */
-export const GetApprovalQueueResponse = proto3.makeMessageType(
-  "bff.v1.GetApprovalQueueResponse",
-  () => [
-    { no: 1, name: "queue_entry", kind: "message", T: Actor },
-    { no: 2, name: "queue_entries_remaining", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-  ],
-);
-
-/**
  * @generated from message bff.v1.ProcessApprovalQueueRequest
  */
 export const ProcessApprovalQueueRequest = proto3.makeMessageType(
@@ -157,14 +138,27 @@ export const ProcessApprovalQueueResponse = proto3.makeMessageType(
 );
 
 /**
+ * ProcessApprovalQueueAuditPayload is the payload for the
+ * `process_approval_queue` audit event.
+ *
+ * @generated from message bff.v1.ProcessApprovalQueueAuditPayload
+ */
+export const ProcessApprovalQueueAuditPayload = proto3.makeMessageType(
+  "bff.v1.ProcessApprovalQueueAuditPayload",
+  () => [
+    { no: 1, name: "action", kind: "enum", T: proto3.getEnumType(ApprovalQueueAction) },
+  ],
+);
+
+/**
  * @generated from message bff.v1.ListAuditEventsRequest
  */
 export const ListAuditEventsRequest = proto3.makeMessageType(
   "bff.v1.ListAuditEventsRequest",
   () => [
-    { no: 1, name: "actor_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "subject_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "subject_record_uri", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "filter_actor_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "filter_subject_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "filter_subject_record_uri", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ],
 );
 
@@ -201,21 +195,6 @@ export const CreateCommentAuditEventResponse = proto3.makeMessageType(
 );
 
 /**
- * @generated from message bff.v1.AuditEvent
- */
-export const AuditEvent = proto3.makeMessageType(
-  "bff.v1.AuditEvent",
-  () => [
-    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "created_at", kind: "message", T: Timestamp },
-    { no: 3, name: "actor_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "subject_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "subject_record_uri", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 6, name: "payload", kind: "message", T: Any },
-  ],
-);
-
-/**
  * CommentAuditPayload is the payload for the `comment`audit event. This is
  * empty, as the comment is actually held within `AuditEvent`
  *
@@ -229,15 +208,110 @@ export const CommentAuditPayload = proto3.makeMessageType(
 );
 
 /**
- * ProcessApprovalQueueAuditPayload is the payload for the
- * `process_approval_queue` audit event.
- *
- * @generated from message bff.v1.ProcessApprovalQueueAuditPayload
+ * @generated from message bff.v1.CreateActorRequest
  */
-export const ProcessApprovalQueueAuditPayload = proto3.makeMessageType(
-  "bff.v1.ProcessApprovalQueueAuditPayload",
+export const CreateActorRequest = proto3.makeMessageType(
+  "bff.v1.CreateActorRequest",
   () => [
-    { no: 1, name: "action", kind: "enum", T: proto3.getEnumType(ApprovalQueueAction) },
+    { no: 1, name: "actor_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "reason", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ],
+);
+
+/**
+ * @generated from message bff.v1.CreateActorResponse
+ */
+export const CreateActorResponse = proto3.makeMessageType(
+  "bff.v1.CreateActorResponse",
+  () => [
+    { no: 1, name: "actor", kind: "message", T: Actor },
+  ],
+);
+
+/**
+ * @generated from message bff.v1.CreateActorAuditPayload
+ */
+export const CreateActorAuditPayload = proto3.makeMessageType(
+  "bff.v1.CreateActorAuditPayload",
+  () => [
+    { no: 1, name: "reason", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ],
+);
+
+/**
+ * @generated from message bff.v1.UnapproveActorRequest
+ */
+export const UnapproveActorRequest = proto3.makeMessageType(
+  "bff.v1.UnapproveActorRequest",
+  () => [
+    { no: 1, name: "actor_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "reason", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ],
+);
+
+/**
+ * @generated from message bff.v1.UnapproveActorResponse
+ */
+export const UnapproveActorResponse = proto3.makeMessageType(
+  "bff.v1.UnapproveActorResponse",
+  () => [
+    { no: 1, name: "actor", kind: "message", T: Actor },
+  ],
+);
+
+/**
+ * @generated from message bff.v1.UnapproveActorAuditPayload
+ */
+export const UnapproveActorAuditPayload = proto3.makeMessageType(
+  "bff.v1.UnapproveActorAuditPayload",
+  () => [
+    { no: 1, name: "reason", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ],
+);
+
+/**
+ * @generated from message bff.v1.BanActorRequest
+ */
+export const BanActorRequest = proto3.makeMessageType(
+  "bff.v1.BanActorRequest",
+  () => [
+    { no: 1, name: "actor_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "reason", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ],
+);
+
+/**
+ * @generated from message bff.v1.BanActorResponse
+ */
+export const BanActorResponse = proto3.makeMessageType(
+  "bff.v1.BanActorResponse",
+  () => [
+    { no: 1, name: "actor", kind: "message", T: Actor },
+  ],
+);
+
+/**
+ * @generated from message bff.v1.BanActorAuditPayload
+ */
+export const BanActorAuditPayload = proto3.makeMessageType(
+  "bff.v1.BanActorAuditPayload",
+  () => [
+    { no: 1, name: "reason", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ],
+);
+
+/**
+ * @generated from message bff.v1.AuditEvent
+ */
+export const AuditEvent = proto3.makeMessageType(
+  "bff.v1.AuditEvent",
+  () => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "created_at", kind: "message", T: Timestamp },
+    { no: 3, name: "actor_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "subject_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "subject_record_uri", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "payload", kind: "message", T: Any },
   ],
 );
 
