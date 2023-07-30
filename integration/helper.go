@@ -3,6 +3,7 @@ package integration
 import (
 	"context"
 	"fmt"
+	"github.com/bluesky-social/indigo/xrpc"
 	"reflect"
 	"strings"
 	"unsafe"
@@ -32,6 +33,14 @@ func SetTrialHostOnBGS(tbgs *testing.TestBGS, rawHost string) {
 
 	reflect.NewAt(trialHosts.Type(), unsafe.Pointer(trialHosts.UnsafeAddr())).Elem().
 		Set(reflect.ValueOf(hosts))
+}
+
+func ExtractClientFromTestUser(user *testing.TestUser) *xrpc.Client {
+	// This isn't exposed by indigo so we have to use reflection to access the
+	// client.
+	val := reflect.ValueOf(user).Elem().FieldByName("client")
+	iface := reflect.NewAt(val.Type(), unsafe.Pointer(val.UnsafeAddr())).Elem().Interface()
+	return iface.(*xrpc.Client)
 }
 
 type Database struct {

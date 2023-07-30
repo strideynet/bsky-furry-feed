@@ -268,6 +268,11 @@ func (m *ModerationServiceHandler) ProcessApprovalQueue(ctx context.Context, req
 	}
 	isArtist := req.Msg.IsArtist
 
+	c, err := m.clientCache.Get(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("getting bsky client: %w", err)
+	}
+
 	_, err = m.store.UpdateActor(ctx, store.UpdateActorOpts{
 		DID: actorDID,
 		Predicate: func(actor *v1.Actor) error {
@@ -285,10 +290,6 @@ func (m *ModerationServiceHandler) ProcessApprovalQueue(ctx context.Context, req
 
 	// Follow them if its an approval
 	if statusToSet == v1.ActorStatus_ACTOR_STATUS_APPROVED {
-		c, err := m.clientCache.Get(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("getting bsky client: %w", err)
-		}
 		if err := c.Follow(ctx, actorDID); err != nil {
 			return nil, fmt.Errorf("following approved actor: %w", err)
 		}
