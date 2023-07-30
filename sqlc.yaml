@@ -3,6 +3,7 @@ overrides:
   go:
      rename:
        did: DID
+       cid: CID
        uri: URI
        actor_did: ActorDID
        subject_uri: SubjectURI

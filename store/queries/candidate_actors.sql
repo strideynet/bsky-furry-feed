@@ -25,6 +25,19 @@ WHERE
     did = sqlc.arg(did)
 RETURNING *;
 
+-- name: UpdateActorProfile :exec
+WITH ap as (
+    INSERT INTO actor_profiles
+        (cid, created_at, display_name, description)
+    VALUES
+        (sqlc.narg(cid), sqlc.narg(updated_at), sqlc.narg(display_name), sqlc.narg(description))
+    RETURNING cid
+)
+UPDATE candidate_actors ca
+SET current_profile_cid = (SELECT cid FROM ap)
+WHERE
+    did = sqlc.arg(did);
+
 -- name: GetCandidateActorByDID :one
 SELECT *
 FROM

@@ -16,7 +16,7 @@ INSERT INTO
     candidate_actors (did, created_at, is_artist, comment, status)
 VALUES
     ($1, $2, $3, $4, $5)
-RETURNING did, created_at, is_artist, comment, is_nsfw, is_hidden, status
+RETURNING did, created_at, is_artist, comment, is_nsfw, is_hidden, status, current_profile_cid
 `
 
 type CreateCandidateActorParams struct {
@@ -44,12 +44,13 @@ func (q *Queries) CreateCandidateActor(ctx context.Context, db DBTX, arg CreateC
 		&i.IsNSFW,
 		&i.IsHidden,
 		&i.Status,
+		&i.CurrentProfileCid,
 	)
 	return i, err
 }
 
 const getCandidateActorByDID = `-- name: GetCandidateActorByDID :one
-SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden, status
+SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden, status, current_profile_cid
 FROM
     candidate_actors
 WHERE
@@ -67,12 +68,13 @@ func (q *Queries) GetCandidateActorByDID(ctx context.Context, db DBTX, did strin
 		&i.IsNSFW,
 		&i.IsHidden,
 		&i.Status,
+		&i.CurrentProfileCid,
 	)
 	return i, err
 }
 
 const listCandidateActors = `-- name: ListCandidateActors :many
-SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden, status
+SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden, status, current_profile_cid
 FROM
     candidate_actors ca
 WHERE
@@ -99,6 +101,7 @@ func (q *Queries) ListCandidateActors(ctx context.Context, db DBTX, status NullA
 			&i.IsNSFW,
 			&i.IsHidden,
 			&i.Status,
+			&i.CurrentProfileCid,
 		); err != nil {
 			return nil, err
 		}
@@ -110,6 +113,39 @@ func (q *Queries) ListCandidateActors(ctx context.Context, db DBTX, status NullA
 	return items, nil
 }
 
+const updateActorProfile = `-- name: UpdateActorProfile :exec
+WITH ap as (
+    INSERT INTO actor_profiles
+        (cid, created_at, display_name, description)
+    VALUES
+        ($2, $3, $4, $5)
+    RETURNING cid
+)
+UPDATE candidate_actors ca
+SET current_profile_cid = (SELECT cid FROM ap)
+WHERE
+    did = $1
+`
+
+type UpdateActorProfileParams struct {
+	DID         string
+	CID         []byte
+	UpdatedAt   pgtype.Timestamptz
+	DisplayName pgtype.Text
+	Description pgtype.Text
+}
+
+func (q *Queries) UpdateActorProfile(ctx context.Context, db DBTX, arg UpdateActorProfileParams) error {
+	_, err := db.Exec(ctx, updateActorProfile,
+		arg.DID,
+		arg.CID,
+		arg.UpdatedAt,
+		arg.DisplayName,
+		arg.Description,
+	)
+	return err
+}
+
 const updateCandidateActor = `-- name: UpdateCandidateActor :one
 UPDATE candidate_actors ca
 SET
@@ -118,7 +154,7 @@ SET
     comment=COALESCE($3, ca.comment)
 WHERE
     did = $4
-RETURNING did, created_at, is_artist, comment, is_nsfw, is_hidden, status
+RETURNING did, created_at, is_artist, comment, is_nsfw, is_hidden, status, current_profile_cid
 `
 
 type UpdateCandidateActorParams struct {
@@ -144,6 +180,7 @@ func (q *Queries) UpdateCandidateActor(ctx context.Context, db DBTX, arg UpdateC
 		&i.IsNSFW,
 		&i.IsHidden,
 		&i.Status,
+		&i.CurrentProfileCid,
 	)
 	return i, err
 }

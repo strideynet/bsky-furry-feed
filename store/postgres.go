@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
+	"github.com/ipfs/go-cid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -18,7 +21,6 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"time"
 )
 
 var tracer = otel.Tracer("github.com/strideynet/bsky-furry-feed/store")
@@ -277,6 +279,59 @@ func (s *PGXStore) UpdateActor(ctx context.Context, opts UpdateActorOpts) (out *
 		return nil, fmt.Errorf("converting actor: %w", err)
 	}
 	return actor, nil
+}
+
+type UpdateActorProfileOpts struct {
+	// DID is the DID of the actor to update.
+	DID         string
+	CID         cid.Cid
+	UpdatedAt   time.Time
+	DisplayName string
+	Description string
+}
+
+func (s *PGXStore) UpdateActorProfile(ctx context.Context, opts UpdateActorProfileOpts) (err error) {
+	ctx, span := tracer.Start(ctx, "pgx_store.update_actor_from_firehose")
+	defer func() {
+		endSpan(span, err)
+	}()
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("beginning transaction: %w", err)
+	}
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			s.log.Warn("failed to roll back transaction", zap.Error(err))
+		}
+	}()
+
+	queryParams := gen.UpdateActorProfileParams{
+		DID: opts.DID,
+		CID: opts.CID.Bytes(),
+		UpdatedAt: pgtype.Timestamptz{
+			Valid: true,
+			Time:  opts.UpdatedAt,
+		},
+		DisplayName: pgtype.Text{
+			Valid:  true,
+			String: opts.DisplayName,
+		},
+		Description: pgtype.Text{
+			Valid:  true,
+			String: opts.Description,
+		},
+	}
+	err = s.queries.UpdateActorProfile(ctx, tx, queryParams)
+	if err != nil {
+		return fmt.Errorf("executing UpdateActorProfile query: %w", err)
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return fmt.Errorf("committing transaction: %w", err)
+	}
+
+	return nil
 }
 
 type CreateLikeOpts struct {

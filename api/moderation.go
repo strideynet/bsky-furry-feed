@@ -3,11 +3,12 @@ package api
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/bufbuild/connect-go"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.uber.org/zap"
-	"time"
 )
 
 type ModerationServiceHandler struct {
@@ -186,6 +187,8 @@ func (m *ModerationServiceHandler) ProcessApprovalQueue(ctx context.Context, req
 		if err := c.Follow(ctx, actorDID); err != nil {
 			return nil, fmt.Errorf("following approved actor: %w", err)
 		}
+
+		// TODO: Update profile
 	}
 
 	go func() {

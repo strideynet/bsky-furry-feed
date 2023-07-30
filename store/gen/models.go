@@ -55,6 +55,13 @@ func (ns NullActorStatus) Value() (driver.Value, error) {
 	return string(ns.ActorStatus), nil
 }
 
+type ActorProfile struct {
+	CID         []byte
+	CreatedAt   pgtype.Timestamptz
+	DisplayName pgtype.Text
+	Description pgtype.Text
+}
+
 type AuditEvent struct {
 	ID               string
 	ActorDID         string
@@ -65,13 +72,14 @@ type AuditEvent struct {
 }
 
 type CandidateActor struct {
-	DID       string
-	CreatedAt pgtype.Timestamptz
-	IsArtist  bool
-	Comment   string
-	IsNSFW    bool
-	IsHidden  bool
-	Status    ActorStatus
+	DID               string
+	CreatedAt         pgtype.Timestamptz
+	IsArtist          bool
+	Comment           string
+	IsNSFW            bool
+	IsHidden          bool
+	Status            ActorStatus
+	CurrentProfileCid []byte
 }
 
 type CandidateFollow struct {

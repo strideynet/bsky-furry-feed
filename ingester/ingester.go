@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ipfs/go-cid"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
@@ -166,6 +167,11 @@ func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncS
 	}()
 	span.SetAttributes(actorDIDAttr(evt.Repo))
 
+	time, err := bluesky.ParseTime(evt.Time)
+	if err != nil {
+		return fmt.Errorf("parsing timestamp: %w", err)
+	}
+
 	rr, err := repo.ReadRepoFromCar(ctx, bytes.NewReader(evt.Blocks))
 	if err != nil {
 		return fmt.Errorf("reading repo from car: %w", err)
@@ -180,17 +186,37 @@ func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncS
 				if errors.Is(err, lexutil.ErrUnrecognizedType) {
 					continue
 				}
-				return fmt.Errorf("getting record for op: %w", err)
+				return fmt.Errorf("create: getting record for op: %w", err)
 			}
 
 			// Ensure there isn't a mismatch between the reference and the found
 			// object.
 			if lexutil.LexLink(recordCid) != *op.Cid {
-				return fmt.Errorf("mismatch in record and op cid: %s != %s", recordCid, *op.Cid)
+				return fmt.Errorf("create: mismatch in record and op cid: %s != %s", recordCid, *op.Cid)
 			}
 
 			if err := fi.handleRecordCreate(
 				ctx, evt.Repo, uri, record,
+			); err != nil {
+				return fmt.Errorf("handling record create: %w", err)
+			}
+		case repomgr.EvtKindUpdateRecord:
+			recordCid, record, err := rr.GetRecord(ctx, op.Path)
+			if err != nil {
+				if errors.Is(err, lexutil.ErrUnrecognizedType) {
+					continue
+				}
+				return fmt.Errorf("update: getting record for op: %w", err)
+			}
+
+			// Ensure there isn't a mismatch between the reference and the found
+			// object.
+			if lexutil.LexLink(recordCid) != *op.Cid {
+				return fmt.Errorf("update: mismatch in record and op cid: %s != %s", recordCid, *op.Cid)
+			}
+
+			if err := fi.handleRecordUpdate(
+				ctx, evt.Repo, uri, recordCid, time, record,
 			); err != nil {
 				return fmt.Errorf("handling record create: %w", err)
 			}
@@ -318,6 +344,8 @@ func (fi *FirehoseIngester) handleRecordDelete(
 	}
 
 	switch nsid {
+	case "app.bsky.actor.profile":
+		err = fi.handleActorProfileDelete(ctx, recordUri)
 	case "app.bsky.feed.post":
 		err = fi.handleFeedPostDelete(ctx, recordUri)
 	case "app.bsky.feed.like":
@@ -329,4 +357,42 @@ func (fi *FirehoseIngester) handleRecordDelete(
 	}
 
 	return
+}
+
+func (fi *FirehoseIngester) handleRecordUpdate(
+	ctx context.Context,
+	repoDID string,
+	recordUri string,
+	recordCid cid.Cid,
+	updatedAt time.Time,
+	record typegen.CBORMarshaler,
+) (err error) {
+	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_record_update")
+	defer func() {
+		endSpan(span, err)
+	}()
+	span.SetAttributes(recordUriAttr(recordUri))
+
+	actor := fi.crc.GetByDID(repoDID)
+	if actor == nil {
+		return nil
+	}
+
+	// Only collect events from actors we care about e.g those that are
+	// approved.
+	if !(actor.Status == v1.ActorStatus_ACTOR_STATUS_APPROVED) {
+		return nil
+	}
+
+	switch data := record.(type) {
+	case *bsky.ActorProfile:
+		err := fi.handleActorProfileUpdate(ctx, repoDID, recordUri, recordCid, updatedAt, data)
+		if err != nil {
+			return fmt.Errorf("handling app.bsky.actor.profile update: %w", err)
+		}
+	default:
+		span.AddEvent("ignoring record due to unrecognized type")
+	}
+
+	return nil
 }
