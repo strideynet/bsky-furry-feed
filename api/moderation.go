@@ -22,6 +22,11 @@ func (m *ModerationServiceHandler) BanActor(ctx context.Context, req *connect.Re
 		return nil, fmt.Errorf("authenticating: %w", err)
 	}
 
+	c, err := m.clientCache.Get(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("getting bsky client: %w", err)
+	}
+
 	actor, err := m.store.UpdateActor(ctx, store.UpdateActorOpts{
 		DID:          req.Msg.ActorDid,
 		UpdateStatus: v1.ActorStatus_ACTOR_STATUS_BANNED,
@@ -31,14 +36,16 @@ func (m *ModerationServiceHandler) BanActor(ctx context.Context, req *connect.Re
 	}
 
 	go m.emitAudit(store.CreateAuditEventOpts{
-		Payload: &v1.UnapproveActorAuditPayload{
+		Payload: &v1.BanActorAuditPayload{
 			Reason: req.Msg.Reason,
 		},
 		ActorDID:   authCtx.DID,
 		SubjectDID: req.Msg.ActorDid,
 	})
 
-	// TODO: Unfollow ?
+	if err := c.Unfollow(ctx, req.Msg.ActorDid); err != nil {
+		return nil, fmt.Errorf("unfollowing actor: %w", err)
+	}
 
 	return connect.NewResponse(&v1.BanActorResponse{
 		Actor: actor,
@@ -49,6 +56,11 @@ func (m *ModerationServiceHandler) UnapproveActor(ctx context.Context, req *conn
 	authCtx, err := auth(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("authenticating: %w", err)
+	}
+
+	c, err := m.clientCache.Get(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("getting bsky client: %w", err)
 	}
 
 	actor, err := m.store.UpdateActor(ctx, store.UpdateActorOpts{
@@ -73,7 +85,9 @@ func (m *ModerationServiceHandler) UnapproveActor(ctx context.Context, req *conn
 		SubjectDID: req.Msg.ActorDid,
 	})
 
-	// TODO: Unfollow ?
+	if err := c.Unfollow(ctx, req.Msg.ActorDid); err != nil {
+		return nil, fmt.Errorf("unfollowing actor: %w", err)
+	}
 
 	return connect.NewResponse(&v1.UnapproveActorResponse{
 		Actor: actor,
@@ -270,6 +284,8 @@ func (m *ModerationServiceHandler) ProcessApprovalQueue(ctx context.Context, req
 }
 
 func (m *ModerationServiceHandler) emitAudit(opts store.CreateAuditEventOpts) {
+	// TODO: Consider pulling this out of a goroutine and making it part
+	// of the transaction in the database?
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	_, err := m.store.CreateAuditEvent(ctx, opts)

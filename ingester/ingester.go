@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/bluesky-social/indigo/util"
 
 	"net/http"
 	"sync"
@@ -24,7 +25,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
 	typegen "github.com/whyrusleeping/cbor-gen"
 	"go.opentelemetry.io/otel/attribute"
@@ -312,12 +312,12 @@ func (fi *FirehoseIngester) handleRecordDelete(
 		return
 	}
 
-	nsid, err := bluesky.ParseNamespaceID(recordUri)
+	parsedUri, err := util.ParseAtUri(recordUri)
 	if err != nil {
-		return fmt.Errorf("parsing nsid: %w", err)
+		return fmt.Errorf("parsing uri: %w", err)
 	}
 
-	switch nsid {
+	switch parsedUri.Collection {
 	case "app.bsky.feed.post":
 		err = fi.handleFeedPostDelete(ctx, recordUri)
 	case "app.bsky.feed.like":

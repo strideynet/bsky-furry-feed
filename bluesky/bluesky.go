@@ -3,8 +3,8 @@ package bluesky
 import (
 	"context"
 	"fmt"
+	indigoUtils "github.com/bluesky-social/indigo/util"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/bluesky-social/indigo/api/atproto"
@@ -126,15 +126,6 @@ func (c *Client) GetProfile(
 func (c *Client) Follow(
 	ctx context.Context, subjectDID string,
 ) error {
-	// {
-	// 	"collection":"app.bsky.graph.follow",
-	//	"repo":"did:plc:jdkvwye2lf4mingzk7qdebzc",
-	//	"record":{
-	//		"subject":"did:plc:nb5a2kg3gnrxe5wrw47grzac",
-	//		"createdAt":"2023-05-21T12:47:14.733Z",
-	//		"$type":"app.bsky.graph.follow"
-	//	}
-	// }
 	createRecord := &atproto.RepoCreateRecord_Input{
 		Collection: "app.bsky.graph.follow",
 		Repo:       c.xrpc.Auth.Did,
@@ -152,19 +143,33 @@ func (c *Client) Follow(
 	return nil
 }
 
-var ErrMalformedRecordUri = fmt.Errorf("malformed record uri")
-
-// Parse the namespace ID from a full record URI, such
-// as app.bsky.feed.post or app.bsky.graph.follow.
-//
-// Errors with a `ErrMalformedRecordUri` if the URI is
-// not a _parseable_ record URI.
-func ParseNamespaceID(recordUri string) (string, error) {
-	parts := strings.Split(recordUri, "/")
-
-	if len(parts) <= 3 {
-		return "", ErrMalformedRecordUri
+// Unfollow removes any app.bsky.graph.follow for the subject from the account
+// the client is authenticated as.
+func (c *Client) Unfollow(
+	ctx context.Context, subjectDID string,
+) error {
+	profile, err := c.GetProfile(ctx, subjectDID)
+	if err != nil {
+		return fmt.Errorf("getting profile: %w", err)
 	}
 
-	return parts[3], nil
+	if profile.Viewer.Following == nil {
+		// Nothing to unfollow
+		return nil
+	}
+
+	uri, err := indigoUtils.ParseAtUri(*profile.Viewer.Following)
+	if err != nil {
+		return fmt.Errorf("parsing following uri: %w", err)
+	}
+
+	err = atproto.RepoDeleteRecord(ctx, c.xrpc, &atproto.RepoDeleteRecord_Input{
+		Collection: "app.bsky.graph.follow",
+		Repo:       c.xrpc.Auth.Did,
+		Rkey:       uri.Rkey,
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
