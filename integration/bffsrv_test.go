@@ -2,6 +2,7 @@ package integration_test
 
 import (
 	"context"
+	"errors"
 	"github.com/bufbuild/connect-go"
 	"github.com/stretchr/testify/require"
 	"github.com/strideynet/bsky-furry-feed/api"
@@ -34,8 +35,8 @@ func TestIngester(t *testing.T) {
 	defer cancel()
 
 	db, err := integration.StartDatabase(ctx)
-	defer db.Close(context.Background())
 	require.NoError(t, err)
+	defer db.Close(context.Background())
 	didr := TestPLC(t)
 	pds := MustSetupPDS(t, ".tpds", didr)
 	pds.Run(t)
@@ -108,8 +109,8 @@ func TestAPI_CreateActor(t *testing.T) {
 
 	// TODO: Extract all of this to a testing harness
 	db, err := integration.StartDatabase(ctx)
-	defer db.Close(context.Background())
 	require.NoError(t, err)
+	defer db.Close(context.Background())
 	didr := TestPLC(t)
 	pds := MustSetupPDS(t, ".tpds", didr)
 	pds.Run(t)
@@ -143,11 +144,15 @@ func TestAPI_CreateActor(t *testing.T) {
 			},
 		},
 	)
+	require.NoError(t, err)
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	defer lis.Close()
 	go func() {
-		srv.Serve(lis)
+		err := srv.Serve(lis)
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			require.NoError(t, err)
+		}
 	}()
 	defer srv.Close()
 
