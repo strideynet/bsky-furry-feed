@@ -4,15 +4,19 @@ import (
 	"context"
 	"fmt"
 	"github.com/bluesky-social/indigo/xrpc"
+	"github.com/stretchr/testify/require"
+	"github.com/strideynet/bsky-furry-feed/store"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
 	"reflect"
-	"strings"
+	"testing"
 	"unsafe"
 
-	"github.com/bluesky-social/indigo/testing"
+	indigoTest "github.com/bluesky-social/indigo/testing"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/ipfs/go-log"
+	ipfsLog "github.com/ipfs/go-log"
 	"github.com/jackc/pgx/v5"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -20,22 +24,23 @@ import (
 )
 
 func init() {
-	log.SetAllLoggers(log.LevelDebug)
+	ipfsLog.SetAllLoggers(ipfsLog.LevelDebug)
 }
 
 // black magic to set an unexported field on the TestBGS
-func SetTrialHostOnBGS(tbgs *testing.TestBGS, rawHost string) {
+func setTrialHostOnBGS(tbgs *indigoTest.TestBGS, rawHost string) {
 	hosts := []string{rawHost}
 
 	trialHosts := reflect.ValueOf(tbgs).
 		Elem().FieldByName("tr").
 		Elem().FieldByName("TrialHosts")
 
-	reflect.NewAt(trialHosts.Type(), unsafe.Pointer(trialHosts.UnsafeAddr())).Elem().
-		Set(reflect.ValueOf(hosts))
+	reflect.NewAt(
+		trialHosts.Type(),
+		unsafe.Pointer(trialHosts.UnsafeAddr())).Elem().Set(reflect.ValueOf(hosts))
 }
 
-func ExtractClientFromTestUser(user *testing.TestUser) *xrpc.Client {
+func ExtractClientFromTestUser(user *indigoTest.TestUser) *xrpc.Client {
 	// This isn't exposed by indigo so we have to use reflection to access the
 	// client.
 	val := reflect.ValueOf(user).Elem().FieldByName("client")
@@ -43,12 +48,7 @@ func ExtractClientFromTestUser(user *testing.TestUser) *xrpc.Client {
 	return iface.(*xrpc.Client)
 }
 
-type Database struct {
-	container *postgres.PostgresContainer
-	url       string
-}
-
-func StartDatabase(ctx context.Context) (db *Database, err error) {
+func startDatabase(ctx context.Context) (close func(ctx context.Context) error, url string, err error) {
 	container, err := postgres.RunContainer(ctx,
 		postgres.WithDatabase("bff"),
 		postgres.WithUsername("bff"),
@@ -56,45 +56,26 @@ func StartDatabase(ctx context.Context) (db *Database, err error) {
 		testcontainers.WithWaitStrategy(wait.ForListeningPort("5432/tcp")),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("starting postgres container: %w", err)
+		return nil, "", fmt.Errorf("starting postgres container: %w", err)
 	}
 
 	port, err := container.MappedPort(ctx, "5432/tcp")
 	if err != nil {
-		return nil, fmt.Errorf("getting postgres port: %w", err)
+		return nil, "", fmt.Errorf("getting postgres port: %w", err)
 	}
 
 	host, err := container.Host(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("getting postgres host: %w", err)
+		return nil, "", fmt.Errorf("getting postgres host: %w", err)
 	}
 
-	return &Database{
-		container: container,
-		url:       fmt.Sprintf("postgres://bff:bff@%s:%d/bff?sslmode=disable", host, port.Int()),
-	}, nil
+	return func(ctx context.Context) error {
+		return container.Terminate(ctx)
+	}, fmt.Sprintf("postgres://bff:bff@%s:%d/bff?sslmode=disable", host, port.Int()), nil
 }
 
-func (db *Database) Close(ctx context.Context) error {
-	return db.container.Terminate(ctx)
-}
-
-func (db *Database) URL() string {
-	return db.url
-}
-
-func (db *Database) Connect(ctx context.Context) (*pgx.Conn, error) {
-	return pgx.Connect(ctx, db.URL())
-}
-
-func (db *Database) Refresh(ctx context.Context) error {
-	con, err := db.Connect(ctx)
-	if err != nil {
-		return fmt.Errorf("connecting to test database: %w", err)
-	}
-	defer con.Close(ctx)
-
-	migrator, err := migrate.New("file://../store/migrations", db.URL())
+func runMigrations(dbURL string) error {
+	migrator, err := migrate.New("file://../store/migrations", dbURL)
 	if err != nil {
 		return fmt.Errorf("initializing migration runner: %w", err)
 	}
@@ -103,25 +84,56 @@ func (db *Database) Refresh(ctx context.Context) error {
 		return fmt.Errorf("applying migrations: %w", err)
 	}
 
-	rows, err := con.Query(ctx, "SELECT table_name FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog', 'information_schema')")
-	if err != nil {
-		return fmt.Errorf("querying table names: %w", err)
-	}
-
-	results, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (s string, err error) {
-		err = row.Scan(&s)
-		return
-	})
-	if err != nil {
-		return fmt.Errorf("collecting table names into array: %w", err)
-	}
-
-	tables := strings.Join(results, ", ")
-
-	_, err = con.Exec(ctx, "TRUNCATE TABLE "+tables)
-	if err != nil {
-		return fmt.Errorf("truncating all tables: %v", err)
-	}
-
 	return nil
+}
+
+type Harness struct {
+	DBConn *pgx.Conn
+	PDS    *indigoTest.TestPDS
+	BGS    *indigoTest.TestBGS
+	Log    *zap.Logger
+	Store  *store.PGXStore
+}
+
+func StartHarness(ctx context.Context, t *testing.T) *Harness {
+	log := zaptest.NewLogger(t)
+
+	dbClose, dbURL, err := startDatabase(ctx)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, dbClose(context.Background()))
+	})
+
+	conn, err := pgx.Connect(ctx, dbURL)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, conn.Close(context.Background()))
+	})
+	require.NoError(t, runMigrations(dbURL))
+
+	didr := indigoTest.TestPLC(t)
+
+	pds := indigoTest.MustSetupPDS(t, ".tpds", didr)
+	pds.Run(t)
+	t.Cleanup(pds.Cleanup)
+
+	bgs := indigoTest.MustSetupBGS(t, didr)
+	bgs.Run(t)
+	setTrialHostOnBGS(bgs, pds.RawHost())
+
+	pgxStore, err := store.ConnectPGXStore(
+		ctx,
+		log.Named("store"),
+		&store.DirectConnector{URI: dbURL},
+	)
+	require.NoError(t, err)
+	t.Cleanup(pgxStore.Close)
+
+	return &Harness{
+		DBConn: conn,
+		BGS:    bgs,
+		PDS:    pds,
+		Log:    log,
+		Store:  pgxStore,
+	}
 }

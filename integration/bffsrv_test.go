@@ -9,13 +9,11 @@ import (
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/feed"
 	"github.com/strideynet/bsky-furry-feed/proto/bff/v1/bffv1pbconnect"
-	"go.uber.org/zap/zaptest"
 	"net"
 	"net/http"
 	"testing"
 	"time"
 
-	. "github.com/bluesky-social/indigo/testing"
 	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/strideynet/bsky-furry-feed/ingester"
@@ -30,32 +28,15 @@ func TestIngester(t *testing.T) {
 	}
 	t.Parallel()
 
-	log := zaptest.NewLogger(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	harness := integration.StartHarness(ctx, t)
 
-	db, err := integration.StartDatabase(ctx)
-	require.NoError(t, err)
-	defer db.Close(context.Background())
-	didr := TestPLC(t)
-	pds := MustSetupPDS(t, ".tpds", didr)
-	pds.Run(t)
-	defer pds.Cleanup()
-	bgs := MustSetupBGS(t, didr)
-	bgs.Run(t)
-	integration.SetTrialHostOnBGS(bgs, pds.RawHost())
+	bob := harness.PDS.MustNewUser(t, "bob.tpds")
+	furry := harness.PDS.MustNewUser(t, "furry.tpds")
 
-	bob := pds.MustNewUser(t, "bob.tpds")
-	furry := pds.MustNewUser(t, "furry.tpds")
-
-	require.NoError(t, db.Refresh(ctx))
-
-	// TODO: Extract all of this to a testing harness
-	poolConnector := &store.DirectConnector{URI: db.URL()}
-	pgxStore, err := store.ConnectPGXStore(ctx, log.Named("store"), poolConnector)
-	require.NoError(t, err)
-	cac := ingester.NewActorCache(log, pgxStore)
-	_, err = pgxStore.CreateActor(ctx, store.CreateActorOpts{
+	cac := ingester.NewActorCache(harness.Log, harness.Store)
+	_, err := harness.Store.CreateActor(ctx, store.CreateActorOpts{
 		Status:  bffv1pb.ActorStatus_ACTOR_STATUS_APPROVED,
 		Comment: "furry.tpds",
 		DID:     furry.DID(),
@@ -63,7 +44,7 @@ func TestIngester(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, cac.Sync(ctx))
 
-	fi := ingester.NewFirehoseIngester(log, pgxStore, cac, "ws://"+pds.RawHost())
+	fi := ingester.NewFirehoseIngester(harness.Log, harness.Store, cac, "ws://"+harness.PDS.RawHost())
 	ended := false
 	defer func() { ended = true }()
 	go func() {
@@ -76,13 +57,10 @@ func TestIngester(t *testing.T) {
 	ignoredPost := bob.Post(t, "lorem ipsum dolor sit amet")
 	trackedPost := furry.Post(t, "thank u bites u")
 
-	var postURIs []string
-
-	con, err := db.Connect(ctx)
-	require.NoError(t, err)
 	// ensure ingester has processed posts
+	var postURIs []string
 	require.Eventually(t, func() bool {
-		rows, err := con.Query(ctx, "select uri from candidate_posts")
+		rows, err := harness.DBConn.Query(ctx, "select uri from candidate_posts")
 		require.NoError(t, err)
 		postURIs, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (s string, err error) {
 			err = row.Scan(&s)
@@ -103,42 +81,26 @@ func TestAPI_CreateActor(t *testing.T) {
 	}
 	t.Parallel()
 
-	log := zaptest.NewLogger(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	harness := integration.StartHarness(ctx, t)
 
-	// TODO: Extract all of this to a testing harness
-	db, err := integration.StartDatabase(ctx)
-	require.NoError(t, err)
-	defer db.Close(context.Background())
-	didr := TestPLC(t)
-	pds := MustSetupPDS(t, ".tpds", didr)
-	pds.Run(t)
-	defer pds.Cleanup()
-	bgs := MustSetupBGS(t, didr)
-	bgs.Run(t)
-	integration.SetTrialHostOnBGS(bgs, pds.RawHost())
-	require.NoError(t, db.Refresh(ctx))
+	furryActor := harness.PDS.MustNewUser(t, "furry.tpds")
+	modActor := harness.PDS.MustNewUser(t, "mod.tpds")
+	_ = harness.PDS.MustNewUser(t, "bff.tpds")
 
-	furryActor := pds.MustNewUser(t, "furry.tpds")
-	modActor := pds.MustNewUser(t, "mod.tpds")
-	_ = pds.MustNewUser(t, "bff.tpds")
-
-	poolConnector := &store.DirectConnector{URI: db.URL()}
-	pgxStore, err := store.ConnectPGXStore(ctx, log.Named("store"), poolConnector)
-	require.NoError(t, err)
 	srv, err := api.New(
-		log,
+		harness.Log,
 		"",
 		"",
 		&feed.Service{},
-		pgxStore,
+		harness.Store,
 		&bluesky.Credentials{
 			Identifier: "bff.tpds",
 			Password:   "password",
 		},
 		&api.AuthEngine{
-			PDSHost: pds.HTTPHost(),
+			PDSHost: harness.PDS.HTTPHost(),
 			ModeratorDIDs: []string{
 				modActor.DID(),
 			},
