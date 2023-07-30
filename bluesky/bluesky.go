@@ -126,6 +126,16 @@ func (c *Client) GetProfile(
 func (c *Client) Follow(
 	ctx context.Context, subjectDID string,
 ) error {
+	profile, err := c.GetProfile(ctx, subjectDID)
+	if err != nil {
+		return fmt.Errorf("getting profile: %w", err)
+	}
+
+	if profile.Viewer.Following != nil {
+		// Already following - no need to follow.
+		return nil
+	}
+
 	createRecord := &atproto.RepoCreateRecord_Input{
 		Collection: "app.bsky.graph.follow",
 		Repo:       c.xrpc.Auth.Did,
@@ -136,9 +146,9 @@ func (c *Client) Follow(
 			},
 		},
 	}
-	_, err := atproto.RepoCreateRecord(ctx, c.xrpc, createRecord)
+	_, err = atproto.RepoCreateRecord(ctx, c.xrpc, createRecord)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating follow record: %w", err)
 	}
 	return nil
 }
@@ -169,7 +179,7 @@ func (c *Client) Unfollow(
 		Rkey:       uri.Rkey,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("deleting follow record: %w", err)
 	}
 	return nil
 }
