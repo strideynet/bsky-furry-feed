@@ -14,12 +14,20 @@ type ModerationServiceHandler struct {
 	store       *store.PGXStore
 	log         *zap.Logger
 	clientCache *cachedBlueSkyClient
+	authEngine  *AuthEngine
 }
 
 func (m *ModerationServiceHandler) BanActor(ctx context.Context, req *connect.Request[v1.BanActorRequest]) (*connect.Response[v1.BanActorResponse], error) {
-	authCtx, err := auth(ctx, req)
+	authCtx, err := m.authEngine.auth(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("authenticating: %w", err)
+	}
+
+	switch {
+	case req.Msg.ActorDid == "":
+		return nil, fmt.Errorf("actor_did is required")
+	case req.Msg.Reason == "":
+		return nil, fmt.Errorf("reason is required")
 	}
 
 	c, err := m.clientCache.Get(ctx)
@@ -53,9 +61,16 @@ func (m *ModerationServiceHandler) BanActor(ctx context.Context, req *connect.Re
 }
 
 func (m *ModerationServiceHandler) UnapproveActor(ctx context.Context, req *connect.Request[v1.UnapproveActorRequest]) (*connect.Response[v1.UnapproveActorResponse], error) {
-	authCtx, err := auth(ctx, req)
+	authCtx, err := m.authEngine.auth(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("authenticating: %w", err)
+	}
+
+	switch {
+	case req.Msg.ActorDid == "":
+		return nil, fmt.Errorf("actor_did is required")
+	case req.Msg.Reason == "":
+		return nil, fmt.Errorf("reason is required")
 	}
 
 	c, err := m.clientCache.Get(ctx)
@@ -95,9 +110,16 @@ func (m *ModerationServiceHandler) UnapproveActor(ctx context.Context, req *conn
 }
 
 func (m *ModerationServiceHandler) CreateActor(ctx context.Context, req *connect.Request[v1.CreateActorRequest]) (*connect.Response[v1.CreateActorResponse], error) {
-	authCtx, err := auth(ctx, req)
+	authCtx, err := m.authEngine.auth(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("authenticating: %w", err)
+	}
+
+	switch {
+	case req.Msg.ActorDid == "":
+		return nil, fmt.Errorf("actor_did is required")
+	case req.Msg.Reason == "":
+		return nil, fmt.Errorf("reason is required")
 	}
 
 	actor, err := m.store.CreateActor(ctx, store.CreateActorOpts{
@@ -123,7 +145,7 @@ func (m *ModerationServiceHandler) CreateActor(ctx context.Context, req *connect
 }
 
 func (m *ModerationServiceHandler) CreateCommentAuditEvent(ctx context.Context, req *connect.Request[v1.CreateCommentAuditEventRequest]) (*connect.Response[v1.CreateCommentAuditEventResponse], error) {
-	authCtx, err := auth(ctx, req)
+	authCtx, err := m.authEngine.auth(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("authenticating: %w", err)
 	}
@@ -153,7 +175,7 @@ func (m *ModerationServiceHandler) CreateCommentAuditEvent(ctx context.Context, 
 }
 
 func (m *ModerationServiceHandler) ListAuditEvents(ctx context.Context, req *connect.Request[v1.ListAuditEventsRequest]) (*connect.Response[v1.ListAuditEventsResponse], error) {
-	_, err := auth(ctx, req)
+	_, err := m.authEngine.auth(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("authenticating: %w", err)
 	}
@@ -178,7 +200,7 @@ func (m *ModerationServiceHandler) ListAuditEvents(ctx context.Context, req *con
 }
 
 func (m *ModerationServiceHandler) Ping(ctx context.Context, req *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error) {
-	authCtx, err := auth(ctx, req)
+	authCtx, err := m.authEngine.auth(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("authenticating: %w", err)
 	}
@@ -189,7 +211,7 @@ func (m *ModerationServiceHandler) Ping(ctx context.Context, req *connect.Reques
 }
 
 func (m *ModerationServiceHandler) ListActors(ctx context.Context, req *connect.Request[v1.ListActorsRequest]) (*connect.Response[v1.ListActorsResponse], error) {
-	_, err := auth(ctx, req)
+	_, err := m.authEngine.auth(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("authenticating: %w", err)
 	}
@@ -208,7 +230,7 @@ func (m *ModerationServiceHandler) ListActors(ctx context.Context, req *connect.
 }
 
 func (m *ModerationServiceHandler) GetActor(ctx context.Context, req *connect.Request[v1.GetActorRequest]) (*connect.Response[v1.GetActorResponse], error) {
-	_, err := auth(ctx, req)
+	_, err := m.authEngine.auth(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("authenticating: %w", err)
 	}
@@ -225,7 +247,7 @@ func (m *ModerationServiceHandler) GetActor(ctx context.Context, req *connect.Re
 }
 
 func (m *ModerationServiceHandler) ProcessApprovalQueue(ctx context.Context, req *connect.Request[v1.ProcessApprovalQueueRequest]) (*connect.Response[v1.ProcessApprovalQueueResponse], error) {
-	authCtx, err := auth(ctx, req)
+	authCtx, err := m.authEngine.auth(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("authenticating: %w", err)
 	}
@@ -292,5 +314,4 @@ func (m *ModerationServiceHandler) emitAudit(opts store.CreateAuditEventOpts) {
 	if err != nil {
 		m.log.Error("failed to emit audit event", zap.Error(err))
 	}
-	return
 }

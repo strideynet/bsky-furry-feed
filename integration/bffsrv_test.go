@@ -2,8 +2,10 @@ package integration_test
 
 import (
 	"context"
-	"flag"
 	"github.com/stretchr/testify/require"
+	"github.com/strideynet/bsky-furry-feed/api"
+	"github.com/strideynet/bsky-furry-feed/bluesky"
+	"go.uber.org/zap/zaptest"
 	"os"
 	"testing"
 	"time"
@@ -15,53 +17,27 @@ import (
 	"github.com/strideynet/bsky-furry-feed/integration"
 	bffv1pb "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store"
-	"go.uber.org/zap"
 )
 
-var log, _ = zap.NewDevelopment()
-var db *integration.Database
-
-func TestMain(m *testing.M) {
-	flag.Parse()
-	testing.Init()
-	if testing.Short() {
-		os.Exit(m.Run())
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-
-	var err error
-	db, err = integration.StartDatabase(ctx)
-	if err != nil {
-		log.Fatal("could not start integration database", zap.Error(err))
-	}
-
-	code := m.Run()
-
-	if err := db.Close(ctx); err != nil {
-		log.Fatal("could not remove test database", zap.Error(err))
-	}
-
-	os.Exit(code)
-}
-
-func TestIntegration(t *testing.T) {
+func TestIngester(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
 	}
+	t.Parallel()
 
+	log := zaptest.NewLogger(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	db, err := integration.StartDatabase(ctx)
+	defer db.Close(context.Background())
+	require.NoError(t, err)
 	didr := TestPLC(t)
-
 	pds := MustSetupPDS(t, ".tpds", didr)
 	pds.Run(t)
-
+	defer pds.Cleanup()
 	bgs := MustSetupBGS(t, didr)
 	bgs.Run(t)
-
 	integration.SetTrialHostOnBGS(bgs, pds.RawHost())
 
 	bob := pds.MustNewUser(t, "bob.tpds")
@@ -115,4 +91,55 @@ func TestIntegration(t *testing.T) {
 	assert.Equal(t, 1, len(postURIs))
 	assert.Contains(t, postURIs, trackedPost.Uri)
 	assert.NotContains(t, postURIs, ignoredPost.Uri)
+}
+
+func TestAPI_CreateActor(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+	t.Parallel()
+
+	log := zaptest.NewLogger(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// TODO: Extract all of this to a testing harness
+	db, err := integration.StartDatabase(ctx)
+	defer db.Close(context.Background())
+	require.NoError(t, err)
+	didr := TestPLC(t)
+	pds := MustSetupPDS(t, ".tpds", didr)
+	pds.Run(t)
+	defer pds.Cleanup()
+	bgs := MustSetupBGS(t, didr)
+	bgs.Run(t)
+	integration.SetTrialHostOnBGS(bgs, pds.RawHost())
+
+	modActor := pds.MustNewUser(t, "mod.tpds")
+	_ = pds.MustNewUser(t, "bff.tpds")
+
+	poolConnector := &store.DirectConnector{URI: db.URL()}
+	pgxStore, err := store.ConnectPGXStore(ctx, log.Named("store"), poolConnector)
+	require.NoError(t, err)
+	srv, err := api.New(
+		log,
+		"",
+		"",
+		nil,
+		pgxStore,
+		&bluesky.Credentials{
+			Identifier: "bff.tpds",
+			Password:   "password",
+		},
+		&api.AuthEngine{
+			PDSHost: pds.HTTPHost(),
+			ModeratorDIDs: []string{
+				modActor.DID(),
+			},
+		},
+	)
+	require.NoError(t, err)
+	require.NoError(t, srv.ListenAndServe())
+	defer srv.Close()
+
 }

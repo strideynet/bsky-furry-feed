@@ -9,17 +9,9 @@ import (
 	"strings"
 )
 
-// TODO: Add Roles to Candidate Actor schema (or a seperate schema for actual
-// feed users)
-var moderatorDIDs = []string{
-	// Noah
-	"did:plc:dllwm3fafh66ktjofzxhylwk",
-	// Newton
-	"did:plc:ouytv644apqbu2pm7fnp7qrj",
-	// Kio
-	"did:plc:o74zbazekchwk2v4twee4ekb",
-	// Kev
-	"did:plc:bv2ckchoc76yobfhkrrie4g6",
+type AuthEngine struct {
+	ModeratorDIDs []string
+	PDSHost       string
 }
 
 type authContext struct {
@@ -28,7 +20,7 @@ type authContext struct {
 
 // TODO: Allow a authOpts to be passed in with a description of attempted
 // action.
-func auth(ctx context.Context, req connect.AnyRequest) (*authContext, error) {
+func (a *AuthEngine) auth(ctx context.Context, req connect.AnyRequest) (*authContext, error) {
 	authHeader := req.Header().Get("Authorization")
 	if authHeader == "" {
 		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("no token provided"))
@@ -46,11 +38,11 @@ func auth(ctx context.Context, req connect.AnyRequest) (*authContext, error) {
 	// Check the presented token is valid against the real bsky.
 	// This also lets us introspect information about the user - we can't just
 	// parse the JWT as they do not use public key signing for the JWT.
-	_, tokenDID, err := bluesky.ClientFromToken(ctx, authParts[1])
+	_, tokenDID, err := bluesky.ClientFromToken(ctx, a.PDSHost, authParts[1])
 	if err != nil {
 		return nil, fmt.Errorf("verifying token: %w", err)
 	}
-	if !slices.Contains(moderatorDIDs, tokenDID) {
+	if !slices.Contains(a.ModeratorDIDs, tokenDID) {
 		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("did not associated with moderator role: %s", tokenDID))
 	}
 

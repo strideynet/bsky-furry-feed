@@ -34,7 +34,7 @@ func getBlueskyClient(ctx context.Context) (*bluesky.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return bluesky.ClientFromCredentials(ctx, creds)
+	return bluesky.ClientFromCredentials(ctx, bluesky.DefaultPDSHost, creds)
 }
 
 func main() {

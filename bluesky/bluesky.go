@@ -13,6 +13,8 @@ import (
 	"github.com/bluesky-social/indigo/xrpc"
 )
 
+const DefaultPDSHost = "https://bsky.social"
+
 type Client struct {
 	xrpc *xrpc.Client
 }
@@ -35,17 +37,17 @@ func CredentialsFromEnv() (*Credentials, error) {
 	return &Credentials{Identifier: identifier, Password: password}, nil
 }
 
-func baseXRPC() *xrpc.Client {
+func baseXRPC(pdsHost string) *xrpc.Client {
 	// TODO: Introduce a ClientConfig we can control these with
 	ua := "github.com/strideynet/bluesky-furry-feed"
 	return &xrpc.Client{
-		Host:      "https://bsky.social",
+		Host:      pdsHost,
 		UserAgent: &ua,
 	}
 }
 
-func ClientFromCredentials(ctx context.Context, credentials *Credentials) (*Client, error) {
-	xrpcClient := baseXRPC()
+func ClientFromCredentials(ctx context.Context, pdsHost string, credentials *Credentials) (*Client, error) {
+	xrpcClient := baseXRPC(pdsHost)
 	out, err := atproto.ServerCreateSession(
 		ctx,
 		xrpcClient,
@@ -72,8 +74,8 @@ func ClientFromCredentials(ctx context.Context, credentials *Credentials) (*Clie
 // GetSession to verify the token.
 //
 // On success, an authenticated client is returned along with the JWTs DID
-func ClientFromToken(ctx context.Context, token string) (*Client, string, error) {
-	xrpcClient := baseXRPC()
+func ClientFromToken(ctx context.Context, pdsHost string, token string) (*Client, string, error) {
+	xrpcClient := baseXRPC(pdsHost)
 	xrpcClient.Auth = &xrpc.AuthInfo{
 		AccessJwt: token,
 	}
