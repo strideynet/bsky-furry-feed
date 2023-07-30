@@ -3,8 +3,11 @@ import { createConnectTransport } from "@bufbuild/connect-web";
 import { ModerationService } from "../../proto/bff/v1/moderation_service_connectweb";
 import { createRegistry } from "@bufbuild/protobuf";
 import {
+  BanActorAuditPayload,
   CommentAuditPayload,
+  CreateActorAuditPayload,
   ProcessApprovalQueueAuditPayload,
+  UnapproveActorAuditPayload,
 } from "../../proto/bff/v1/moderation_service_pb";
 
 export default async function () {
@@ -24,8 +27,11 @@ export default async function () {
 
     jsonOptions: {
       typeRegistry: createRegistry(
+        BanActorAuditPayload,
+        CommentAuditPayload,
+        CreateActorAuditPayload,
         ProcessApprovalQueueAuditPayload,
-        CommentAuditPayload
+        UnapproveActorAuditPayload
       ),
     },
   });
