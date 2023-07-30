@@ -323,7 +323,7 @@ func (fi *FirehoseIngester) handleRecordDelete(
 	case "app.bsky.feed.like":
 		err = fi.handleFeedLikeDelete(ctx, recordUri)
 	case "app.bsky.graph.follow":
-		err = fi.handleFeedFollowDelete(ctx, recordUri)
+		err = fi.handleGraphFollowDelete(ctx, recordUri)
 	default:
 		span.AddEvent("ignoring record due to unrecognized type")
 	}
