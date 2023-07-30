@@ -49,6 +49,19 @@ func getMode() (mode, error) {
 	}
 }
 
+// TODO: Add Roles to Candidate Actor schema (or a seperate schema for actual
+// feed users)
+var moderatorDIDs = []string{
+	// Noah
+	"did:plc:dllwm3fafh66ktjofzxhylwk",
+	// Newton
+	"did:plc:ouytv644apqbu2pm7fnp7qrj",
+	// Kio
+	"did:plc:o74zbazekchwk2v4twee4ekb",
+	// Kev
+	"did:plc:bv2ckchoc76yobfhkrrie4g6",
+}
+
 func main() {
 	log, _ := zap.NewProduction()
 
@@ -205,6 +218,10 @@ func runE(log *zap.Logger) error {
 			feedService,
 			pgxStore,
 			bskyCredentials,
+			&api.AuthEngine{
+				ModeratorDIDs: moderatorDIDs,
+				PDSHost:       bluesky.DefaultPDSHost,
+			},
 		)
 		if err != nil {
 			return fmt.Errorf("creating feed server: %w", err)

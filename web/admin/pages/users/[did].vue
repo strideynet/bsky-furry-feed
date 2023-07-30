@@ -12,7 +12,7 @@ const { data: subject } = await agent.getProfile({
 const auditEvents: Ref<AuditEvent[]> = ref([]);
 
 async function loadEvents() {
-  const response = await api.listAuditEvents({ subjectDid: subject.did });
+  const response = await api.listAuditEvents({ filterSubjectDid: subject.did });
   auditEvents.value = response.auditEvents;
 }
 

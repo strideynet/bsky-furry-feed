@@ -3,8 +3,8 @@ package bluesky
 import (
 	"context"
 	"fmt"
+	indigoUtils "github.com/bluesky-social/indigo/util"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/bluesky-social/indigo/api/atproto"
@@ -12,6 +12,8 @@ import (
 	"github.com/bluesky-social/indigo/lex/util"
 	"github.com/bluesky-social/indigo/xrpc"
 )
+
+const DefaultPDSHost = "https://bsky.social"
 
 type Client struct {
 	xrpc *xrpc.Client
@@ -35,17 +37,17 @@ func CredentialsFromEnv() (*Credentials, error) {
 	return &Credentials{Identifier: identifier, Password: password}, nil
 }
 
-func baseXRPC() *xrpc.Client {
+func baseXRPC(pdsHost string) *xrpc.Client {
 	// TODO: Introduce a ClientConfig we can control these with
 	ua := "github.com/strideynet/bluesky-furry-feed"
 	return &xrpc.Client{
-		Host:      "https://bsky.social",
+		Host:      pdsHost,
 		UserAgent: &ua,
 	}
 }
 
-func ClientFromCredentials(ctx context.Context, credentials *Credentials) (*Client, error) {
-	xrpcClient := baseXRPC()
+func ClientFromCredentials(ctx context.Context, pdsHost string, credentials *Credentials) (*Client, error) {
+	xrpcClient := baseXRPC(pdsHost)
 	out, err := atproto.ServerCreateSession(
 		ctx,
 		xrpcClient,
@@ -72,8 +74,8 @@ func ClientFromCredentials(ctx context.Context, credentials *Credentials) (*Clie
 // GetSession to verify the token.
 //
 // On success, an authenticated client is returned along with the JWTs DID
-func ClientFromToken(ctx context.Context, token string) (*Client, string, error) {
-	xrpcClient := baseXRPC()
+func ClientFromToken(ctx context.Context, pdsHost string, token string) (*Client, string, error) {
+	xrpcClient := baseXRPC(pdsHost)
 	xrpcClient.Auth = &xrpc.AuthInfo{
 		AccessJwt: token,
 	}
@@ -126,15 +128,16 @@ func (c *Client) GetProfile(
 func (c *Client) Follow(
 	ctx context.Context, subjectDID string,
 ) error {
-	// {
-	// 	"collection":"app.bsky.graph.follow",
-	//	"repo":"did:plc:jdkvwye2lf4mingzk7qdebzc",
-	//	"record":{
-	//		"subject":"did:plc:nb5a2kg3gnrxe5wrw47grzac",
-	//		"createdAt":"2023-05-21T12:47:14.733Z",
-	//		"$type":"app.bsky.graph.follow"
-	//	}
-	// }
+	profile, err := c.GetProfile(ctx, subjectDID)
+	if err != nil {
+		return fmt.Errorf("getting profile: %w", err)
+	}
+
+	if profile.Viewer.Following != nil {
+		// Already following - no need to follow.
+		return nil
+	}
+
 	createRecord := &atproto.RepoCreateRecord_Input{
 		Collection: "app.bsky.graph.follow",
 		Repo:       c.xrpc.Auth.Did,
@@ -145,26 +148,40 @@ func (c *Client) Follow(
 			},
 		},
 	}
-	_, err := atproto.RepoCreateRecord(ctx, c.xrpc, createRecord)
+	_, err = atproto.RepoCreateRecord(ctx, c.xrpc, createRecord)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating follow record: %w", err)
 	}
 	return nil
 }
 
-var ErrMalformedRecordUri = fmt.Errorf("malformed record uri")
-
-// Parse the namespace ID from a full record URI, such
-// as app.bsky.feed.post or app.bsky.graph.follow.
-//
-// Errors with a `ErrMalformedRecordUri` if the URI is
-// not a _parseable_ record URI.
-func ParseNamespaceID(recordUri string) (string, error) {
-	parts := strings.Split(recordUri, "/")
-
-	if len(parts) <= 3 {
-		return "", ErrMalformedRecordUri
+// Unfollow removes any app.bsky.graph.follow for the subject from the account
+// the client is authenticated as.
+func (c *Client) Unfollow(
+	ctx context.Context, subjectDID string,
+) error {
+	profile, err := c.GetProfile(ctx, subjectDID)
+	if err != nil {
+		return fmt.Errorf("getting profile: %w", err)
 	}
 
-	return parts[3], nil
+	if profile.Viewer.Following == nil {
+		// Nothing to unfollow
+		return nil
+	}
+
+	uri, err := indigoUtils.ParseAtUri(*profile.Viewer.Following)
+	if err != nil {
+		return fmt.Errorf("parsing following uri: %w", err)
+	}
+
+	err = atproto.RepoDeleteRecord(ctx, c.xrpc, &atproto.RepoDeleteRecord_Input{
+		Collection: "app.bsky.graph.follow",
+		Repo:       c.xrpc.Auth.Did,
+		Rkey:       uri.Rkey,
+	})
+	if err != nil {
+		return fmt.Errorf("deleting follow record: %w", err)
+	}
+	return nil
 }

@@ -239,9 +239,12 @@ func (s *PGXStore) UpdateActor(ctx context.Context, opts UpdateActorOpts) (out *
 	if err != nil {
 		return nil, fmt.Errorf("converting actor: %w", err)
 	}
-	err = opts.Predicate(actor)
-	if err != nil {
-		return nil, fmt.Errorf("update predicate: %w", err)
+
+	if opts.Predicate != nil {
+		err = opts.Predicate(actor)
+		if err != nil {
+			return nil, fmt.Errorf("update predicate: %w", err)
+		}
 	}
 
 	status, err := actorStatusFromProto(opts.UpdateStatus)

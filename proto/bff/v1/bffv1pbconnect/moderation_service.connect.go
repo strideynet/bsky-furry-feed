@@ -27,12 +27,24 @@ const (
 
 // ModerationServiceClient is a client for the bff.v1.ModerationService service.
 type ModerationServiceClient interface {
+	// Ping is a test RPC that checks that the user is authenticated and then
+	// returns an empty response. Ideal for health checking the moderation service.
 	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
-	GetApprovalQueue(context.Context, *connect_go.Request[v1.GetApprovalQueueRequest]) (*connect_go.Response[v1.GetApprovalQueueResponse], error)
-	// TODO: Refactor ProcessApprovalQueue to something more like "ApproveActor"
+	// TODO: Refactor ProcessApprovalQueue to something more like "ProcessPendingActor"
 	ProcessApprovalQueue(context.Context, *connect_go.Request[v1.ProcessApprovalQueueRequest]) (*connect_go.Response[v1.ProcessApprovalQueueResponse], error)
+	// ListActors fetches multiple actors from the database. It allows this to be
+	// filtered by certain attributes.
 	ListActors(context.Context, *connect_go.Request[v1.ListActorsRequest]) (*connect_go.Response[v1.ListActorsResponse], error)
+	// GetActor fetches a single actor from the database.
 	GetActor(context.Context, *connect_go.Request[v1.GetActorRequest]) (*connect_go.Response[v1.GetActorResponse], error)
+	// BanActor changes an actors status to "banned".
+	// Actor can be in any status before they are banned.
+	BanActor(context.Context, *connect_go.Request[v1.BanActorRequest]) (*connect_go.Response[v1.BanActorResponse], error)
+	// UnapproveActor changes an actor from "approved" status to "none" status.
+	UnapproveActor(context.Context, *connect_go.Request[v1.UnapproveActorRequest]) (*connect_go.Response[v1.UnapproveActorResponse], error)
+	// CreateActor creates a database entry for an actor who does not currently exist.
+	// By default, their status will be set to none.
+	CreateActor(context.Context, *connect_go.Request[v1.CreateActorRequest]) (*connect_go.Response[v1.CreateActorResponse], error)
 	ListAuditEvents(context.Context, *connect_go.Request[v1.ListAuditEventsRequest]) (*connect_go.Response[v1.ListAuditEventsResponse], error)
 	CreateCommentAuditEvent(context.Context, *connect_go.Request[v1.CreateCommentAuditEventRequest]) (*connect_go.Response[v1.CreateCommentAuditEventResponse], error)
 }
@@ -52,11 +64,6 @@ func NewModerationServiceClient(httpClient connect_go.HTTPClient, baseURL string
 			baseURL+"/bff.v1.ModerationService/Ping",
 			opts...,
 		),
-		getApprovalQueue: connect_go.NewClient[v1.GetApprovalQueueRequest, v1.GetApprovalQueueResponse](
-			httpClient,
-			baseURL+"/bff.v1.ModerationService/GetApprovalQueue",
-			opts...,
-		),
 		processApprovalQueue: connect_go.NewClient[v1.ProcessApprovalQueueRequest, v1.ProcessApprovalQueueResponse](
 			httpClient,
 			baseURL+"/bff.v1.ModerationService/ProcessApprovalQueue",
@@ -70,6 +77,21 @@ func NewModerationServiceClient(httpClient connect_go.HTTPClient, baseURL string
 		getActor: connect_go.NewClient[v1.GetActorRequest, v1.GetActorResponse](
 			httpClient,
 			baseURL+"/bff.v1.ModerationService/GetActor",
+			opts...,
+		),
+		banActor: connect_go.NewClient[v1.BanActorRequest, v1.BanActorResponse](
+			httpClient,
+			baseURL+"/bff.v1.ModerationService/BanActor",
+			opts...,
+		),
+		unapproveActor: connect_go.NewClient[v1.UnapproveActorRequest, v1.UnapproveActorResponse](
+			httpClient,
+			baseURL+"/bff.v1.ModerationService/UnapproveActor",
+			opts...,
+		),
+		createActor: connect_go.NewClient[v1.CreateActorRequest, v1.CreateActorResponse](
+			httpClient,
+			baseURL+"/bff.v1.ModerationService/CreateActor",
 			opts...,
 		),
 		listAuditEvents: connect_go.NewClient[v1.ListAuditEventsRequest, v1.ListAuditEventsResponse](
@@ -88,10 +110,12 @@ func NewModerationServiceClient(httpClient connect_go.HTTPClient, baseURL string
 // moderationServiceClient implements ModerationServiceClient.
 type moderationServiceClient struct {
 	ping                    *connect_go.Client[v1.PingRequest, v1.PingResponse]
-	getApprovalQueue        *connect_go.Client[v1.GetApprovalQueueRequest, v1.GetApprovalQueueResponse]
 	processApprovalQueue    *connect_go.Client[v1.ProcessApprovalQueueRequest, v1.ProcessApprovalQueueResponse]
 	listActors              *connect_go.Client[v1.ListActorsRequest, v1.ListActorsResponse]
 	getActor                *connect_go.Client[v1.GetActorRequest, v1.GetActorResponse]
+	banActor                *connect_go.Client[v1.BanActorRequest, v1.BanActorResponse]
+	unapproveActor          *connect_go.Client[v1.UnapproveActorRequest, v1.UnapproveActorResponse]
+	createActor             *connect_go.Client[v1.CreateActorRequest, v1.CreateActorResponse]
 	listAuditEvents         *connect_go.Client[v1.ListAuditEventsRequest, v1.ListAuditEventsResponse]
 	createCommentAuditEvent *connect_go.Client[v1.CreateCommentAuditEventRequest, v1.CreateCommentAuditEventResponse]
 }
@@ -99,11 +123,6 @@ type moderationServiceClient struct {
 // Ping calls bff.v1.ModerationService.Ping.
 func (c *moderationServiceClient) Ping(ctx context.Context, req *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error) {
 	return c.ping.CallUnary(ctx, req)
-}
-
-// GetApprovalQueue calls bff.v1.ModerationService.GetApprovalQueue.
-func (c *moderationServiceClient) GetApprovalQueue(ctx context.Context, req *connect_go.Request[v1.GetApprovalQueueRequest]) (*connect_go.Response[v1.GetApprovalQueueResponse], error) {
-	return c.getApprovalQueue.CallUnary(ctx, req)
 }
 
 // ProcessApprovalQueue calls bff.v1.ModerationService.ProcessApprovalQueue.
@@ -121,6 +140,21 @@ func (c *moderationServiceClient) GetActor(ctx context.Context, req *connect_go.
 	return c.getActor.CallUnary(ctx, req)
 }
 
+// BanActor calls bff.v1.ModerationService.BanActor.
+func (c *moderationServiceClient) BanActor(ctx context.Context, req *connect_go.Request[v1.BanActorRequest]) (*connect_go.Response[v1.BanActorResponse], error) {
+	return c.banActor.CallUnary(ctx, req)
+}
+
+// UnapproveActor calls bff.v1.ModerationService.UnapproveActor.
+func (c *moderationServiceClient) UnapproveActor(ctx context.Context, req *connect_go.Request[v1.UnapproveActorRequest]) (*connect_go.Response[v1.UnapproveActorResponse], error) {
+	return c.unapproveActor.CallUnary(ctx, req)
+}
+
+// CreateActor calls bff.v1.ModerationService.CreateActor.
+func (c *moderationServiceClient) CreateActor(ctx context.Context, req *connect_go.Request[v1.CreateActorRequest]) (*connect_go.Response[v1.CreateActorResponse], error) {
+	return c.createActor.CallUnary(ctx, req)
+}
+
 // ListAuditEvents calls bff.v1.ModerationService.ListAuditEvents.
 func (c *moderationServiceClient) ListAuditEvents(ctx context.Context, req *connect_go.Request[v1.ListAuditEventsRequest]) (*connect_go.Response[v1.ListAuditEventsResponse], error) {
 	return c.listAuditEvents.CallUnary(ctx, req)
@@ -133,12 +167,24 @@ func (c *moderationServiceClient) CreateCommentAuditEvent(ctx context.Context, r
 
 // ModerationServiceHandler is an implementation of the bff.v1.ModerationService service.
 type ModerationServiceHandler interface {
+	// Ping is a test RPC that checks that the user is authenticated and then
+	// returns an empty response. Ideal for health checking the moderation service.
 	Ping(context.Context, *connect_go.Request[v1.PingRequest]) (*connect_go.Response[v1.PingResponse], error)
-	GetApprovalQueue(context.Context, *connect_go.Request[v1.GetApprovalQueueRequest]) (*connect_go.Response[v1.GetApprovalQueueResponse], error)
-	// TODO: Refactor ProcessApprovalQueue to something more like "ApproveActor"
+	// TODO: Refactor ProcessApprovalQueue to something more like "ProcessPendingActor"
 	ProcessApprovalQueue(context.Context, *connect_go.Request[v1.ProcessApprovalQueueRequest]) (*connect_go.Response[v1.ProcessApprovalQueueResponse], error)
+	// ListActors fetches multiple actors from the database. It allows this to be
+	// filtered by certain attributes.
 	ListActors(context.Context, *connect_go.Request[v1.ListActorsRequest]) (*connect_go.Response[v1.ListActorsResponse], error)
+	// GetActor fetches a single actor from the database.
 	GetActor(context.Context, *connect_go.Request[v1.GetActorRequest]) (*connect_go.Response[v1.GetActorResponse], error)
+	// BanActor changes an actors status to "banned".
+	// Actor can be in any status before they are banned.
+	BanActor(context.Context, *connect_go.Request[v1.BanActorRequest]) (*connect_go.Response[v1.BanActorResponse], error)
+	// UnapproveActor changes an actor from "approved" status to "none" status.
+	UnapproveActor(context.Context, *connect_go.Request[v1.UnapproveActorRequest]) (*connect_go.Response[v1.UnapproveActorResponse], error)
+	// CreateActor creates a database entry for an actor who does not currently exist.
+	// By default, their status will be set to none.
+	CreateActor(context.Context, *connect_go.Request[v1.CreateActorRequest]) (*connect_go.Response[v1.CreateActorResponse], error)
 	ListAuditEvents(context.Context, *connect_go.Request[v1.ListAuditEventsRequest]) (*connect_go.Response[v1.ListAuditEventsResponse], error)
 	CreateCommentAuditEvent(context.Context, *connect_go.Request[v1.CreateCommentAuditEventRequest]) (*connect_go.Response[v1.CreateCommentAuditEventResponse], error)
 }
@@ -155,11 +201,6 @@ func NewModerationServiceHandler(svc ModerationServiceHandler, opts ...connect_g
 		svc.Ping,
 		opts...,
 	))
-	mux.Handle("/bff.v1.ModerationService/GetApprovalQueue", connect_go.NewUnaryHandler(
-		"/bff.v1.ModerationService/GetApprovalQueue",
-		svc.GetApprovalQueue,
-		opts...,
-	))
 	mux.Handle("/bff.v1.ModerationService/ProcessApprovalQueue", connect_go.NewUnaryHandler(
 		"/bff.v1.ModerationService/ProcessApprovalQueue",
 		svc.ProcessApprovalQueue,
@@ -173,6 +214,21 @@ func NewModerationServiceHandler(svc ModerationServiceHandler, opts ...connect_g
 	mux.Handle("/bff.v1.ModerationService/GetActor", connect_go.NewUnaryHandler(
 		"/bff.v1.ModerationService/GetActor",
 		svc.GetActor,
+		opts...,
+	))
+	mux.Handle("/bff.v1.ModerationService/BanActor", connect_go.NewUnaryHandler(
+		"/bff.v1.ModerationService/BanActor",
+		svc.BanActor,
+		opts...,
+	))
+	mux.Handle("/bff.v1.ModerationService/UnapproveActor", connect_go.NewUnaryHandler(
+		"/bff.v1.ModerationService/UnapproveActor",
+		svc.UnapproveActor,
+		opts...,
+	))
+	mux.Handle("/bff.v1.ModerationService/CreateActor", connect_go.NewUnaryHandler(
+		"/bff.v1.ModerationService/CreateActor",
+		svc.CreateActor,
 		opts...,
 	))
 	mux.Handle("/bff.v1.ModerationService/ListAuditEvents", connect_go.NewUnaryHandler(
@@ -195,10 +251,6 @@ func (UnimplementedModerationServiceHandler) Ping(context.Context, *connect_go.R
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("bff.v1.ModerationService.Ping is not implemented"))
 }
 
-func (UnimplementedModerationServiceHandler) GetApprovalQueue(context.Context, *connect_go.Request[v1.GetApprovalQueueRequest]) (*connect_go.Response[v1.GetApprovalQueueResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("bff.v1.ModerationService.GetApprovalQueue is not implemented"))
-}
-
 func (UnimplementedModerationServiceHandler) ProcessApprovalQueue(context.Context, *connect_go.Request[v1.ProcessApprovalQueueRequest]) (*connect_go.Response[v1.ProcessApprovalQueueResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("bff.v1.ModerationService.ProcessApprovalQueue is not implemented"))
 }
@@ -209,6 +261,18 @@ func (UnimplementedModerationServiceHandler) ListActors(context.Context, *connec
 
 func (UnimplementedModerationServiceHandler) GetActor(context.Context, *connect_go.Request[v1.GetActorRequest]) (*connect_go.Response[v1.GetActorResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("bff.v1.ModerationService.GetActor is not implemented"))
+}
+
+func (UnimplementedModerationServiceHandler) BanActor(context.Context, *connect_go.Request[v1.BanActorRequest]) (*connect_go.Response[v1.BanActorResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("bff.v1.ModerationService.BanActor is not implemented"))
+}
+
+func (UnimplementedModerationServiceHandler) UnapproveActor(context.Context, *connect_go.Request[v1.UnapproveActorRequest]) (*connect_go.Response[v1.UnapproveActorResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("bff.v1.ModerationService.UnapproveActor is not implemented"))
+}
+
+func (UnimplementedModerationServiceHandler) CreateActor(context.Context, *connect_go.Request[v1.CreateActorRequest]) (*connect_go.Response[v1.CreateActorResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("bff.v1.ModerationService.CreateActor is not implemented"))
 }
 
 func (UnimplementedModerationServiceHandler) ListAuditEvents(context.Context, *connect_go.Request[v1.ListAuditEventsRequest]) (*connect_go.Response[v1.ListAuditEventsResponse], error) {

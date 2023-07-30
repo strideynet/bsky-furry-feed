@@ -56,6 +56,7 @@ func New(
 	feedRegistry *feed.Service,
 	pgxStore *store.PGXStore,
 	bskyCredentials *bluesky.Credentials,
+	authEngine *AuthEngine,
 ) (*http.Server, error) {
 	mux := &http.ServeMux{}
 
@@ -88,6 +89,7 @@ func New(
 			creds:            bskyCredentials,
 			renewalThreshold: time.Minute * 5,
 		},
+		authEngine: authEngine,
 	}
 
 	mux.Handle(

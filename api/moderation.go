@@ -14,10 +14,138 @@ type ModerationServiceHandler struct {
 	store       *store.PGXStore
 	log         *zap.Logger
 	clientCache *cachedBlueSkyClient
+	authEngine  *AuthEngine
+}
+
+func (m *ModerationServiceHandler) BanActor(ctx context.Context, req *connect.Request[v1.BanActorRequest]) (*connect.Response[v1.BanActorResponse], error) {
+	authCtx, err := m.authEngine.auth(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("authenticating: %w", err)
+	}
+
+	switch {
+	case req.Msg.ActorDid == "":
+		return nil, fmt.Errorf("actor_did is required")
+	case req.Msg.Reason == "":
+		return nil, fmt.Errorf("reason is required")
+	}
+
+	c, err := m.clientCache.Get(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("getting bsky client: %w", err)
+	}
+
+	actor, err := m.store.UpdateActor(ctx, store.UpdateActorOpts{
+		DID:          req.Msg.ActorDid,
+		UpdateStatus: v1.ActorStatus_ACTOR_STATUS_BANNED,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("updating actor: %w", err)
+	}
+
+	go m.emitAudit(store.CreateAuditEventOpts{
+		Payload: &v1.BanActorAuditPayload{
+			Reason: req.Msg.Reason,
+		},
+		ActorDID:   authCtx.DID,
+		SubjectDID: req.Msg.ActorDid,
+	})
+
+	if err := c.Unfollow(ctx, req.Msg.ActorDid); err != nil {
+		return nil, fmt.Errorf("unfollowing actor: %w", err)
+	}
+
+	return connect.NewResponse(&v1.BanActorResponse{
+		Actor: actor,
+	}), nil
+}
+
+func (m *ModerationServiceHandler) UnapproveActor(ctx context.Context, req *connect.Request[v1.UnapproveActorRequest]) (*connect.Response[v1.UnapproveActorResponse], error) {
+	authCtx, err := m.authEngine.auth(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("authenticating: %w", err)
+	}
+
+	switch {
+	case req.Msg.ActorDid == "":
+		return nil, fmt.Errorf("actor_did is required")
+	case req.Msg.Reason == "":
+		return nil, fmt.Errorf("reason is required")
+	}
+
+	c, err := m.clientCache.Get(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("getting bsky client: %w", err)
+	}
+
+	actor, err := m.store.UpdateActor(ctx, store.UpdateActorOpts{
+		DID: req.Msg.ActorDid,
+		Predicate: func(actor *v1.Actor) error {
+			if actor.Status != v1.ActorStatus_ACTOR_STATUS_APPROVED {
+				return fmt.Errorf("candidate actor status was %q not %q", actor.Status, v1.ActorStatus_ACTOR_STATUS_APPROVED)
+			}
+			return nil
+		},
+		UpdateStatus: v1.ActorStatus_ACTOR_STATUS_NONE,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("updating actor: %w", err)
+	}
+
+	go m.emitAudit(store.CreateAuditEventOpts{
+		Payload: &v1.UnapproveActorAuditPayload{
+			Reason: req.Msg.Reason,
+		},
+		ActorDID:   authCtx.DID,
+		SubjectDID: req.Msg.ActorDid,
+	})
+
+	if err := c.Unfollow(ctx, req.Msg.ActorDid); err != nil {
+		return nil, fmt.Errorf("unfollowing actor: %w", err)
+	}
+
+	return connect.NewResponse(&v1.UnapproveActorResponse{
+		Actor: actor,
+	}), nil
+}
+
+func (m *ModerationServiceHandler) CreateActor(ctx context.Context, req *connect.Request[v1.CreateActorRequest]) (*connect.Response[v1.CreateActorResponse], error) {
+	authCtx, err := m.authEngine.auth(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("authenticating: %w", err)
+	}
+
+	switch {
+	case req.Msg.ActorDid == "":
+		return nil, fmt.Errorf("actor_did is required")
+	case req.Msg.Reason == "":
+		return nil, fmt.Errorf("reason is required")
+	}
+
+	actor, err := m.store.CreateActor(ctx, store.CreateActorOpts{
+		Status:  v1.ActorStatus_ACTOR_STATUS_NONE,
+		DID:     req.Msg.ActorDid,
+		Comment: "",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("creating actor: %w", err)
+	}
+
+	go m.emitAudit(store.CreateAuditEventOpts{
+		Payload: &v1.CreateActorAuditPayload{
+			Reason: req.Msg.Reason,
+		},
+		ActorDID:   authCtx.DID,
+		SubjectDID: req.Msg.ActorDid,
+	})
+
+	return connect.NewResponse(&v1.CreateActorResponse{
+		Actor: actor,
+	}), nil
 }
 
 func (m *ModerationServiceHandler) CreateCommentAuditEvent(ctx context.Context, req *connect.Request[v1.CreateCommentAuditEventRequest]) (*connect.Response[v1.CreateCommentAuditEventResponse], error) {
-	authCtx, err := auth(ctx, req)
+	authCtx, err := m.authEngine.auth(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("authenticating: %w", err)
 	}
@@ -47,20 +175,20 @@ func (m *ModerationServiceHandler) CreateCommentAuditEvent(ctx context.Context, 
 }
 
 func (m *ModerationServiceHandler) ListAuditEvents(ctx context.Context, req *connect.Request[v1.ListAuditEventsRequest]) (*connect.Response[v1.ListAuditEventsResponse], error) {
-	_, err := auth(ctx, req)
+	_, err := m.authEngine.auth(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("authenticating: %w", err)
 	}
 
 	switch {
-	case req.Msg.ActorDid != "":
-		return nil, fmt.Errorf("filtering by actor_did is not implemented")
-	case req.Msg.SubjectRecordUri != "":
-		return nil, fmt.Errorf("filtering by subject_record_uri is not implemented")
+	case req.Msg.FilterActorDid != "":
+		return nil, fmt.Errorf("filter_actor_did is not implemented")
+	case req.Msg.FilterSubjectRecordUri != "":
+		return nil, fmt.Errorf("filter_subject_record_uri is not implemented")
 	}
 
 	out, err := m.store.ListAuditEvents(ctx, store.ListAuditEventsOpts{
-		FilterSubjectDID: req.Msg.SubjectDid,
+		FilterSubjectDID: req.Msg.FilterSubjectDid,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("listing audit events: %w", err)
@@ -72,7 +200,7 @@ func (m *ModerationServiceHandler) ListAuditEvents(ctx context.Context, req *con
 }
 
 func (m *ModerationServiceHandler) Ping(ctx context.Context, req *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error) {
-	authCtx, err := auth(ctx, req)
+	authCtx, err := m.authEngine.auth(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("authenticating: %w", err)
 	}
@@ -83,7 +211,7 @@ func (m *ModerationServiceHandler) Ping(ctx context.Context, req *connect.Reques
 }
 
 func (m *ModerationServiceHandler) ListActors(ctx context.Context, req *connect.Request[v1.ListActorsRequest]) (*connect.Response[v1.ListActorsResponse], error) {
-	_, err := auth(ctx, req)
+	_, err := m.authEngine.auth(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("authenticating: %w", err)
 	}
@@ -102,7 +230,7 @@ func (m *ModerationServiceHandler) ListActors(ctx context.Context, req *connect.
 }
 
 func (m *ModerationServiceHandler) GetActor(ctx context.Context, req *connect.Request[v1.GetActorRequest]) (*connect.Response[v1.GetActorResponse], error) {
-	_, err := auth(ctx, req)
+	_, err := m.authEngine.auth(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("authenticating: %w", err)
 	}
@@ -118,30 +246,8 @@ func (m *ModerationServiceHandler) GetActor(ctx context.Context, req *connect.Re
 	return res, nil
 }
 
-func (m *ModerationServiceHandler) GetApprovalQueue(ctx context.Context, req *connect.Request[v1.GetApprovalQueueRequest]) (*connect.Response[v1.GetApprovalQueueResponse], error) {
-	_, err := auth(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("authenticating: %w", err)
-	}
-
-	actors, err := m.store.ListActors(ctx, store.ListActorsOpts{
-		FilterStatus: v1.ActorStatus_ACTOR_STATUS_PENDING,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("listing pending candidate actors: %w", err)
-	}
-
-	res := &v1.GetApprovalQueueResponse{}
-	res.QueueEntriesRemaining = int32(len(actors))
-	if len(actors) > 0 {
-		res.QueueEntry = actors[0]
-	}
-
-	return connect.NewResponse(res), nil
-}
-
 func (m *ModerationServiceHandler) ProcessApprovalQueue(ctx context.Context, req *connect.Request[v1.ProcessApprovalQueueRequest]) (*connect.Response[v1.ProcessApprovalQueueResponse], error) {
-	authCtx, err := auth(ctx, req)
+	authCtx, err := m.authEngine.auth(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("authenticating: %w", err)
 	}
@@ -162,6 +268,11 @@ func (m *ModerationServiceHandler) ProcessApprovalQueue(ctx context.Context, req
 	}
 	isArtist := req.Msg.IsArtist
 
+	c, err := m.clientCache.Get(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("getting bsky client: %w", err)
+	}
+
 	_, err = m.store.UpdateActor(ctx, store.UpdateActorOpts{
 		DID: actorDID,
 		Predicate: func(actor *v1.Actor) error {
@@ -179,29 +290,29 @@ func (m *ModerationServiceHandler) ProcessApprovalQueue(ctx context.Context, req
 
 	// Follow them if its an approval
 	if statusToSet == v1.ActorStatus_ACTOR_STATUS_APPROVED {
-		c, err := m.clientCache.Get(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("getting bsky client: %w", err)
-		}
 		if err := c.Follow(ctx, actorDID); err != nil {
 			return nil, fmt.Errorf("following approved actor: %w", err)
 		}
 	}
 
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
-		_, err := m.store.CreateAuditEvent(ctx, store.CreateAuditEventOpts{
-			Payload: &v1.ProcessApprovalQueueAuditPayload{
-				Action: req.Msg.Action,
-			},
-			ActorDID:   authCtx.DID,
-			SubjectDID: actorDID, // actor here is subject
-		})
-		if err != nil {
-			m.log.Error("failed to emit audit event", zap.Error(err))
-		}
-	}()
+	go m.emitAudit(store.CreateAuditEventOpts{
+		Payload: &v1.ProcessApprovalQueueAuditPayload{
+			Action: req.Msg.Action,
+		},
+		ActorDID:   authCtx.DID,
+		SubjectDID: actorDID,
+	})
 
 	return connect.NewResponse(&v1.ProcessApprovalQueueResponse{}), nil
+}
+
+func (m *ModerationServiceHandler) emitAudit(opts store.CreateAuditEventOpts) {
+	// TODO: Consider pulling this out of a goroutine and making it part
+	// of the transaction in the database?
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	_, err := m.store.CreateAuditEvent(ctx, opts)
+	if err != nil {
+		m.log.Error("failed to emit audit event", zap.Error(err))
+	}
 }

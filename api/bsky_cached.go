@@ -36,7 +36,8 @@ func (cb *cachedBlueSkyClient) Get(ctx context.Context) (c *bluesky.Client, err 
 	span.AddEvent("no client created within last five minutes, will attempt to create new client.")
 
 	// Otherwise return a new client.
-	c, err = bluesky.ClientFromCredentials(ctx, cb.creds)
+	// TODO: DI PDSHost in or tests wont work
+	c, err = bluesky.ClientFromCredentials(ctx, bluesky.DefaultPDSHost, cb.creds)
 	if err != nil {
 		return nil, fmt.Errorf("fetching token from credentials: %w", err)
 	}
