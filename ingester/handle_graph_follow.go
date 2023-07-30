@@ -42,7 +42,7 @@ func (fi *FirehoseIngester) handleGraphFollowCreate(
 	return nil
 }
 
-func (fi *FirehoseIngester) handleFeedFollowDelete(
+func (fi *FirehoseIngester) handleGraphFollowDelete(
 	ctx context.Context,
 	recordUri string,
 ) (err error) {
