@@ -25,6 +25,19 @@ WHERE
     did = sqlc.arg(did)
 RETURNING *;
 
+-- name: CreateLatestActorProfile :exec
+WITH ap as (
+    INSERT INTO actor_profiles
+        (actor_did, id, created_at, indexed_at, display_name, description)
+    VALUES
+        (sqlc.arg(did), sqlc.arg(id), sqlc.arg(created_at), sqlc.arg(indexed_at), sqlc.arg(display_name), sqlc.arg(description))
+    RETURNING actor_did, id
+)
+UPDATE candidate_actors ca
+SET current_profile_id = (SELECT id FROM ap)
+WHERE
+    did = (SELECT actor_did FROM ap);
+
 -- name: GetCandidateActorByDID :one
 SELECT *
 FROM

@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/strideynet/bsky-furry-feed/store/gen"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
-	"strings"
-	"time"
 )
 
 func dbCmd(log *zap.Logger, env *environment) *cli.Command {

@@ -3,11 +3,13 @@ package api
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/bufbuild/connect-go"
+	"github.com/rs/xid"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.uber.org/zap"
-	"time"
 )
 
 type ModerationServiceHandler struct {
@@ -288,8 +290,34 @@ func (m *ModerationServiceHandler) ProcessApprovalQueue(ctx context.Context, req
 		return nil, fmt.Errorf("updating actor: %w", err)
 	}
 
-	// Follow them if its an approval
 	if statusToSet == v1.ActorStatus_ACTOR_STATUS_APPROVED {
+		profile, err := c.GetProfile(ctx, actorDID)
+		if err != nil {
+			return nil, err
+		}
+
+		displayName := ""
+		if profile.DisplayName != nil {
+			displayName = *profile.DisplayName
+		}
+
+		description := ""
+		if profile.Description != nil {
+			description = *profile.Description
+		}
+
+		if err := m.store.CreateLatestActorProfile(ctx, store.CreateLatestActorProfileOpts{
+			DID:         actorDID,
+			ID:          xid.New().String(),
+			CreatedAt:   time.Now(), // NOTE: The Firehose reader uses the server time but we use the local time here. This may cause staleness if the firehose gives us an older timestamp but a newer update.
+			IndexedAt:   time.Now(),
+			DisplayName: displayName,
+			Description: description,
+		}); err != nil {
+			return nil, fmt.Errorf("updating actor profile: %w", err)
+		}
+
+		// Follow them on approval
 		if err := c.Follow(ctx, actorDID); err != nil {
 			return nil, fmt.Errorf("following approved actor: %w", err)
 		}

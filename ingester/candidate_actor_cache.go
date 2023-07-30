@@ -3,11 +3,12 @@ package ingester
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.uber.org/zap"
-	"sync"
-	"time"
 )
 
 // ActorCache holds a view of the candidate actors from

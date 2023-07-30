@@ -2,12 +2,15 @@ package main
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/rs/xid"
 	"github.com/strideynet/bsky-furry-feed/store/gen"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
-	"strings"
 )
 
 func queueCmd(log *zap.Logger, env *environment) *cli.Command {
@@ -58,10 +61,13 @@ func queueCmd(log *zap.Logger, env *environment) *cli.Command {
 					len(prospectActors),
 					comment,
 				)
+
+				description := ""
 				if profile.Description != nil {
 					fmt.Println()
 					fmt.Println(*profile.Description)
 					fmt.Println()
+					description = *profile.Description
 				}
 				fmt.Printf("link: https://bsky.app/profile/%s\n", actor.DID)
 				fmt.Printf("(a)dd, (r)eject, (s)kip, (q)uit: ")
@@ -130,6 +136,31 @@ func queueCmd(log *zap.Logger, env *environment) *cli.Command {
 					}
 					log.Info("successfully added")
 					log.Info("following")
+
+					if err := queries.CreateLatestActorProfile(cctx.Context, conn, gen.CreateLatestActorProfileParams{
+						DID: actor.DID,
+						ID:  xid.New().String(),
+						CreatedAt: pgtype.Timestamptz{
+							Valid: true,
+							// NOTE: The Firehose reader uses the server time but we use the local time here. This may cause staleness if the firehose gives us an older timestamp but a newer update.
+							Time: time.Now(),
+						},
+						IndexedAt: pgtype.Timestamptz{
+							Valid: true,
+							Time:  time.Now(),
+						},
+						DisplayName: pgtype.Text{
+							Valid:  true,
+							String: displayName,
+						},
+						Description: pgtype.Text{
+							Valid:  true,
+							String: description,
+						},
+					}); err != nil {
+						return fmt.Errorf("updating actor profile: %w", err)
+					}
+
 					err = client.Follow(cctx.Context, actor.DID)
 					if err != nil {
 						return fmt.Errorf("following actor: %w", err)

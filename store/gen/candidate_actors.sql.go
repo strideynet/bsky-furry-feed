@@ -16,7 +16,7 @@ INSERT INTO
     candidate_actors (did, created_at, is_artist, comment, status)
 VALUES
     ($1, $2, $3, $4, $5)
-RETURNING did, created_at, is_artist, comment, is_nsfw, is_hidden, status
+RETURNING did, created_at, is_artist, comment, is_nsfw, is_hidden, status, current_profile_id
 `
 
 type CreateCandidateActorParams struct {
@@ -44,12 +44,48 @@ func (q *Queries) CreateCandidateActor(ctx context.Context, db DBTX, arg CreateC
 		&i.IsNSFW,
 		&i.IsHidden,
 		&i.Status,
+		&i.CurrentProfileID,
 	)
 	return i, err
 }
 
+const createLatestActorProfile = `-- name: CreateLatestActorProfile :exec
+WITH ap as (
+    INSERT INTO actor_profiles
+        (actor_did, id, created_at, indexed_at, display_name, description)
+    VALUES
+        ($1, $2, $3, $4, $5, $6)
+    RETURNING actor_did, id
+)
+UPDATE candidate_actors ca
+SET current_profile_id = (SELECT id FROM ap)
+WHERE
+    did = (SELECT actor_did FROM ap)
+`
+
+type CreateLatestActorProfileParams struct {
+	DID         string
+	ID          string
+	CreatedAt   pgtype.Timestamptz
+	IndexedAt   pgtype.Timestamptz
+	DisplayName pgtype.Text
+	Description pgtype.Text
+}
+
+func (q *Queries) CreateLatestActorProfile(ctx context.Context, db DBTX, arg CreateLatestActorProfileParams) error {
+	_, err := db.Exec(ctx, createLatestActorProfile,
+		arg.DID,
+		arg.ID,
+		arg.CreatedAt,
+		arg.IndexedAt,
+		arg.DisplayName,
+		arg.Description,
+	)
+	return err
+}
+
 const getCandidateActorByDID = `-- name: GetCandidateActorByDID :one
-SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden, status
+SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden, status, current_profile_id
 FROM
     candidate_actors
 WHERE
@@ -67,12 +103,13 @@ func (q *Queries) GetCandidateActorByDID(ctx context.Context, db DBTX, did strin
 		&i.IsNSFW,
 		&i.IsHidden,
 		&i.Status,
+		&i.CurrentProfileID,
 	)
 	return i, err
 }
 
 const listCandidateActors = `-- name: ListCandidateActors :many
-SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden, status
+SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden, status, current_profile_id
 FROM
     candidate_actors ca
 WHERE
@@ -99,6 +136,7 @@ func (q *Queries) ListCandidateActors(ctx context.Context, db DBTX, status NullA
 			&i.IsNSFW,
 			&i.IsHidden,
 			&i.Status,
+			&i.CurrentProfileID,
 		); err != nil {
 			return nil, err
 		}
@@ -118,7 +156,7 @@ SET
     comment=COALESCE($3, ca.comment)
 WHERE
     did = $4
-RETURNING did, created_at, is_artist, comment, is_nsfw, is_hidden, status
+RETURNING did, created_at, is_artist, comment, is_nsfw, is_hidden, status, current_profile_id
 `
 
 type UpdateCandidateActorParams struct {
@@ -144,6 +182,7 @@ func (q *Queries) UpdateCandidateActor(ctx context.Context, db DBTX, arg UpdateC
 		&i.IsNSFW,
 		&i.IsHidden,
 		&i.Status,
+		&i.CurrentProfileID,
 	)
 	return i, err
 }
