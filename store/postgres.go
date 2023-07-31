@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -400,6 +401,9 @@ type CreatePostOpts struct {
 	CreatedAt time.Time
 	IndexedAt time.Time
 	Tags      []string
+	Hashtags  []string
+	HasMedia  bool
+	Raw       *bsky.FeedPost
 }
 
 func (s *PGXStore) CreatePost(ctx context.Context, opts CreatePostOpts) (err error) {
@@ -419,7 +423,13 @@ func (s *PGXStore) CreatePost(ctx context.Context, opts CreatePostOpts) (err err
 			Time:  opts.IndexedAt,
 			Valid: true,
 		},
-		Tags: opts.Tags,
+		Tags:     opts.Tags,
+		Hashtags: opts.Hashtags,
+		HasMedia: pgtype.Bool{
+			Valid: true,
+			Bool:  opts.HasMedia,
+		},
+		Raw: opts.Raw,
 	}
 	err = s.queries.CreateCandidatePost(ctx, s.pool, queryParams)
 	if err != nil {

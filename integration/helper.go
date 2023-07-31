@@ -3,14 +3,15 @@ package integration
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"testing"
+	"unsafe"
+
 	"github.com/bluesky-social/indigo/xrpc"
 	"github.com/stretchr/testify/require"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
-	"reflect"
-	"testing"
-	"unsafe"
 
 	indigoTest "github.com/bluesky-social/indigo/testing"
 	"github.com/golang-migrate/migrate/v4"
