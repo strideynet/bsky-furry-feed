@@ -28,15 +28,17 @@ async function process(did: string, action: ApprovalQueueAction) {
 
 <template>
   <div
-    class="mb-3 rounded-lg bg-orange-400 text-black px-3 py-1 flex items-baseline text-sm"
+    class="mb-3 rounded-lg bg-orange-400 text-black px-3 py-1 flex items-baseline text-sm max-md:flex-col"
   >
-    {{ handle }} requested to be on the feed.
-    <span class="ml-auto">
+    <span class="max-md:order-1"
+      >{{ handle }} requested to be on the feed.</span
+    >
+    <span class="md:ml-auto max-md:w-full flex items-baseline">
       <span v-if="pending" class="text-xs text-gray-700 mx-1">
         ({{ pending }} more...)
       </span>
       <button
-        class="py-0.5 px-2 mr-1 text-white bg-blue-400 dark:bg-blue-600 rounded-lg hover:bg-blue-500 dark:hover:bg-blue-700 disabled:bg-blue-300 disabled:dark:bg-blue-500 disabled:cursor-not-allowed"
+        class="py-0.5 px-2 max-md:ml-auto mr-1 text-white bg-blue-400 dark:bg-blue-600 rounded-lg hover:bg-blue-500 dark:hover:bg-blue-700 disabled:bg-blue-300 disabled:dark:bg-blue-500 disabled:cursor-not-allowed"
         :disabled="loading"
         @click="accept"
       >
