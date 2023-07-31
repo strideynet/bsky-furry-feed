@@ -69,7 +69,6 @@ func main() {
 		Commands: []*cli.Command{
 			dbCmd(log, env),
 			findDIDCmd(log),
-			queueCmd(log, env),
 		},
 	}
 	if err := app.Run(os.Args); err != nil {
