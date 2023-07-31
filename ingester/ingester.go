@@ -187,19 +187,19 @@ func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncS
 				if errors.Is(err, lexutil.ErrUnrecognizedType) {
 					continue
 				}
-				return fmt.Errorf("create: getting record for op: %w", err)
+				return fmt.Errorf("create (%s): getting record for op: %w", uri, err)
 			}
 
 			// Ensure there isn't a mismatch between the reference and the found
 			// object.
 			if lexutil.LexLink(recordCid) != *op.Cid {
-				return fmt.Errorf("create: mismatch in record and op cid: %s != %s", recordCid, *op.Cid)
+				return fmt.Errorf("create (%s): mismatch in record and op cid: %s != %s", uri, recordCid, *op.Cid)
 			}
 
 			if err := fi.handleRecordCreate(
 				ctx, evt.Repo, uri, record,
 			); err != nil {
-				return fmt.Errorf("handling record create: %w", err)
+				return fmt.Errorf("create (%s): handling record create: %w", uri, err)
 			}
 		case repomgr.EvtKindUpdateRecord:
 			recordCid, record, err := rr.GetRecord(ctx, op.Path)
@@ -207,19 +207,19 @@ func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncS
 				if errors.Is(err, lexutil.ErrUnrecognizedType) {
 					continue
 				}
-				return fmt.Errorf("update: getting record for op: %w", err)
+				return fmt.Errorf("update (%s): getting record for op: %w", uri, err)
 			}
 
 			// Ensure there isn't a mismatch between the reference and the found
 			// object.
 			if lexutil.LexLink(recordCid) != *op.Cid {
-				return fmt.Errorf("update: mismatch in record and op cid: %s != %s", recordCid, *op.Cid)
+				return fmt.Errorf("update (%s): mismatch in record and op cid: %s != %s", uri, recordCid, *op.Cid)
 			}
 
 			if err := fi.handleRecordUpdate(
 				ctx, evt.Repo, uri, time, record,
 			); err != nil {
-				return fmt.Errorf("handling record update: %w", err)
+				return fmt.Errorf("update (%s): handling record update: %w", uri, err)
 			}
 		case repomgr.EvtKindDeleteRecord:
 			if err := fi.handleRecordDelete(
