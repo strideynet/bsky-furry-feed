@@ -5,14 +5,14 @@ import { ActorStatus } from "../../proto/bff/v1/moderation_service_pb";
 
 const props = defineProps<{
   did: string;
-  loading?: boolean;
   pending?: number;
   variant: "queue" | "profile";
 }>();
-defineEmits(["accept", "reject"]);
+const $emit = defineEmits(["next"]);
 
 const api = await useAPI();
 const isArtist = ref(false);
+const loading = ref(false);
 const status = ref<ActorStatus | undefined>();
 const agent = newAgent();
 const data = ref<ProfileViewDetailed>();
@@ -28,6 +28,14 @@ const loadProfile = async () => {
   status.value = actor?.status;
 };
 
+async function next() {
+  if (props.variant === "profile") {
+    await loadProfile();
+  }
+  loading.value = false;
+  $emit("next");
+}
+
 watch(
   () => props.did,
   () => loadProfile()
@@ -38,31 +46,14 @@ await loadProfile();
 
 <template>
   <shared-card v-if="data" :class="{ loading }">
-    <div
-      v-if="variant === 'queue' && status === ActorStatus.PENDING"
-      class="flex items-center gap-3 pt-2 mb-5"
-    >
-      <button
-        class="px-3 py-2 bg-blue-400 dark:bg-blue-600 rounded-lg hover:bg-blue-500 dark:hover:bg-blue-700 disabled:bg-blue-300 disabled:dark:bg-blue-500 disabled:cursor-not-allowed"
-        :disabled="loading"
-        @click="$emit('accept')"
-      >
-        Accept
-      </button>
-      <button
-        class="px-3 py-2 bg-red-500 dark:bg-red-600 hover:bg-red-600 dark:hover:bg-red-700 disabled:bg-red-400 disabled:dark:bg-red-500 rounded-lg disabled:cursor-not-allowed"
-        :disabled="loading"
-        @click="$emit('reject')"
-      >
-        Reject
-      </button>
-
-      <span
-        v-if="pending > 0"
-        class="ml-auto text-sm text-gray-600 dark:text-gray-400"
-        >and {{ pending }} more...</span
-      >
-    </div>
+    <user-queue-actions
+      v-if="status === ActorStatus.PENDING"
+      :did="data.did"
+      :handle="data.handle"
+      :pending="pending"
+      @next="next"
+      @loading="loading = true"
+    />
 
     <div class="flex gap-3 items-center mb-5">
       <shared-avatar :url="data.avatar" />
