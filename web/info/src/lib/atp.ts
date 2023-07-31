@@ -1,13 +1,31 @@
-import { writable } from 'svelte/store';
+import { get, writable } from 'svelte/store';
 
 import { ATP_API, ATP_SESSION_COOKIE } from '$lib/constants';
 
 import * as atproto from '@atproto/api';
 
-import type { AtpSessionData, AtpSessionEvent } from '@atproto/api';
+import type {
+  AppBskyActorGetProfile,
+  AtpSessionData,
+  AtpSessionEvent
+} from '@atproto/api';
 
 const session = writable<AtpSessionData | null>(null),
-  agent = writable<atproto.BskyAgent | null>(null);
+  agent = writable<atproto.BskyAgent | null>(null),
+  profile = writable<AppBskyActorGetProfile.Response['data'] | null>(null);
+
+const fetchProfile = async (agent: atproto.BskyAgent | null, session: AtpSessionData) => {
+  if (!agent) {
+    return;
+  }
+
+  const response = await agent.getProfile({ actor: session.did });
+  if (response.success === false) {
+    return;
+  }
+
+  profile.set(response.data);
+};
 
 const setupSession = () => {
   let session: AtpSessionData | null = null;
@@ -17,6 +35,7 @@ const setupSession = () => {
   const subscriber = (data: typeof session) => {
     if (data === null) {
       localStorage.removeItem(ATP_SESSION_COOKIE);
+      profile.set(null);
       return;
     }
 
@@ -27,9 +46,11 @@ const setupSession = () => {
 
       if (currentData !== data) {
         localStorage.setItem(ATP_SESSION_COOKIE, JSON.stringify(data));
+        fetchProfile(get(agent), data);
       }
     } catch {
       localStorage.removeItem(ATP_SESSION_COOKIE);
+      profile.set(null);
     }
   };
 
@@ -73,4 +94,4 @@ const setupAgent = () => {
   return new atproto.BskyAgent({ service: ATP_API, persistSession: persistSessionWith });
 };
 
-export { agent, session, setupAgent, setupSession };
+export { agent, fetchProfile, profile, session, setupAgent, setupSession };
