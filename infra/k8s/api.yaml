@@ -29,7 +29,7 @@ spec:
       serviceAccountName: bff-api
       containers:
         - name: api
-          image: ghcr.io/strideynet/bsky-furry-feed/bffsrv:16a0e163af170f7f9d6c61dde0832aa35c64452f
+          image: ghcr.io/strideynet/bsky-furry-feed/bffsrv:9f6bf07f2d7c090759b518e9db1e35dab1821e99
           env:
             - name: ENV
               value: production
