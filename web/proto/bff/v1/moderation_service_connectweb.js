@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { BanActorRequest, BanActorResponse, CreateActorRequest, CreateActorResponse, CreateCommentAuditEventRequest, CreateCommentAuditEventResponse, GetActorRequest, GetActorResponse, ListActorsRequest, ListActorsResponse, ListAuditEventsRequest, ListAuditEventsResponse, PingRequest, PingResponse, ProcessApprovalQueueRequest, ProcessApprovalQueueResponse, UnapproveActorRequest, UnapproveActorResponse } from "./moderation_service_pb.js";
+import { BanActorRequest, BanActorResponse, CreateActorRequest, CreateActorResponse, CreateCommentAuditEventRequest, CreateCommentAuditEventResponse, ForceApproveActorRequest, ForceApproveActorResponse, GetActorRequest, GetActorResponse, ListActorsRequest, ListActorsResponse, ListAuditEventsRequest, ListAuditEventsResponse, PingRequest, PingResponse, ProcessApprovalQueueRequest, ProcessApprovalQueueResponse, UnapproveActorRequest, UnapproveActorResponse } from "./moderation_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -79,6 +79,17 @@ export const ModerationService = {
       name: "UnapproveActor",
       I: UnapproveActorRequest,
       O: UnapproveActorResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * ForceApproveActor changes an actor to "approved" status from "none" or "pending".
+     *
+     * @generated from rpc bff.v1.ModerationService.ForceApproveActor
+     */
+    forceApproveActor: {
+      name: "ForceApproveActor",
+      I: ForceApproveActorRequest,
+      O: ForceApproveActorResponse,
       kind: MethodKind.Unary,
     },
     /**

@@ -25,6 +25,8 @@ service ModerationService {
   rpc BanActor(BanActorRequest) returns (BanActorResponse) {}
   // UnapproveActor changes an actor from "approved" status to "none" status.
   rpc UnapproveActor(UnapproveActorRequest) returns (UnapproveActorResponse) {}
+  // ForceApproveActor changes an actor to "approved" status from "none" or "pending".
+  rpc ForceApproveActor(ForceApproveActorRequest) returns (ForceApproveActorResponse) {}
   // CreateActor creates a database entry for an actor who does not currently exist.
   // By default, their status will be set to none.
   rpc CreateActor(CreateActorRequest) returns (CreateActorResponse) {}
@@ -98,21 +100,31 @@ message ProcessApprovalQueueRequest {
   string did = 1;
   ApprovalQueueAction action = 2;
   bool is_artist = 3;
+  // reason is the reason that the actor was approved or rejected. This is
+  // currently optional but will become required for rejections eventually.
+  string reason = 4;
 }
 message ProcessApprovalQueueResponse {}
 // ProcessApprovalQueueAuditPayload is the payload for the
 // `process_approval_queue` audit event.
 message ProcessApprovalQueueAuditPayload {
   ApprovalQueueAction action = 1;
+  string reason = 2;
 }
 
 message ListAuditEventsRequest {
   string filter_actor_did = 1;
   string filter_subject_did = 2;
   string filter_subject_record_uri = 3;
+
+  // limit specifies how many audit events to return. If unspecific, this
+  // defaults to 100.
+  uint32 limit = 4;
+  string cursor = 5;
 }
 message ListAuditEventsResponse {
   repeated AuditEvent audit_events = 1;
+  string cursor = 2;
 }
 
 message CreateCommentAuditEventRequest {
@@ -140,7 +152,6 @@ message CreateActorAuditPayload {
   string reason = 1;
 }
 
-
 message UnapproveActorRequest {
   string actor_did = 1;
   string reason = 2;
@@ -152,6 +163,16 @@ message UnapproveActorAuditPayload {
   string reason = 1;
 }
 
+message ForceApproveActorRequest {
+  string actor_did = 1;
+  string reason = 2;
+}
+message ForceApproveActorResponse {
+  Actor actor = 1;
+}
+message ForceApproveActorAuditPayload {
+  string reason = 1;
+}
 
 message BanActorRequest {
   string actor_did = 1;

@@ -59,19 +59,29 @@ WHERE
     ($2::text  = '' OR
      ae.actor_did = $2) AND
     ($3::text  = '' OR
-     ae.subject_record_uri = $3)
+     ae.subject_record_uri = $3) AND
+    ($4::TIMESTAMPTZ IS NULL OR ae.created_at < $4)
 ORDER BY
     ae.created_at DESC
+LIMIT $5
 `
 
 type ListAuditEventsParams struct {
 	SubjectDid       string
 	ActorDID         string
 	SubjectRecordUri string
+	CreatedBefore    pgtype.Timestamptz
+	Limit            int32
 }
 
 func (q *Queries) ListAuditEvents(ctx context.Context, db DBTX, arg ListAuditEventsParams) ([]AuditEvent, error) {
-	rows, err := db.Query(ctx, listAuditEvents, arg.SubjectDid, arg.ActorDID, arg.SubjectRecordUri)
+	rows, err := db.Query(ctx, listAuditEvents,
+		arg.SubjectDid,
+		arg.ActorDID,
+		arg.SubjectRecordUri,
+		arg.CreatedBefore,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}
