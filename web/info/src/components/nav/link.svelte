@@ -11,7 +11,7 @@
 
 <style lang="scss">
   a {
-    @apply whitespace-nowrap text-gray-800 underline-offset-2;
+    @apply block h-fit whitespace-nowrap text-gray-800 underline-offset-2;
 
     &:hover,
     &:focus-visible,

@@ -1,11 +1,18 @@
 import { get } from 'svelte/store';
 
 import { browser } from '$app/environment';
-import { agent, session, setupAgent, setupSession } from '$lib/atp';
+import {
+  agent,
+  fetchProfile,
+  profile,
+  session,
+  setupAgent,
+  setupSession
+} from '$lib/atp';
 
 import type { LayoutLoad } from './$types';
 
-export const load = (({ url }) => {
+export const load = (async ({ url }) => {
   if (!browser) {
     return { url };
   }
@@ -23,10 +30,16 @@ export const load = (({ url }) => {
     session.subscribe(subscriber);
   }
 
-  const currentSession = get(session);
+  const currentSession = get(session),
+    currentAgent = get(agent);
 
-  if (currentSession) {
-    get(agent)?.resumeSession(currentSession);
+  if (currentSession && currentAgent && !currentAgent.hasSession) {
+    if (!currentAgent.hasSession) {
+      await currentAgent.resumeSession(currentSession);
+    }
+    if (!get(profile)) {
+      await fetchProfile(currentAgent, currentSession);
+    }
   }
 
   return { url };
