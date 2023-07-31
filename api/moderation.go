@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"fmt"
+	"github.com/strideynet/bsky-furry-feed/bluesky"
+	"golang.org/x/exp/slices"
 	"time"
 
 	"github.com/bufbuild/connect-go"
@@ -189,15 +191,31 @@ func (m *ModerationServiceHandler) ListAuditEvents(ctx context.Context, req *con
 		return nil, fmt.Errorf("filter_subject_record_uri is not implemented")
 	}
 
+	var filterCreatedBefore *time.Time
+	if req.Msg.Cursor != "" {
+		t, err := bluesky.ParseTime(req.Msg.Cursor)
+		if err != nil {
+			return nil, fmt.Errorf("parsing cursor time: %w", err)
+		}
+		filterCreatedBefore = &t
+	}
+
 	out, err := m.store.ListAuditEvents(ctx, store.ListAuditEventsOpts{
-		FilterSubjectDID: req.Msg.FilterSubjectDid,
+		FilterSubjectDID:    req.Msg.FilterSubjectDid,
+		FilterCreatedBefore: filterCreatedBefore,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("listing audit events: %w", err)
 	}
 
+	newCursor := ""
+	if len(out) > 0 {
+		newCursor = bluesky.FormatTime(out[len(out)-1].CreatedAt.AsTime())
+	}
+
 	return connect.NewResponse(&v1.ListAuditEventsResponse{
 		AuditEvents: out,
+		Cursor:      newCursor,
 	}), nil
 }
 
@@ -291,47 +309,102 @@ func (m *ModerationServiceHandler) ProcessApprovalQueue(ctx context.Context, req
 	}
 
 	if statusToSet == v1.ActorStatus_ACTOR_STATUS_APPROVED {
-		profile, err := c.GetProfile(ctx, actorDID)
-		if err != nil {
-			return nil, err
-		}
-
-		displayName := ""
-		if profile.DisplayName != nil {
-			displayName = *profile.DisplayName
-		}
-
-		description := ""
-		if profile.Description != nil {
-			description = *profile.Description
-		}
-
-		if err := m.store.CreateLatestActorProfile(ctx, store.CreateLatestActorProfileOpts{
-			DID:         actorDID,
-			ID:          xid.New().String(),
-			CreatedAt:   time.Now(), // NOTE: The Firehose reader uses the server time but we use the local time here. This may cause staleness if the firehose gives us an older timestamp but a newer update.
-			IndexedAt:   time.Now(),
-			DisplayName: displayName,
-			Description: description,
-		}); err != nil {
-			return nil, fmt.Errorf("updating actor profile: %w", err)
-		}
-
-		// Follow them on approval
-		if err := c.Follow(ctx, actorDID); err != nil {
-			return nil, fmt.Errorf("following approved actor: %w", err)
+		if err := m.updateProfileAndFollow(ctx, actorDID, c); err != nil {
+			return nil, fmt.Errorf("updating profile and following actor: %w", err)
 		}
 	}
 
 	go m.emitAudit(store.CreateAuditEventOpts{
 		Payload: &v1.ProcessApprovalQueueAuditPayload{
 			Action: req.Msg.Action,
+			Reason: req.Msg.Reason,
 		},
 		ActorDID:   authCtx.DID,
 		SubjectDID: actorDID,
 	})
 
 	return connect.NewResponse(&v1.ProcessApprovalQueueResponse{}), nil
+}
+
+func (m *ModerationServiceHandler) ForceApproveActor(ctx context.Context, req *connect.Request[v1.ForceApproveActorRequest]) (*connect.Response[v1.ForceApproveActorResponse], error) {
+	authCtx, err := m.authEngine.auth(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("authenticating: %w", err)
+	}
+
+	switch {
+	case req.Msg.ActorDid == "":
+		return nil, fmt.Errorf("actor_did is required")
+	case req.Msg.Reason == "":
+		return nil, fmt.Errorf("reason is required")
+	}
+
+	c, err := m.clientCache.Get(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("getting bsky client: %w", err)
+	}
+
+	_, err = m.store.UpdateActor(ctx, store.UpdateActorOpts{
+		DID: req.Msg.ActorDid,
+		Predicate: func(actor *v1.Actor) error {
+			if !slices.Contains([]v1.ActorStatus{v1.ActorStatus_ACTOR_STATUS_PENDING, v1.ActorStatus_ACTOR_STATUS_NONE}, actor.Status) {
+				return fmt.Errorf("candidate actor status was %q not pending or none", actor.Status)
+			}
+			return nil
+		},
+		UpdateStatus: v1.ActorStatus_ACTOR_STATUS_APPROVED,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("updating actor: %w", err)
+	}
+
+	if err := m.updateProfileAndFollow(ctx, req.Msg.ActorDid, c); err != nil {
+		return nil, fmt.Errorf("updating profile and following actor: %w", err)
+	}
+
+	go m.emitAudit(store.CreateAuditEventOpts{
+		Payload: &v1.ForceApproveActorAuditPayload{
+			Reason: req.Msg.Reason,
+		},
+		ActorDID:   authCtx.DID,
+		SubjectDID: req.Msg.ActorDid,
+	})
+
+	return connect.NewResponse(&v1.ForceApproveActorResponse{}), nil
+}
+
+func (m *ModerationServiceHandler) updateProfileAndFollow(ctx context.Context, actorDID string, c *bluesky.Client) error {
+	profile, err := c.GetProfile(ctx, actorDID)
+	if err != nil {
+		return fmt.Errorf("getting profile: %w", err)
+	}
+
+	displayName := ""
+	if profile.DisplayName != nil {
+		displayName = *profile.DisplayName
+	}
+
+	description := ""
+	if profile.Description != nil {
+		description = *profile.Description
+	}
+
+	if err := m.store.CreateLatestActorProfile(ctx, store.CreateLatestActorProfileOpts{
+		DID:         actorDID,
+		ID:          xid.New().String(),
+		CreatedAt:   time.Now(), // NOTE: The Firehose reader uses the server time but we use the local time here. This may cause staleness if the firehose gives us an older timestamp but a newer update.
+		IndexedAt:   time.Now(),
+		DisplayName: displayName,
+		Description: description,
+	}); err != nil {
+		return fmt.Errorf("updating actor profile: %w", err)
+	}
+
+	if err := c.Follow(ctx, actorDID); err != nil {
+		return fmt.Errorf("following approved actor: %w", err)
+	}
+
+	return nil
 }
 
 func (m *ModerationServiceHandler) emitAudit(opts store.CreateAuditEventOpts) {

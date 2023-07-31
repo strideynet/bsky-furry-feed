@@ -583,7 +583,11 @@ func auditEventToProto(in gen.AuditEvent) (*v1.AuditEvent, error) {
 }
 
 type ListAuditEventsOpts struct {
-	FilterSubjectDID string
+	FilterSubjectDID    string
+	FilterCreatedBefore *time.Time
+
+	// Limit defaults to 100.
+	Limit int32
 }
 
 func (s *PGXStore) ListAuditEvents(ctx context.Context, opts ListAuditEventsOpts) (out []*v1.AuditEvent, err error) {
@@ -592,9 +596,22 @@ func (s *PGXStore) ListAuditEvents(ctx context.Context, opts ListAuditEventsOpts
 		endSpan(span, err)
 	}()
 
+	limit := opts.Limit
+	if limit == 0 {
+		limit = 100
+	}
+
 	queryParams := gen.ListAuditEventsParams{
 		SubjectDid: opts.FilterSubjectDID,
+		Limit:      limit,
 	}
+	if opts.FilterCreatedBefore != nil {
+		queryParams.CreatedBefore = pgtype.Timestamptz{
+			Time:  *opts.FilterCreatedBefore,
+			Valid: true,
+		}
+	}
+
 	data, err := s.queries.ListAuditEvents(ctx, s.pool, queryParams)
 	if err != nil {
 		return nil, fmt.Errorf("executing ListAuditEvents query: %w", err)

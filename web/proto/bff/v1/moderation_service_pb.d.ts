@@ -325,6 +325,11 @@ export declare class ProcessApprovalQueueRequest extends Message<ProcessApproval
    */
   isArtist: boolean;
 
+  /**
+   * @generated from field: string reason = 4;
+   */
+  reason: string;
+
   constructor(data?: PartialMessage<ProcessApprovalQueueRequest>);
 
   static readonly runtime: typeof proto3;
@@ -371,6 +376,11 @@ export declare class ProcessApprovalQueueAuditPayload extends Message<ProcessApp
    */
   action: ApprovalQueueAction;
 
+  /**
+   * @generated from field: string reason = 2;
+   */
+  reason: string;
+
   constructor(data?: PartialMessage<ProcessApprovalQueueAuditPayload>);
 
   static readonly runtime: typeof proto3;
@@ -405,6 +415,19 @@ export declare class ListAuditEventsRequest extends Message<ListAuditEventsReque
    */
   filterSubjectRecordUri: string;
 
+  /**
+   * limit specifies how many audit events to return. If unspecific, this
+   * defaults to 100.
+   *
+   * @generated from field: uint32 limit = 4;
+   */
+  limit: number;
+
+  /**
+   * @generated from field: string cursor = 5;
+   */
+  cursor: string;
+
   constructor(data?: PartialMessage<ListAuditEventsRequest>);
 
   static readonly runtime: typeof proto3;
@@ -428,6 +451,11 @@ export declare class ListAuditEventsResponse extends Message<ListAuditEventsResp
    * @generated from field: repeated bff.v1.AuditEvent audit_events = 1;
    */
   auditEvents: AuditEvent[];
+
+  /**
+   * @generated from field: string cursor = 2;
+   */
+  cursor: string;
 
   constructor(data?: PartialMessage<ListAuditEventsResponse>);
 
@@ -681,6 +709,83 @@ export declare class UnapproveActorAuditPayload extends Message<UnapproveActorAu
   static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UnapproveActorAuditPayload;
 
   static equals(a: UnapproveActorAuditPayload | PlainMessage<UnapproveActorAuditPayload> | undefined, b: UnapproveActorAuditPayload | PlainMessage<UnapproveActorAuditPayload> | undefined): boolean;
+}
+
+/**
+ * @generated from message bff.v1.ForceApproveActorRequest
+ */
+export declare class ForceApproveActorRequest extends Message<ForceApproveActorRequest> {
+  /**
+   * @generated from field: string actor_did = 1;
+   */
+  actorDid: string;
+
+  /**
+   * @generated from field: string reason = 2;
+   */
+  reason: string;
+
+  constructor(data?: PartialMessage<ForceApproveActorRequest>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "bff.v1.ForceApproveActorRequest";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ForceApproveActorRequest;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ForceApproveActorRequest;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ForceApproveActorRequest;
+
+  static equals(a: ForceApproveActorRequest | PlainMessage<ForceApproveActorRequest> | undefined, b: ForceApproveActorRequest | PlainMessage<ForceApproveActorRequest> | undefined): boolean;
+}
+
+/**
+ * @generated from message bff.v1.ForceApproveActorResponse
+ */
+export declare class ForceApproveActorResponse extends Message<ForceApproveActorResponse> {
+  /**
+   * @generated from field: bff.v1.Actor actor = 1;
+   */
+  actor?: Actor;
+
+  constructor(data?: PartialMessage<ForceApproveActorResponse>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "bff.v1.ForceApproveActorResponse";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ForceApproveActorResponse;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ForceApproveActorResponse;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ForceApproveActorResponse;
+
+  static equals(a: ForceApproveActorResponse | PlainMessage<ForceApproveActorResponse> | undefined, b: ForceApproveActorResponse | PlainMessage<ForceApproveActorResponse> | undefined): boolean;
+}
+
+/**
+ * @generated from message bff.v1.ForceApproveActorAuditPayload
+ */
+export declare class ForceApproveActorAuditPayload extends Message<ForceApproveActorAuditPayload> {
+  /**
+   * @generated from field: string reason = 1;
+   */
+  reason: string;
+
+  constructor(data?: PartialMessage<ForceApproveActorAuditPayload>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "bff.v1.ForceApproveActorAuditPayload";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ForceApproveActorAuditPayload;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ForceApproveActorAuditPayload;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ForceApproveActorAuditPayload;
+
+  static equals(a: ForceApproveActorAuditPayload | PlainMessage<ForceApproveActorAuditPayload> | undefined, b: ForceApproveActorAuditPayload | PlainMessage<ForceApproveActorAuditPayload> | undefined): boolean;
 }
 
 /**

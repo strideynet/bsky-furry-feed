@@ -60,6 +60,8 @@ var moderatorDIDs = []string{
 	"did:plc:o74zbazekchwk2v4twee4ekb",
 	// Kev
 	"did:plc:bv2ckchoc76yobfhkrrie4g6",
+	// KandyElmo
+	"did:plc:xtuer24wmkwitvr2ajjeewra",
 }
 
 func main() {

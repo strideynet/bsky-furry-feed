@@ -8,9 +8,11 @@ WHERE
     (@actor_did::text  = '' OR
      ae.actor_did = @actor_did) AND
     (@subject_record_uri::text  = '' OR
-     ae.subject_record_uri = @subject_record_uri)
+     ae.subject_record_uri = @subject_record_uri) AND
+    (@created_before::TIMESTAMPTZ IS NULL OR ae.created_at < @created_before)
 ORDER BY
-    ae.created_at DESC;
+    ae.created_at DESC
+LIMIT @_limit;
 
 -- name: CreateAuditEvent :one
 INSERT INTO

@@ -42,6 +42,8 @@ type ModerationServiceClient interface {
 	BanActor(context.Context, *connect_go.Request[v1.BanActorRequest]) (*connect_go.Response[v1.BanActorResponse], error)
 	// UnapproveActor changes an actor from "approved" status to "none" status.
 	UnapproveActor(context.Context, *connect_go.Request[v1.UnapproveActorRequest]) (*connect_go.Response[v1.UnapproveActorResponse], error)
+	// ForceApproveActor changes an actor to "approved" status from "none" or "pending".
+	ForceApproveActor(context.Context, *connect_go.Request[v1.ForceApproveActorRequest]) (*connect_go.Response[v1.ForceApproveActorResponse], error)
 	// CreateActor creates a database entry for an actor who does not currently exist.
 	// By default, their status will be set to none.
 	CreateActor(context.Context, *connect_go.Request[v1.CreateActorRequest]) (*connect_go.Response[v1.CreateActorResponse], error)
@@ -89,6 +91,11 @@ func NewModerationServiceClient(httpClient connect_go.HTTPClient, baseURL string
 			baseURL+"/bff.v1.ModerationService/UnapproveActor",
 			opts...,
 		),
+		forceApproveActor: connect_go.NewClient[v1.ForceApproveActorRequest, v1.ForceApproveActorResponse](
+			httpClient,
+			baseURL+"/bff.v1.ModerationService/ForceApproveActor",
+			opts...,
+		),
 		createActor: connect_go.NewClient[v1.CreateActorRequest, v1.CreateActorResponse](
 			httpClient,
 			baseURL+"/bff.v1.ModerationService/CreateActor",
@@ -115,6 +122,7 @@ type moderationServiceClient struct {
 	getActor                *connect_go.Client[v1.GetActorRequest, v1.GetActorResponse]
 	banActor                *connect_go.Client[v1.BanActorRequest, v1.BanActorResponse]
 	unapproveActor          *connect_go.Client[v1.UnapproveActorRequest, v1.UnapproveActorResponse]
+	forceApproveActor       *connect_go.Client[v1.ForceApproveActorRequest, v1.ForceApproveActorResponse]
 	createActor             *connect_go.Client[v1.CreateActorRequest, v1.CreateActorResponse]
 	listAuditEvents         *connect_go.Client[v1.ListAuditEventsRequest, v1.ListAuditEventsResponse]
 	createCommentAuditEvent *connect_go.Client[v1.CreateCommentAuditEventRequest, v1.CreateCommentAuditEventResponse]
@@ -150,6 +158,11 @@ func (c *moderationServiceClient) UnapproveActor(ctx context.Context, req *conne
 	return c.unapproveActor.CallUnary(ctx, req)
 }
 
+// ForceApproveActor calls bff.v1.ModerationService.ForceApproveActor.
+func (c *moderationServiceClient) ForceApproveActor(ctx context.Context, req *connect_go.Request[v1.ForceApproveActorRequest]) (*connect_go.Response[v1.ForceApproveActorResponse], error) {
+	return c.forceApproveActor.CallUnary(ctx, req)
+}
+
 // CreateActor calls bff.v1.ModerationService.CreateActor.
 func (c *moderationServiceClient) CreateActor(ctx context.Context, req *connect_go.Request[v1.CreateActorRequest]) (*connect_go.Response[v1.CreateActorResponse], error) {
 	return c.createActor.CallUnary(ctx, req)
@@ -182,6 +195,8 @@ type ModerationServiceHandler interface {
 	BanActor(context.Context, *connect_go.Request[v1.BanActorRequest]) (*connect_go.Response[v1.BanActorResponse], error)
 	// UnapproveActor changes an actor from "approved" status to "none" status.
 	UnapproveActor(context.Context, *connect_go.Request[v1.UnapproveActorRequest]) (*connect_go.Response[v1.UnapproveActorResponse], error)
+	// ForceApproveActor changes an actor to "approved" status from "none" or "pending".
+	ForceApproveActor(context.Context, *connect_go.Request[v1.ForceApproveActorRequest]) (*connect_go.Response[v1.ForceApproveActorResponse], error)
 	// CreateActor creates a database entry for an actor who does not currently exist.
 	// By default, their status will be set to none.
 	CreateActor(context.Context, *connect_go.Request[v1.CreateActorRequest]) (*connect_go.Response[v1.CreateActorResponse], error)
@@ -224,6 +239,11 @@ func NewModerationServiceHandler(svc ModerationServiceHandler, opts ...connect_g
 	mux.Handle("/bff.v1.ModerationService/UnapproveActor", connect_go.NewUnaryHandler(
 		"/bff.v1.ModerationService/UnapproveActor",
 		svc.UnapproveActor,
+		opts...,
+	))
+	mux.Handle("/bff.v1.ModerationService/ForceApproveActor", connect_go.NewUnaryHandler(
+		"/bff.v1.ModerationService/ForceApproveActor",
+		svc.ForceApproveActor,
 		opts...,
 	))
 	mux.Handle("/bff.v1.ModerationService/CreateActor", connect_go.NewUnaryHandler(
@@ -269,6 +289,10 @@ func (UnimplementedModerationServiceHandler) BanActor(context.Context, *connect_
 
 func (UnimplementedModerationServiceHandler) UnapproveActor(context.Context, *connect_go.Request[v1.UnapproveActorRequest]) (*connect_go.Response[v1.UnapproveActorResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("bff.v1.ModerationService.UnapproveActor is not implemented"))
+}
+
+func (UnimplementedModerationServiceHandler) ForceApproveActor(context.Context, *connect_go.Request[v1.ForceApproveActorRequest]) (*connect_go.Response[v1.ForceApproveActorResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("bff.v1.ModerationService.ForceApproveActor is not implemented"))
 }
 
 func (UnimplementedModerationServiceHandler) CreateActor(context.Context, *connect_go.Request[v1.CreateActorRequest]) (*connect_go.Response[v1.CreateActorResponse], error) {

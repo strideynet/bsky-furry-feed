@@ -126,6 +126,7 @@ export const ProcessApprovalQueueRequest = proto3.makeMessageType(
     { no: 1, name: "did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "action", kind: "enum", T: proto3.getEnumType(ApprovalQueueAction) },
     { no: 3, name: "is_artist", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "reason", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ],
 );
 
@@ -147,6 +148,7 @@ export const ProcessApprovalQueueAuditPayload = proto3.makeMessageType(
   "bff.v1.ProcessApprovalQueueAuditPayload",
   () => [
     { no: 1, name: "action", kind: "enum", T: proto3.getEnumType(ApprovalQueueAction) },
+    { no: 2, name: "reason", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ],
 );
 
@@ -159,6 +161,8 @@ export const ListAuditEventsRequest = proto3.makeMessageType(
     { no: 1, name: "filter_actor_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "filter_subject_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "filter_subject_record_uri", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "limit", kind: "scalar", T: 13 /* ScalarType.UINT32 */ },
+    { no: 5, name: "cursor", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ],
 );
 
@@ -169,6 +173,7 @@ export const ListAuditEventsResponse = proto3.makeMessageType(
   "bff.v1.ListAuditEventsResponse",
   () => [
     { no: 1, name: "audit_events", kind: "message", T: AuditEvent, repeated: true },
+    { no: 2, name: "cursor", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ],
 );
 
@@ -264,6 +269,37 @@ export const UnapproveActorResponse = proto3.makeMessageType(
  */
 export const UnapproveActorAuditPayload = proto3.makeMessageType(
   "bff.v1.UnapproveActorAuditPayload",
+  () => [
+    { no: 1, name: "reason", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ],
+);
+
+/**
+ * @generated from message bff.v1.ForceApproveActorRequest
+ */
+export const ForceApproveActorRequest = proto3.makeMessageType(
+  "bff.v1.ForceApproveActorRequest",
+  () => [
+    { no: 1, name: "actor_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "reason", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ],
+);
+
+/**
+ * @generated from message bff.v1.ForceApproveActorResponse
+ */
+export const ForceApproveActorResponse = proto3.makeMessageType(
+  "bff.v1.ForceApproveActorResponse",
+  () => [
+    { no: 1, name: "actor", kind: "message", T: Actor },
+  ],
+);
+
+/**
+ * @generated from message bff.v1.ForceApproveActorAuditPayload
+ */
+export const ForceApproveActorAuditPayload = proto3.makeMessageType(
+  "bff.v1.ForceApproveActorAuditPayload",
   () => [
     { no: 1, name: "reason", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ],
