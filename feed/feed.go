@@ -3,6 +3,11 @@ package feed
 import (
 	"context"
 	"fmt"
+	"math"
+	"strings"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	bff "github.com/strideynet/bsky-furry-feed"
@@ -10,9 +15,6 @@ import (
 	"github.com/strideynet/bsky-furry-feed/store"
 	"github.com/strideynet/bsky-furry-feed/store/gen"
 	"golang.org/x/exp/slices"
-	"math"
-	"strings"
-	"time"
 )
 
 var feedRequestMetric = promauto.NewSummaryVec(prometheus.SummaryOpts{
@@ -94,7 +96,17 @@ func PostsFromStorePosts(storePosts []gen.CandidatePost) []Post {
 	return posts
 }
 
-func chronologicalGenerator(requireTags []string, excludeTags []string) GenerateFunc {
+type chronologicalGeneratorOpts struct {
+	// TODO: Remove these once we're fully moved over to hashtags.
+	RequireTags []string
+	ExcludeTags []string
+
+	IncludeHashtags []string
+	ExcludeHashtags []string
+	HasMedia        pgtype.Bool
+}
+
+func chronologicalGenerator(opts chronologicalGeneratorOpts) GenerateFunc {
 	return func(ctx context.Context, pgxStore *store.PGXStore, cursor string, limit int) ([]Post, error) {
 		cursorTime := time.Now().UTC()
 		if cursor != "" {
@@ -105,10 +117,13 @@ func chronologicalGenerator(requireTags []string, excludeTags []string) Generate
 			cursorTime = parsedTime
 		}
 		params := store.ListPostsForNewFeedOpts{
-			Limit:       limit,
-			RequireTags: requireTags,
-			ExcludeTags: excludeTags,
-			CursorTime:  cursorTime,
+			Limit:           limit,
+			RequireTags:     opts.RequireTags,
+			ExcludeTags:     opts.ExcludeTags,
+			IncludeHashtags: opts.IncludeHashtags,
+			ExcludeHashtags: opts.ExcludeHashtags,
+			HasMedia:        opts.HasMedia,
+			CursorTime:      cursorTime,
 		}
 
 		posts, err := pgxStore.ListPostsForNewFeed(ctx, params)
@@ -225,15 +240,75 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{ID: "furry-hot"}, scoreBasedGenerator(1.85, time.Hour*2))
 
 	// Reverse chronological based feeds
-	r.Register(Meta{ID: "furry-new"}, chronologicalGenerator([]string{}, []string{}))
-	r.Register(Meta{ID: "furry-fursuit"}, chronologicalGenerator([]string{bff.TagFursuitMedia}, []string{}))
-	r.Register(Meta{ID: "fursuit-nsfw"}, chronologicalGenerator([]string{bff.TagFursuitMedia, bff.TagNSFW}, []string{}))
-	r.Register(Meta{ID: "fursuit-clean"}, chronologicalGenerator([]string{bff.TagFursuitMedia}, []string{bff.TagNSFW}))
-	r.Register(Meta{ID: "furry-art"}, chronologicalGenerator([]string{bff.TagArt}, []string{}))
-	r.Register(Meta{ID: "art-clean"}, chronologicalGenerator([]string{bff.TagArt}, []string{bff.TagNSFW}))
-	r.Register(Meta{ID: "art-nsfw"}, chronologicalGenerator([]string{bff.TagNSFW, bff.TagArt}, []string{}))
-	r.Register(Meta{ID: "furry-nsfw"}, chronologicalGenerator([]string{bff.TagNSFW}, []string{}))
-	r.Register(Meta{ID: "furry-comms"}, chronologicalGenerator([]string{bff.TagCommissionsOpen}, []string{}))
+	r.Register(Meta{ID: "furry-new"}, chronologicalGenerator(chronologicalGeneratorOpts{
+		RequireTags: []string{},
+		ExcludeTags: []string{},
+
+		IncludeHashtags: []string{},
+		ExcludeHashtags: []string{},
+	}))
+	r.Register(Meta{ID: "furry-fursuit"}, chronologicalGenerator(chronologicalGeneratorOpts{
+		RequireTags: []string{bff.TagFursuitMedia},
+		ExcludeTags: []string{},
+
+		IncludeHashtags: []string{"fursuitfriday", "fursuit", "murrsuit", "mursuit"},
+		ExcludeHashtags: []string{},
+		HasMedia:        pgtype.Bool{Valid: true, Bool: true},
+	}))
+	r.Register(Meta{ID: "fursuit-nsfw"}, chronologicalGenerator(chronologicalGeneratorOpts{
+		RequireTags: []string{bff.TagFursuitMedia, bff.TagNSFW},
+		ExcludeTags: []string{},
+
+		IncludeHashtags: []string{"fursuitfriday", "fursuit", "murrsuit", "mursuit", "nsfw"},
+		ExcludeHashtags: []string{},
+		HasMedia:        pgtype.Bool{Valid: true, Bool: true},
+	}))
+	r.Register(Meta{ID: "fursuit-clean"}, chronologicalGenerator(chronologicalGeneratorOpts{
+		RequireTags: []string{bff.TagFursuitMedia},
+		ExcludeTags: []string{bff.TagNSFW},
+
+		IncludeHashtags: []string{"fursuitfriday", "fursuit"},
+		ExcludeHashtags: []string{"murrsuit", "mursuit", "nsfw"},
+		HasMedia:        pgtype.Bool{Valid: true, Bool: true},
+	}))
+	r.Register(Meta{ID: "furry-art"}, chronologicalGenerator(chronologicalGeneratorOpts{
+		RequireTags: []string{bff.TagArt},
+		ExcludeTags: []string{},
+
+		IncludeHashtags: []string{"art", "furryart"},
+		ExcludeHashtags: []string{},
+		HasMedia:        pgtype.Bool{Valid: true, Bool: true},
+	}))
+	r.Register(Meta{ID: "art-clean"}, chronologicalGenerator(chronologicalGeneratorOpts{
+		RequireTags: []string{bff.TagArt},
+		ExcludeTags: []string{bff.TagNSFW},
+
+		IncludeHashtags: []string{"art", "furryart"},
+		ExcludeHashtags: []string{"nsfw"},
+		HasMedia:        pgtype.Bool{Valid: true, Bool: true},
+	}))
+	r.Register(Meta{ID: "art-nsfw"}, chronologicalGenerator(chronologicalGeneratorOpts{
+		RequireTags: []string{bff.TagNSFW, bff.TagArt},
+		ExcludeTags: []string{},
+
+		IncludeHashtags: []string{"art", "furryart", "nsfw"},
+		ExcludeHashtags: []string{},
+		HasMedia:        pgtype.Bool{Valid: true, Bool: true},
+	}))
+	r.Register(Meta{ID: "furry-nsfw"}, chronologicalGenerator(chronologicalGeneratorOpts{
+		RequireTags: []string{bff.TagNSFW},
+		ExcludeTags: []string{},
+
+		IncludeHashtags: []string{"nsfw"},
+		ExcludeHashtags: []string{},
+	}))
+	r.Register(Meta{ID: "furry-comms"}, chronologicalGenerator(chronologicalGeneratorOpts{
+		RequireTags: []string{bff.TagCommissionsOpen},
+		ExcludeTags: []string{},
+
+		IncludeHashtags: []string{"commsopen"},
+		ExcludeHashtags: []string{},
+	}))
 	r.Register(Meta{ID: "furry-test"}, func(_ context.Context, _ *store.PGXStore, _ string, limit int) ([]Post, error) {
 		return []Post{
 			{

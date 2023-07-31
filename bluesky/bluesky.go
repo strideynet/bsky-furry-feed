@@ -3,13 +3,13 @@ package bluesky
 import (
 	"context"
 	"fmt"
-	indigoUtils "github.com/bluesky-social/indigo/util"
 	"os"
 	"time"
 
 	"github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/bluesky-social/indigo/lex/util"
+	indigoUtils "github.com/bluesky-social/indigo/util"
 	"github.com/bluesky-social/indigo/xrpc"
 )
 
@@ -108,12 +108,6 @@ func (c *Client) GetFollowers(
 		cursor,
 		limit,
 	)
-}
-
-func (c *Client) GetPostThread(
-	ctx context.Context, uri string,
-) (*bsky.FeedGetPostThread_Output, error) {
-	return bsky.FeedGetPostThread(ctx, c.xrpc, 1, uri)
 }
 
 // GetProfile fetches an actor's profile. actor can be a DID or a handle.

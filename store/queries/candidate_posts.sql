@@ -1,8 +1,8 @@
 -- name: CreateCandidatePost :exec
 INSERT INTO
-    candidate_posts (uri, actor_did, created_at, indexed_at, tags)
+    candidate_posts (uri, actor_did, created_at, indexed_at, hashtags, has_media, raw)
 VALUES
-    ($1, $2, $3, $4, $5);
+    ($1, $2, $3, $4, $5, $6, $7);
 
 -- name: SoftDeleteCandidatePost :exec
 UPDATE
@@ -21,8 +21,15 @@ FROM
 WHERE
       cp.is_hidden = false
   AND ca.status = 'approved'
-  AND (@require_tags::TEXT[] = '{}' OR @require_tags::TEXT[] <@ cp.tags)
-  AND (@exclude_tags::TEXT[] = '{}' OR NOT (@exclude_tags::TEXT[] && cp.tags))
+  AND (
+    (COALESCE(@require_tags::TEXT[], '{}') = '{}' OR @require_tags::TEXT[] <@ cp.tags) OR
+    (COALESCE(@include_hashtags::TEXT[], '{}') = '{}' OR (@include_hashtags::TEXT[] && cp.hashtags))
+  )
+  AND (
+    (COALESCE(@exclude_tags::TEXT[], '{}') = '{}' OR NOT (@exclude_tags::TEXT[] && cp.tags)) AND
+    (COALESCE(@exclude_hashtags::TEXT[], '{}') = '{}' OR NOT (@exclude_hashtags::TEXT[] && cp.hashtags))
+  )
+  AND (sqlc.narg(has_media)::BOOLEAN IS NULL OR sqlc.narg(has_media)::BOOLEAN = COALESCE(cp.has_media, true))
   AND (cp.indexed_at < @cursor_timestamp)
   AND cp.deleted_at IS NULL
 ORDER BY
@@ -52,4 +59,3 @@ WHERE
 ORDER BY
     cp.indexed_at DESC
 LIMIT @_limit;
-

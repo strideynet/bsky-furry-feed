@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -32,6 +33,11 @@ type PGXStore struct {
 
 func (s *PGXStore) Close() {
 	s.pool.Close()
+}
+
+// TODO: This is kind of a hack, but we want to be able to run raw SQL queries in integration tests...
+func (s *PGXStore) TESTONLY_GetPool() *pgxpool.Pool {
+	return s.pool
 }
 
 type PoolConnector interface {
@@ -399,7 +405,9 @@ type CreatePostOpts struct {
 	ActorDID  string
 	CreatedAt time.Time
 	IndexedAt time.Time
-	Tags      []string
+	Hashtags  []string
+	HasMedia  bool
+	Raw       *bsky.FeedPost
 }
 
 func (s *PGXStore) CreatePost(ctx context.Context, opts CreatePostOpts) (err error) {
@@ -419,7 +427,12 @@ func (s *PGXStore) CreatePost(ctx context.Context, opts CreatePostOpts) (err err
 			Time:  opts.IndexedAt,
 			Valid: true,
 		},
-		Tags: opts.Tags,
+		Hashtags: opts.Hashtags,
+		HasMedia: pgtype.Bool{
+			Valid: true,
+			Bool:  opts.HasMedia,
+		},
+		Raw: opts.Raw,
 	}
 	err = s.queries.CreateCandidatePost(ctx, s.pool, queryParams)
 	if err != nil {
@@ -501,10 +514,17 @@ func (s *PGXStore) DeleteFollow(ctx context.Context, opts DeleteFollowOpts) (err
 }
 
 type ListPostsForNewFeedOpts struct {
-	CursorTime  time.Time
+	CursorTime time.Time
+
+	// TODO: Remove these once we're fully moved over to hashtags.
 	RequireTags []string
 	ExcludeTags []string
-	Limit       int
+
+	IncludeHashtags []string
+	ExcludeHashtags []string
+	HasMedia        pgtype.Bool
+
+	Limit int
 }
 
 func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNewFeedOpts) (out []gen.CandidatePost, err error) {
@@ -519,8 +539,11 @@ func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNew
 			Valid: true,
 			Time:  opts.CursorTime,
 		},
-		RequireTags: opts.RequireTags,
-		ExcludeTags: opts.ExcludeTags,
+		RequireTags:     opts.RequireTags,
+		ExcludeTags:     opts.ExcludeTags,
+		IncludeHashtags: opts.IncludeHashtags,
+		ExcludeHashtags: opts.ExcludeHashtags,
+		HasMedia:        opts.HasMedia,
 	}
 	if opts.Limit != 0 {
 		queryParams.Limit = int32(opts.Limit)
