@@ -20,6 +20,7 @@ export async function logout() {
   agent.session = undefined;
   useCookie<null>(COOKIE_NAME, { expires: new Date() }).value = null;
   useState("user").value = null;
+  window.location.reload();
 }
 
 export async function login(
@@ -42,7 +43,9 @@ export async function login(
     return { success, error: "Invalid identifier or password" };
   }
 
-  useCookie<atproto.AtpSessionData>(COOKIE_NAME).value = data;
+  useCookie<atproto.AtpSessionData>(COOKIE_NAME, {
+    expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
+  }).value = data;
   useState("user").value = data;
 
   return { success, error: null };
