@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/rs/xid"
 	"github.com/strideynet/bsky-furry-feed/store/gen"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
@@ -25,6 +26,7 @@ func dbCmd(log *zap.Logger, env *environment) *cli.Command {
 					dbCandidateActorsList(log, env),
 					dbCandidateActorsSeedCmd(log, env),
 					dbCandidateActorsAddCmd(log, env),
+					dbCandidateActorsBackfillProfiles(log, env),
 				},
 			},
 		},
@@ -267,4 +269,76 @@ var seedCandidateActors = map[string]struct {
 		Comment:  "reese (reese.bsky.social)",
 		IsArtist: false,
 	},
+}
+
+func dbCandidateActorsBackfillProfiles(log *zap.Logger, env *environment) *cli.Command {
+	return &cli.Command{
+		Name:  "backfill-profiles",
+		Usage: "Backfill profiles for all actors missing profiles",
+		Action: func(cctx *cli.Context) error {
+			conn, err := pgx.Connect(cctx.Context, env.dbURL)
+			if err != nil {
+				return err
+			}
+			defer conn.Close(cctx.Context)
+
+			client, err := getBlueskyClient(cctx.Context)
+			if err != nil {
+				return err
+			}
+
+			db := gen.New()
+			repos, err := db.ListCandidateActorsRequiringProfileBackfill(cctx.Context, conn)
+			if err != nil {
+				return err
+			}
+			for _, r := range repos {
+				// TODO: Does this need throttling?
+				profile, err := client.GetProfile(cctx.Context, r.DID)
+				if err != nil {
+					return err
+				}
+
+				displayName := ""
+				if profile.DisplayName != nil {
+					displayName = *profile.DisplayName
+				}
+
+				description := ""
+				if profile.Description != nil {
+					description = *profile.Description
+				}
+
+				params := gen.CreateLatestActorProfileParams{
+					DID: r.DID,
+					ID:  xid.New().String(),
+					CreatedAt: pgtype.Timestamptz{
+						Valid: true,
+						// NOTE: The Firehose reader uses the server time but we use the local time here. This may cause staleness if the firehose gives us an older timestamp but a newer update.
+						Time: time.Now(),
+					},
+					IndexedAt: pgtype.Timestamptz{
+						Valid: true,
+						Time:  time.Now(),
+					},
+					DisplayName: pgtype.Text{
+						Valid:  true,
+						String: displayName,
+					},
+					Description: pgtype.Text{
+						Valid:  true,
+						String: description,
+					},
+				}
+				log.Info("backfilling candidate actor profile",
+					zap.Any("data", params),
+				)
+				if err := db.CreateLatestActorProfile(cctx.Context, conn, params); err != nil {
+					return err
+				}
+
+			}
+			return nil
+		},
+	}
 }

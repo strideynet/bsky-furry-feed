@@ -44,3 +44,13 @@ FROM
     candidate_actors
 WHERE
     did = $1;
+
+-- name: ListCandidateActorsRequiringProfileBackfill :many
+SELECT *
+FROM
+    candidate_actors ca
+WHERE
+    ca.status = 'approved' AND
+    ca.current_profile_id IS NULL
+ORDER BY
+    did;

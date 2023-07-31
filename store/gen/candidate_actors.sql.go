@@ -148,6 +148,46 @@ func (q *Queries) ListCandidateActors(ctx context.Context, db DBTX, status NullA
 	return items, nil
 }
 
+const listCandidateActorsRequiringProfileBackfill = `-- name: ListCandidateActorsRequiringProfileBackfill :many
+SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden, status, current_profile_id
+FROM
+    candidate_actors ca
+WHERE
+    ca.status = 'approved' AND
+    ca.current_profile_id IS NULL
+ORDER BY
+    did
+`
+
+func (q *Queries) ListCandidateActorsRequiringProfileBackfill(ctx context.Context, db DBTX) ([]CandidateActor, error) {
+	rows, err := db.Query(ctx, listCandidateActorsRequiringProfileBackfill)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CandidateActor
+	for rows.Next() {
+		var i CandidateActor
+		if err := rows.Scan(
+			&i.DID,
+			&i.CreatedAt,
+			&i.IsArtist,
+			&i.Comment,
+			&i.IsNSFW,
+			&i.IsHidden,
+			&i.Status,
+			&i.CurrentProfileID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateCandidateActor = `-- name: UpdateCandidateActor :one
 UPDATE candidate_actors ca
 SET
