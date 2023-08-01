@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/bluesky-social/indigo/util"
 	"github.com/ipfs/go-cid"
@@ -49,6 +50,16 @@ type actorCacher interface {
 	CreatePendingCandidateActor(ctx context.Context, did string) (err error)
 }
 
+var workerCursors = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	Name: "bff_ingester_worker_cursors",
+	Help: "The current cursor a worker is at.",
+}, []string{"worker"})
+
+var flushedWorkerCursor = promauto.NewGauge(prometheus.GaugeOpts{
+	Name: "bff_ingester_flushed_worker_cursor",
+	Help: "The current cursor flushed to persistent storage.",
+})
+
 type FirehoseIngester struct {
 	// dependencies
 	log        *zap.Logger
@@ -56,9 +67,10 @@ type FirehoseIngester struct {
 	store      *store.PGXStore
 
 	// configuration
-	subscribeURL    string
-	workerCount     int
-	workItemTimeout time.Duration
+	subscribeURL       string
+	workerCount        int
+	workItemTimeout    time.Duration
+	cursorFlushTimeout time.Duration
 }
 
 func NewFirehoseIngester(
@@ -69,9 +81,10 @@ func NewFirehoseIngester(
 		actorCache: crc,
 		store:      store,
 
-		subscribeURL:    pdsHost + "/xrpc/com.atproto.sync.subscribeRepos",
-		workerCount:     8,
-		workItemTimeout: time.Second * 30,
+		subscribeURL:       pdsHost + "/xrpc/com.atproto.sync.subscribeRepos",
+		workerCount:        8,
+		workItemTimeout:    time.Second * 30,
+		cursorFlushTimeout: time.Second * 10,
 	}
 }
 
@@ -82,17 +95,64 @@ func (fi *FirehoseIngester) Start(ctx context.Context) error {
 	// are not ready. In future, we may want to consider some reasonable
 	// buffering to account for short spikes in event rates.
 	evtChan := make(chan *atproto.SyncSubscribeRepos_Commit)
+
+	workerFirehoseCommitCursors := make([]struct {
+		mu     sync.Mutex
+		cursor int64
+	}, fi.workerCount)
+	flushCommitCursor := func(ctx context.Context) error {
+		cursors := make([]int64, len(workerFirehoseCommitCursors))
+		(func() {
+			// Acquire locks for all workers at once to force a write barrier across all workers.
+			for i := range workerFirehoseCommitCursors {
+				wfcc := &workerFirehoseCommitCursors[i]
+
+				wfcc.mu.Lock()
+				// defer here will defer the unlock to the end of the function and not the block, so this does what we intend it to do.
+				defer wfcc.mu.Unlock()
+
+				cursors[i] = wfcc.cursor
+			}
+		})()
+
+		// We want to set to the lowest cursor of all known cursors, since if we set it to the highest it may result in losing data from unprocessed events.
+		// If we set it to the lowest cursor, we will maybe get events get redelivered, but at least we won't lose any.
+		cursor := cursors[0]
+		for _, v := range cursors[1:] {
+			if v < cursor {
+				cursor = v
+			}
+		}
+
+		if err := fi.store.SetFirehoseCommitCursor(ctx, cursor); err != nil {
+			return err
+		}
+		flushedWorkerCursor.Set(float64(cursor))
+		return nil
+	}
+	defer func() {
+		if err := flushCommitCursor(ctx); err != nil {
+			fi.log.Error(
+				"failed to flush final firehose commit cursor",
+				zap.Error(err),
+			)
+		}
+	}()
+
 	eg.Go(func() error {
 		workerWg := sync.WaitGroup{}
-		for n := 1; n < fi.workerCount; n++ {
-			n := n
+
+		for i := 0; i < fi.workerCount; i++ {
+			i := i
+			wfcc := &workerFirehoseCommitCursors[i]
+
 			workerWg.Add(1)
 			go func() {
 				defer workerWg.Done()
 				for {
 					select {
 					case <-ctx.Done():
-						fi.log.Warn("worker exiting", zap.Int("worker", n))
+						fi.log.Warn("worker exiting", zap.Int("worker", i))
 						return
 					case evt := <-evtChan:
 						// record start time so we can collect
@@ -108,6 +168,21 @@ func (fi *FirehoseIngester) Start(ctx context.Context) error {
 								zap.Error(err),
 							)
 						}
+
+						(func() {
+							wfcc.mu.Lock()
+							defer wfcc.mu.Unlock()
+							if evt.Seq <= wfcc.cursor {
+								fi.log.Error(
+									"cursor went backwards or was repeated",
+									zap.Int64("seq", evt.Seq),
+									zap.Int64("cursor", wfcc.cursor),
+								)
+							}
+							workerCursors.WithLabelValues(strconv.Itoa(i)).Set(float64(evt.Seq))
+							wfcc.cursor = evt.Seq
+						})()
+
 						workItemsProcessed.
 							WithLabelValues("repo_commit").
 							Observe(time.Since(start).Seconds())
@@ -124,8 +199,40 @@ func (fi *FirehoseIngester) Start(ctx context.Context) error {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
+		for {
+			select {
+			case <-ctx.Done():
+				fi.log.Warn("cursor flushing worker exiting")
+				return nil
+			case <-time.After(fi.cursorFlushTimeout):
+			}
+
+			if err := flushCommitCursor(ctx); err != nil {
+				fi.log.Error(
+					"failed to flush firehose commit cursor",
+					zap.Error(err),
+				)
+			}
+		}
+	})
+
+	eg.Go(func() error {
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		cursor, err := fi.store.GetFirehoseCommitCursor(ctx)
+		if err != nil {
+			return fmt.Errorf("get commit cursor: %w", err)
+		}
+		fi.log.Info("starting ingestion", zap.Int64("cursor", cursor))
+
+		subscribeURL := fi.subscribeURL
+		if cursor != -1 {
+			subscribeURL += "?cursor=" + strconv.FormatInt(cursor, 10)
+		}
+
 		con, _, err := websocket.DefaultDialer.DialContext(
-			ctx, fi.subscribeURL, http.Header{},
+			ctx, subscribeURL, http.Header{},
 		)
 		if err != nil {
 			return fmt.Errorf("dialing websocket: %w", err)

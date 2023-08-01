@@ -700,6 +700,22 @@ func (s *PGXStore) CreateAuditEvent(ctx context.Context, opts CreateAuditEventOp
 	return out, nil
 }
 
+func (s *PGXStore) GetFirehoseCommitCursor(ctx context.Context) (out int64, err error) {
+	out, err = s.queries.GetFirehoseCommitCursor(ctx, s.pool)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Special sentinel value for no cursor persisted.
+			return -1, nil
+		}
+		return 0, err
+	}
+	return out, nil
+}
+
+func (s *PGXStore) SetFirehoseCommitCursor(ctx context.Context, cursor int64) (err error) {
+	return s.queries.SetFirehoseCommitCursor(ctx, s.pool, cursor)
+}
+
 func (s *PGXStore) GetPostByURI(ctx context.Context, uri string) (out gen.CandidatePost, err error) {
 	// TODO: Return a proto type rather than exposing gen.CandidatePost
 	return s.queries.GetPostByURI(ctx, s.pool, uri)

@@ -117,3 +117,7 @@ type CandidatePost struct {
 	Hashtags  []string
 	HasMedia  pgtype.Bool
 }
+
+type FirehoseCommitCursor struct {
+	Cursor int64
+}
