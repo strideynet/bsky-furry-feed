@@ -1,8 +1,8 @@
 -- name: CreateCandidatePost :exec
 INSERT INTO
-    candidate_posts (uri, actor_did, created_at, indexed_at, tags)
+    candidate_posts (uri, actor_did, created_at, indexed_at, tags, hashtags, has_media, raw)
 VALUES
-    ($1, $2, $3, $4, $5);
+    ($1, $2, $3, $4, $5, $6, $7, $8);
 
 -- name: SoftDeleteCandidatePost :exec
 UPDATE
@@ -52,4 +52,3 @@ WHERE
 ORDER BY
     cp.indexed_at DESC
 LIMIT @_limit;
-
