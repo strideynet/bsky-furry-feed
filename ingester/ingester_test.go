@@ -239,6 +239,8 @@ func TestFirehoseIngester(t *testing.T) {
 
 	// Now we can ensure the posts that were ignored don't show
 	// TODO: We still can't be totally sure these have been ingested...
+	// We need some way of telling that there's nothing left on the firehose
+	// to slorp.
 	for _, tp := range testPosts {
 		if tp.wantPost != nil {
 			continue
