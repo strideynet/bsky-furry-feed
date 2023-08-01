@@ -10,6 +10,7 @@ import {
 
 const props = defineProps<{
   action: AuditEvent;
+  lookupUser?: boolean;
 }>();
 
 const payload = computed(() => {
@@ -50,15 +51,15 @@ const type = computed(() => {
 const actionText = computed(() => {
   switch (type.value) {
     case "queue_approval":
-      return "approved this user.";
+      return props.lookupUser ? "approved" : "approved this user.";
     case "queue_rejection":
-      return "rejected this user";
+      return props.lookupUser ? "rejected" : "rejected this user.";
     case "comment":
-      return "commented.";
+      return props.lookupUser ? "commented on" : "commented.";
     case "unapprove":
-      return "unapproved this user.";
+      return props.lookupUser ? "unapproved" : "unapproved this user.";
     case "ban":
-      return "banned this user.";
+      return props.lookupUser ? "banned" : "banned this user.";
   }
 });
 
@@ -92,6 +93,7 @@ const comment = computed(() => {
       <div class="flex items-center gap-1">
         <user-link :did="action.actorDid" />
         {{ actionText }}
+        <user-link v-if="lookupUser" :did="action.subjectDid" />
         <span class="text-gray-600 dark:text-gray-400 text-xs">{{
           action.createdAt?.toDate().toLocaleDateString("en", {
             day: "numeric",

@@ -1,12 +1,9 @@
 <script setup lang="ts">
-import { newAgent } from "~/lib/auth";
+import { getProfile } from "~/lib/cached-bsky";
 
 const props = defineProps<{ did: string }>();
-const agent = newAgent();
 
-const { data } = await agent.getProfile({
-  actor: props.did,
-});
+const { data } = await getProfile(props.did);
 </script>
 
 <template>
