@@ -2,6 +2,9 @@ package ingester_test
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/api/bsky"
 	lexutil "github.com/bluesky-social/indigo/lex/util"
@@ -12,14 +15,11 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	bff "github.com/strideynet/bsky-furry-feed"
 	"github.com/strideynet/bsky-furry-feed/ingester"
 	bffv1pb "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"github.com/strideynet/bsky-furry-feed/store/gen"
 	"github.com/strideynet/bsky-furry-feed/testenv"
-	"testing"
-	"time"
 )
 
 // TestFirehoseIngester intends to fully integration test the ingester against
@@ -110,7 +110,6 @@ func TestFirehoseIngester(t *testing.T) {
 					Time:  now,
 					Valid: true,
 				},
-				Tags:     []string{},
 				Hashtags: []string{},
 				HasMedia: pgtype.Bool{
 					Bool:  false,
@@ -142,12 +141,6 @@ func TestFirehoseIngester(t *testing.T) {
 					Time:  now,
 					Valid: true,
 				},
-				Tags: []string{
-					bff.TagFursuitMedia,
-					bff.TagArt,
-					bff.TagNSFW,
-					bff.TagCommissionsOpen,
-				},
 				Hashtags: []string{
 					"fursuit",
 					"murrsuit",
@@ -177,7 +170,6 @@ func TestFirehoseIngester(t *testing.T) {
 					Time:  now,
 					Valid: true,
 				},
-				Tags: []string{},
 				Hashtags: []string{
 					"seni", "ısırır", "isirır",
 				},
@@ -210,12 +202,6 @@ func TestFirehoseIngester(t *testing.T) {
 				CreatedAt: pgtype.Timestamptz{
 					Time:  now,
 					Valid: true,
-				},
-				Tags: []string{
-					bff.TagFursuitMedia,
-					bff.TagArt,
-					bff.TagNSFW,
-					bff.TagCommissionsOpen,
 				},
 				Hashtags: []string{
 					"fursuit",
@@ -273,6 +259,8 @@ func TestFirehoseIngester(t *testing.T) {
 							out,
 							// We can't know IndexedAt ahead of time.
 							cmpopts.IgnoreFields(gen.CandidatePost{}, "IndexedAt"),
+							// Ignore tags, we're deprecating it.
+							cmpopts.IgnoreFields(gen.CandidatePost{}, "Tags"),
 							cmpopts.SortSlices(func(a, b string) bool { return a < b }),
 						),
 					)

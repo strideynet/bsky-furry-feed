@@ -14,10 +14,9 @@ import (
 
 const createCandidatePost = `-- name: CreateCandidatePost :exec
 INSERT INTO
-    candidate_posts (uri, actor_did, created_at, indexed_at, tags, hashtags,
-                     has_media, raw)
+    candidate_posts (uri, actor_did, created_at, indexed_at, hashtags, has_media, raw)
 VALUES
-    ($1, $2, $3, $4, $5, $6, $7, $8)
+    ($1, $2, $3, $4, $5, $6, $7)
 `
 
 type CreateCandidatePostParams struct {
@@ -25,7 +24,6 @@ type CreateCandidatePostParams struct {
 	ActorDID  string
 	CreatedAt pgtype.Timestamptz
 	IndexedAt pgtype.Timestamptz
-	Tags      []string
 	Hashtags  []string
 	HasMedia  pgtype.Bool
 	Raw       *bsky.FeedPost
@@ -37,7 +35,6 @@ func (q *Queries) CreateCandidatePost(ctx context.Context, db DBTX, arg CreateCa
 		arg.ActorDID,
 		arg.CreatedAt,
 		arg.IndexedAt,
-		arg.Tags,
 		arg.Hashtags,
 		arg.HasMedia,
 		arg.Raw,
@@ -54,26 +51,29 @@ FROM
 WHERE
       cp.is_hidden = false
   AND ca.status = 'approved'
-  AND ($1::TEXT[] = '{}' OR $1::TEXT[] <@ cp.tags)
-  AND ($2::TEXT[] = '{}' OR NOT ($2::TEXT[] && cp.tags))
-  AND (cp.indexed_at < $3)
+  AND (COALESCE($1::TEXT[], '{}') = '{}' OR $1::TEXT[] && cp.hashtags)
+  AND ($2::BOOLEAN IS NULL OR COALESCE(cp.has_media, false) = $2)
+  AND ($3::BOOLEAN IS NULL OR (ARRAY['nsfw', 'mursuit', 'murrsuit'] && cp.hashtags) = $3)
+  AND (cp.indexed_at < $4)
   AND cp.deleted_at IS NULL
 ORDER BY
     cp.indexed_at DESC
-LIMIT $4
+LIMIT $5
 `
 
 type GetFurryNewFeedParams struct {
-	RequireTags     []string
-	ExcludeTags     []string
+	Hashtags        []string
+	HasMedia        pgtype.Bool
+	IsNSFW          pgtype.Bool
 	CursorTimestamp pgtype.Timestamptz
 	Limit           int32
 }
 
 func (q *Queries) GetFurryNewFeed(ctx context.Context, db DBTX, arg GetFurryNewFeedParams) ([]CandidatePost, error) {
 	rows, err := db.Query(ctx, getFurryNewFeed,
-		arg.RequireTags,
-		arg.ExcludeTags,
+		arg.Hashtags,
+		arg.HasMedia,
+		arg.IsNSFW,
 		arg.CursorTimestamp,
 		arg.Limit,
 	)

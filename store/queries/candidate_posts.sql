@@ -1,9 +1,8 @@
 -- name: CreateCandidatePost :exec
 INSERT INTO
-    candidate_posts (uri, actor_did, created_at, indexed_at, tags, hashtags,
-                     has_media, raw)
+    candidate_posts (uri, actor_did, created_at, indexed_at, hashtags, has_media, raw)
 VALUES
-    ($1, $2, $3, $4, $5, $6, $7, $8);
+    ($1, $2, $3, $4, $5, $6, $7);
 
 -- name: SoftDeleteCandidatePost :exec
 UPDATE
@@ -22,8 +21,9 @@ FROM
 WHERE
       cp.is_hidden = false
   AND ca.status = 'approved'
-  AND (@require_tags::TEXT[] = '{}' OR @require_tags::TEXT[] <@ cp.tags)
-  AND (@exclude_tags::TEXT[] = '{}' OR NOT (@exclude_tags::TEXT[] && cp.tags))
+  AND (COALESCE(@hashtags::TEXT[], '{}') = '{}' OR @hashtags::TEXT[] && cp.hashtags)
+  AND (sqlc.narg(has_media)::BOOLEAN IS NULL OR COALESCE(cp.has_media, false) = @has_media)
+  AND (sqlc.narg(is_nsfw)::BOOLEAN IS NULL OR (ARRAY['nsfw', 'mursuit', 'murrsuit'] && cp.hashtags) = @is_nsfw)
   AND (cp.indexed_at < @cursor_timestamp)
   AND cp.deleted_at IS NULL
 ORDER BY
