@@ -85,7 +85,7 @@ const comment = computed(() => {
         v-else-if="type === 'queue_rejection' || type === 'unapprove'"
         class="text-gray-200"
       />
-      <icon-slash v-else-if="type === 'ban'" class="text-red-700" />
+      <icon-slash v-else-if="type === 'ban'" class="text-red-500" />
       <icon-comment v-else-if="type === 'comment'" class="text-gray-200" />
     </div>
     <div class="flex-1">
