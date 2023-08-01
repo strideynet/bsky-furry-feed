@@ -10,6 +10,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	bff "github.com/strideynet/bsky-furry-feed"
 	"github.com/strideynet/bsky-furry-feed/ingester"
@@ -197,51 +198,60 @@ func TestFirehoseIngester(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-
 		// We don't know the URI until we post it and this makes assertion
 		// more difficult. So we persist the returned URI here.
 		testPosts[i].uri = resp.Uri
 	}
 
-	// TODO(noah): This sucks - let's see if we can detect that they have all
-	// been delivered. Perhaps we can make use of the cursor updates and wait
-	// until the cursor reaches the end ?
-	time.Sleep(time.Second * 1)
+	t.Run("waiting for posts", func(t *testing.T) {
+		for _, tp := range testPosts {
+			if tp.wantPost == nil {
+				// Skip posts we don't expect to show up.
+				continue
+			}
+			tp := tp
+			t.Run(tp.name, func(t *testing.T) {
+				t.Parallel()
+				require.EventuallyWithT(t, func(t *assert.CollectT) {
+					out, err := harness.Store.GetPostByURI(ctx, tp.uri)
+					if !assert.NoError(t, err) {
+						return
+					}
 
-	// Close down ingester - and wait for it to close *properly*
+					// We don't know these values at the time of initializing the test case
+					// so we can set them here before assertion.
+					tp.wantPost.URI = tp.uri
+					tp.wantPost.Raw = tp.post
+					assert.Empty(
+						t,
+						cmp.Diff(
+							*tp.wantPost,
+							out,
+							// We can't know IndexedAt ahead of time.
+							cmpopts.IgnoreFields(gen.CandidatePost{}, "IndexedAt"),
+							cmpopts.SortSlices(func(a, b string) bool { return a < b }),
+						),
+					)
+				}, time.Second*5, time.Millisecond*100)
+			})
+		}
+	})
+
+	// Now we can ensure the posts that were ignored don't show
+	// TODO: We still can't be totally sure these have been ingested...
+	for _, tp := range testPosts {
+		if tp.wantPost != nil {
+			continue
+		}
+		_, err := harness.Store.GetPostByURI(ctx, tp.uri)
+		require.ErrorIs(t, err, pgx.ErrNoRows)
+	}
+
+	// Ensure ingester closes properly
 	fiCancel()
 	select {
 	case <-time.After(time.Second * 5):
 		require.FailNow(t, "firehose ingester did not finish within deadline")
 	case <-fiWait:
-	}
-
-	for _, tp := range testPosts {
-		tp := tp
-		t.Run("post: "+tp.name, func(t *testing.T) {
-			t.Parallel()
-
-			out, err := harness.Store.GetPostByURI(ctx, tp.uri)
-			if tp.wantPost == nil {
-				require.ErrorIs(t, err, pgx.ErrNoRows)
-				return
-			}
-			require.NoError(t, err)
-
-			// We don't know these values at the time of initializing the test case
-			// so we can set them here before assertion.
-			tp.wantPost.URI = tp.uri
-			tp.wantPost.Raw = tp.post
-			require.Empty(
-				t,
-				cmp.Diff(
-					*tp.wantPost,
-					out,
-					// We can't know IndexedAt ahead of time.
-					cmpopts.IgnoreFields(gen.CandidatePost{}, "IndexedAt"),
-					cmpopts.SortSlices(func(a, b string) bool { return a < b }),
-				),
-			)
-		})
 	}
 }

@@ -18,7 +18,6 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	ipfsLog "github.com/ipfs/go-log"
-	"github.com/jackc/pgx/v5"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -49,68 +48,45 @@ func ExtractClientFromTestUser(user *indigoTest.TestUser) *xrpc.Client {
 	return iface.(*xrpc.Client)
 }
 
-func startDatabase(ctx context.Context) (close func(ctx context.Context) error, url string, err error) {
+func StartDatabase(ctx context.Context, t *testing.T) (url string) {
+	t.Helper()
+
 	container, err := postgres.RunContainer(ctx,
 		postgres.WithDatabase("bff"),
 		postgres.WithUsername("bff"),
 		postgres.WithPassword("bff"),
 		testcontainers.WithWaitStrategy(wait.ForListeningPort("5432/tcp")),
 	)
-	if err != nil {
-		return nil, "", fmt.Errorf("starting postgres container: %w", err)
-	}
+	require.NoError(t, err, "starting postgres container")
+	t.Cleanup(func() {
+		require.NoError(t, container.Terminate(context.Background()))
+	})
 
 	port, err := container.MappedPort(ctx, "5432/tcp")
-	if err != nil {
-		return nil, "", fmt.Errorf("getting postgres port: %w", err)
-	}
+	require.NoError(t, err, "getting postgres port")
 
 	host, err := container.Host(ctx)
-	if err != nil {
-		return nil, "", fmt.Errorf("getting postgres host: %w", err)
-	}
+	require.NoError(t, err, "getting postgres host")
 
-	return func(ctx context.Context) error {
-		return container.Terminate(ctx)
-	}, fmt.Sprintf("postgres://bff:bff@%s:%d/bff?sslmode=disable", host, port.Int()), nil
-}
+	url = fmt.Sprintf("postgres://bff:bff@%s:%d/bff?sslmode=disable", host, port.Int())
+	migrator, err := migrate.New("file://../store/migrations", url)
+	require.NoError(t, err, "initializing migration runner")
+	require.NoError(t, migrator.Up(), "applying migrations")
 
-func runMigrations(dbURL string) error {
-	migrator, err := migrate.New("file://../store/migrations", dbURL)
-	if err != nil {
-		return fmt.Errorf("initializing migration runner: %w", err)
-	}
-	err = migrator.Up()
-	if err != nil {
-		return fmt.Errorf("applying migrations: %w", err)
-	}
-
-	return nil
+	return url
 }
 
 type Harness struct {
-	DBConn *pgx.Conn
-	PDS    *indigoTest.TestPDS
-	BGS    *indigoTest.TestBGS
-	Log    *zap.Logger
-	Store  *store.PGXStore
+	PDS   *indigoTest.TestPDS
+	BGS   *indigoTest.TestBGS
+	Log   *zap.Logger
+	Store *store.PGXStore
 }
 
 func StartHarness(ctx context.Context, t *testing.T) *Harness {
 	log := zaptest.NewLogger(t)
 
-	dbClose, dbURL, err := startDatabase(ctx)
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		require.NoError(t, dbClose(context.Background()))
-	})
-
-	conn, err := pgx.Connect(ctx, dbURL)
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		require.NoError(t, conn.Close(context.Background()))
-	})
-	require.NoError(t, runMigrations(dbURL))
+	dbURL := StartDatabase(ctx, t)
 
 	didr := indigoTest.TestPLC(t)
 
@@ -131,10 +107,9 @@ func StartHarness(ctx context.Context, t *testing.T) *Harness {
 	t.Cleanup(pgxStore.Close)
 
 	return &Harness{
-		DBConn: conn,
-		BGS:    bgs,
-		PDS:    pds,
-		Log:    log,
-		Store:  pgxStore,
+		BGS:   bgs,
+		PDS:   pds,
+		Log:   log,
+		Store: pgxStore,
 	}
 }
