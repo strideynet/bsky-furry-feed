@@ -514,17 +514,11 @@ func (s *PGXStore) DeleteFollow(ctx context.Context, opts DeleteFollowOpts) (err
 }
 
 type ListPostsForNewFeedOpts struct {
-	CursorTime time.Time
-
-	// TODO: Remove these once we're fully moved over to hashtags.
-	RequireTags []string
-	ExcludeTags []string
-
+	CursorTime      time.Time
 	IncludeHashtags []string
 	ExcludeHashtags []string
 	HasMedia        pgtype.Bool
-
-	Limit int
+	Limit           int
 }
 
 func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNewFeedOpts) (out []gen.CandidatePost, err error) {
@@ -539,8 +533,6 @@ func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNew
 			Valid: true,
 			Time:  opts.CursorTime,
 		},
-		RequireTags:     opts.RequireTags,
-		ExcludeTags:     opts.ExcludeTags,
 		IncludeHashtags: opts.IncludeHashtags,
 		ExcludeHashtags: opts.ExcludeHashtags,
 		HasMedia:        opts.HasMedia,

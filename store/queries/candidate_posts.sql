@@ -21,14 +21,8 @@ FROM
 WHERE
       cp.is_hidden = false
   AND ca.status = 'approved'
-  AND (
-    (COALESCE(@require_tags::TEXT[], '{}') = '{}' OR @require_tags::TEXT[] <@ cp.tags) OR
-    (COALESCE(@include_hashtags::TEXT[], '{}') = '{}' OR (@include_hashtags::TEXT[] && cp.hashtags))
-  )
-  AND (
-    (COALESCE(@exclude_tags::TEXT[], '{}') = '{}' OR NOT (@exclude_tags::TEXT[] && cp.tags)) AND
-    (COALESCE(@exclude_hashtags::TEXT[], '{}') = '{}' OR NOT (@exclude_hashtags::TEXT[] && cp.hashtags))
-  )
+  AND (COALESCE(@include_hashtags::TEXT[], '{}') = '{}' OR (@include_hashtags::TEXT[] && cp.hashtags))
+  AND (COALESCE(@exclude_hashtags::TEXT[], '{}') = '{}' OR NOT (@exclude_hashtags::TEXT[] && cp.hashtags))
   AND (sqlc.narg(has_media)::BOOLEAN IS NULL OR sqlc.narg(has_media)::BOOLEAN = COALESCE(cp.has_media, true))
   AND (cp.indexed_at < @cursor_timestamp)
   AND cp.deleted_at IS NULL

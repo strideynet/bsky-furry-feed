@@ -15,9 +15,9 @@ import (
 
 const createPostQuery = `
 INSERT INTO
-    candidate_posts (uri, actor_did, created_at, indexed_at, hashtags, tags, has_media, raw)
+    candidate_posts (uri, actor_did, created_at, indexed_at, hashtags, has_media, raw)
 VALUES
-    ($1, $2, $3, $4, $5, $6, $7, $8);
+    ($1, $2, $3, $4, $5, $6, $7);
 `
 
 func TestChronologicalGenerator(t *testing.T) {
@@ -47,29 +47,12 @@ func TestChronologicalGenerator(t *testing.T) {
 		time.Now(),      // created_at
 		time.Now(),      // indexed_at
 		[]string{"art"}, // hashtags
-		[]string{},      // tags
 		true,            // has_media
 		nil,             // raw
 	)
 	require.NoError(t, err)
 
-	legacyArtWithMediaURI := indigoTest.RandFakeAtUri("app.bsky.feed.post", "")
-	_, err = pool.Exec(
-		ctx,
-		createPostQuery,
-
-		legacyArtWithMediaURI, // uri
-		furry.DID(),           // actor_did
-		time.Now(),            // created_at
-		time.Now(),            // indexed_at
-		[]string{},            // hashtags
-		[]string{"art"},       // tags
-		nil,                   // has_media
-		nil,                   // raw
-	)
-	require.NoError(t, err)
-
-	nsfwArtWithMediaURI := indigoTest.RandFakeAtUri("app.bsky.feed.post", "")
+	nsfwArtWithMediaURI := indigoTest.RandFakeAtUri("app.bsky.feed.post", "post")
 	_, err = pool.Exec(
 		ctx,
 		createPostQuery,
@@ -79,29 +62,12 @@ func TestChronologicalGenerator(t *testing.T) {
 		time.Now(),              // created_at
 		time.Now(),              // indexed_at
 		[]string{"art", "nsfw"}, // hashtags
-		[]string{},              // tags
 		true,                    // has_media
 		nil,                     // raw
 	)
 	require.NoError(t, err)
 
-	legacyNsfwArtWithMediaURI := indigoTest.RandFakeAtUri("app.bsky.feed.post", "")
-	_, err = pool.Exec(
-		ctx,
-		createPostQuery,
-
-		legacyNsfwArtWithMediaURI, // uri
-		furry.DID(),               // actor_did
-		time.Now(),                // created_at
-		time.Now(),                // indexed_at
-		[]string{},                // hashtags
-		[]string{"art", "nsfw"},   // tags
-		nil,                       // has_media
-		nil,                       // raw
-	)
-	require.NoError(t, err)
-
-	artWithNoMediaURI := indigoTest.RandFakeAtUri("app.bsky.feed.post", "")
+	artWithNoMediaURI := indigoTest.RandFakeAtUri("app.bsky.feed.post", "post")
 	_, err = pool.Exec(
 		ctx,
 		createPostQuery,
@@ -111,16 +77,12 @@ func TestChronologicalGenerator(t *testing.T) {
 		time.Now(),        // created_at
 		time.Now(),        // indexed_at
 		[]string{"art"},   // hashtags
-		[]string{},        // tags
 		false,             // has_media
 		nil,               // raw
 	)
 	require.NoError(t, err)
 
 	posts, err := chronologicalGenerator(chronologicalGeneratorOpts{
-		RequireTags: []string{"art"},
-		ExcludeTags: []string{"nsfw"},
-
 		IncludeHashtags: []string{"art"},
 		ExcludeHashtags: []string{"nsfw"},
 		HasMedia:        pgtype.Bool{Valid: true, Bool: true},
@@ -132,7 +94,7 @@ func TestChronologicalGenerator(t *testing.T) {
 		postURIs[i] = post.URI
 	}
 
-	require.ElementsMatch(t, postURIs, []string{artWithMediaURI, legacyArtWithMediaURI})
+	require.ElementsMatch(t, postURIs, []string{artWithMediaURI})
 }
 
 func TestChronologicalGenerator_IncludeHashtags(t *testing.T) {
@@ -162,7 +124,6 @@ func TestChronologicalGenerator_IncludeHashtags(t *testing.T) {
 		time.Now(),                // created_at
 		time.Now(),                // indexed_at
 		[]string{"fursuitfriday"}, // hashtags
-		[]string{},                // tags
 		true,                      // has_media
 		nil,                       // raw
 	)

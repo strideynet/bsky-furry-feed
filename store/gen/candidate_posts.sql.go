@@ -44,33 +44,25 @@ func (q *Queries) CreateCandidatePost(ctx context.Context, db DBTX, arg CreateCa
 
 const getFurryNewFeed = `-- name: GetFurryNewFeed :many
 SELECT
-    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden, cp.tags, cp.deleted_at, cp.raw, cp.hashtags, cp.has_media
+    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden, cp.deleted_at, cp.raw, cp.hashtags, cp.has_media
 FROM
     candidate_posts cp
         INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
 WHERE
       cp.is_hidden = false
   AND ca.status = 'approved'
-  AND (
-    (COALESCE($1::TEXT[], '{}') = '{}' OR $1::TEXT[] <@ cp.tags) OR
-    (COALESCE($2::TEXT[], '{}') = '{}' OR ($2::TEXT[] && cp.hashtags))
-  )
-  AND (
-    (COALESCE($3::TEXT[], '{}') = '{}' OR NOT ($3::TEXT[] && cp.tags)) AND
-    (COALESCE($4::TEXT[], '{}') = '{}' OR NOT ($4::TEXT[] && cp.hashtags))
-  )
-  AND ($5::BOOLEAN IS NULL OR $5::BOOLEAN = COALESCE(cp.has_media, true))
-  AND (cp.indexed_at < $6)
+  AND (COALESCE($1::TEXT[], '{}') = '{}' OR ($1::TEXT[] && cp.hashtags))
+  AND (COALESCE($2::TEXT[], '{}') = '{}' OR NOT ($2::TEXT[] && cp.hashtags))
+  AND ($3::BOOLEAN IS NULL OR $3::BOOLEAN = COALESCE(cp.has_media, true))
+  AND (cp.indexed_at < $4)
   AND cp.deleted_at IS NULL
 ORDER BY
     cp.indexed_at DESC
-LIMIT $7
+LIMIT $5
 `
 
 type GetFurryNewFeedParams struct {
-	RequireTags     []string
 	IncludeHashtags []string
-	ExcludeTags     []string
 	ExcludeHashtags []string
 	HasMedia        pgtype.Bool
 	CursorTimestamp pgtype.Timestamptz
@@ -79,9 +71,7 @@ type GetFurryNewFeedParams struct {
 
 func (q *Queries) GetFurryNewFeed(ctx context.Context, db DBTX, arg GetFurryNewFeedParams) ([]CandidatePost, error) {
 	rows, err := db.Query(ctx, getFurryNewFeed,
-		arg.RequireTags,
 		arg.IncludeHashtags,
-		arg.ExcludeTags,
 		arg.ExcludeHashtags,
 		arg.HasMedia,
 		arg.CursorTimestamp,
@@ -101,7 +91,6 @@ func (q *Queries) GetFurryNewFeed(ctx context.Context, db DBTX, arg GetFurryNewF
 			&i.IndexedAt,
 			&i.IsNSFW,
 			&i.IsHidden,
-			&i.Tags,
 			&i.DeletedAt,
 			&i.Raw,
 			&i.Hashtags,
@@ -119,7 +108,7 @@ func (q *Queries) GetFurryNewFeed(ctx context.Context, db DBTX, arg GetFurryNewF
 
 const getPostsWithLikes = `-- name: GetPostsWithLikes :many
 SELECT
-    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden, cp.tags, cp.deleted_at, cp.raw, cp.hashtags, cp.has_media,
+    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden, cp.deleted_at, cp.raw, cp.hashtags, cp.has_media,
     (SELECT
          COUNT(*)
      FROM
@@ -154,7 +143,6 @@ type GetPostsWithLikesRow struct {
 	IndexedAt pgtype.Timestamptz
 	IsNSFW    bool
 	IsHidden  bool
-	Tags      []string
 	DeletedAt pgtype.Timestamptz
 	Raw       *bsky.FeedPost
 	Hashtags  []string
@@ -178,7 +166,6 @@ func (q *Queries) GetPostsWithLikes(ctx context.Context, db DBTX, arg GetPostsWi
 			&i.IndexedAt,
 			&i.IsNSFW,
 			&i.IsHidden,
-			&i.Tags,
 			&i.DeletedAt,
 			&i.Raw,
 			&i.Hashtags,

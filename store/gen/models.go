@@ -110,7 +110,6 @@ type CandidatePost struct {
 	IndexedAt pgtype.Timestamptz
 	IsNSFW    bool
 	IsHidden  bool
-	Tags      []string
 	DeletedAt pgtype.Timestamptz
 	Raw       *bsky.FeedPost
 	Hashtags  []string
