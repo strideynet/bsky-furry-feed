@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ProfileViewDetailed } from "@atproto/api/dist/client/types/app/bsky/actor/defs";
-import { newAgent } from "~/lib/auth";
 import { ActorStatus } from "../../proto/bff/v1/moderation_service_pb";
+import { getProfile } from "~/lib/cached-bsky";
 
 const props = defineProps<{
   did: string;
@@ -14,12 +14,9 @@ const api = await useAPI();
 const isArtist = ref(false);
 const loading = ref(false);
 const status = ref<ActorStatus | undefined>();
-const agent = newAgent();
 const data = ref<ProfileViewDetailed>();
 const loadProfile = async () => {
-  const result = await agent.getProfile({
-    actor: props.did,
-  });
+  const result = await getProfile(props.did);
   data.value = result.data;
   const { actor } = await api
     .getActor({ did: result.data.did })
