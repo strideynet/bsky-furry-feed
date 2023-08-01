@@ -13,7 +13,7 @@ const $emit = defineEmits(["next"]);
 const api = await useAPI();
 const isArtist = ref(false);
 const loading = ref(false);
-const status = ref<ActorStatus | undefined>();
+const status = ref() as Ref<ActorStatus>;
 const data = ref<ProfileViewDetailed>();
 const loadProfile = async () => {
   const result = await getProfile(props.did);
@@ -22,7 +22,7 @@ const loadProfile = async () => {
     .getActor({ did: result.data.did })
     .catch(() => ({ actor: undefined }));
   isArtist.value = Boolean(actor?.isArtist);
-  status.value = actor?.status;
+  status.value = actor?.status || ActorStatus.UNSPECIFIED;
 };
 
 async function next() {
@@ -50,6 +50,12 @@ await loadProfile();
       :pending="pending"
       @next="next"
       @loading="loading = true"
+    />
+    <user-actions
+      v-if="variant === 'profile'"
+      :did="data.did"
+      :status="status"
+      @update="next"
     />
 
     <div class="flex gap-3 items-center mb-5">
