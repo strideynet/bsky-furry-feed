@@ -89,7 +89,7 @@ const comment = computed(() => {
       <icon-comment v-else-if="type === 'comment'" class="text-gray-200" />
     </div>
     <div class="flex-1">
-      <div class="flex items-center gap-1">
+      <div class="flex max-md:flex-wrap items-center gap-1">
         <user-link :did="action.actorDid" />
         {{ actionText }}
         <span class="text-gray-600 dark:text-gray-400 text-xs">{{
