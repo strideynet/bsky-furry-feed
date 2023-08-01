@@ -68,7 +68,7 @@ func TestFirehoseIngester(t *testing.T) {
 		close(fiWait)
 	}()
 
-	now := time.Now().UTC()
+	now := time.Now().UTC().Truncate(time.Millisecond)
 	testPosts := []struct {
 		name string
 		user *indigoTest.TestUser
