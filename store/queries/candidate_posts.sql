@@ -52,3 +52,6 @@ WHERE
 ORDER BY
     cp.indexed_at DESC
 LIMIT @_limit;
+
+-- name: GetPostByURI :one
+SELECT * FROM candidate_posts cp WHERE cp.uri = @uri LIMIT 1;
