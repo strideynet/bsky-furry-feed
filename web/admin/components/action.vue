@@ -80,13 +80,13 @@ const comment = computed(() => {
     <div
       class="bg-gray-800 rounded-full flex items-center justify-center h-7 w-7 mr-3"
     >
-      <icon-user-plus v-if="type === 'queue_approval'" class="text-gray-300" />
+      <icon-user-plus v-if="type === 'queue_approval'" class="text-gray-200" />
       <icon-user-minus
         v-else-if="type === 'queue_rejection' || type === 'unapprove'"
-        class="text-gray-300"
+        class="text-gray-200"
       />
       <icon-slash v-else-if="type === 'ban'" class="text-red-700" />
-      <icon-comment v-else-if="type === 'comment'" class="text-gray-300" />
+      <icon-comment v-else-if="type === 'comment'" class="text-gray-200" />
     </div>
     <div class="flex-1">
       <div class="flex items-center gap-1">
