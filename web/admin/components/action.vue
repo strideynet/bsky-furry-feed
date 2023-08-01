@@ -2,8 +2,10 @@
 import {
   ApprovalQueueAction,
   AuditEvent,
+  BanActorAuditPayload,
   CommentAuditPayload,
   ProcessApprovalQueueAuditPayload,
+  UnapproveActorAuditPayload,
 } from "../../proto/bff/v1/moderation_service_pb";
 
 const props = defineProps<{
@@ -20,6 +22,12 @@ const payload = computed(() => {
       return ProcessApprovalQueueAuditPayload.fromBinary(value);
     case "bff.v1.CommentAuditPayload":
       return CommentAuditPayload.fromBinary(value);
+    case "bff.v1.UnapproveActorAuditPayload":
+      return UnapproveActorAuditPayload.fromBinary(value);
+    case "bff.v1.BanActorAuditPayload":
+      return BanActorAuditPayload.fromBinary(value);
+    default:
+      console.warn(`Missing payload decoding: ${typeUrl}`);
   }
 });
 
@@ -32,6 +40,10 @@ const type = computed(() => {
       : "queue_rejection";
   } else if (data instanceof CommentAuditPayload) {
     return "comment";
+  } else if (data instanceof UnapproveActorAuditPayload) {
+    return "unapprove";
+  } else if (data instanceof BanActorAuditPayload) {
+    return "ban";
   }
 });
 
@@ -43,6 +55,10 @@ const actionText = computed(() => {
       return "rejected this user";
     case "comment":
       return "commented.";
+    case "unapprove":
+      return "unapproved this user.";
+    case "ban":
+      return "banned this user.";
   }
 });
 
@@ -51,6 +67,10 @@ const comment = computed(() => {
 
   if (data instanceof CommentAuditPayload) {
     return data.comment;
+  } else if (data instanceof UnapproveActorAuditPayload) {
+    return data.reason;
+  } else if (data instanceof BanActorAuditPayload) {
+    return data.reason;
   }
 });
 </script>
@@ -58,11 +78,15 @@ const comment = computed(() => {
 <template>
   <div class="flex items-start my-4">
     <div
-      class="bg-gray-700 rounded-full flex items-center justify-center h-6 w-6 mr-3"
+      class="bg-gray-800 rounded-full flex items-center justify-center h-7 w-7 mr-3"
     >
-      <icon-check v-if="type === 'queue_approval'" class="text-green-500" />
-      <icon-cross v-else-if="type === 'queue_rejection'" class="text-red-500" />
-      <icon-comment v-else-if="type === 'comment'" class="text-gray-300" />
+      <icon-user-plus v-if="type === 'queue_approval'" class="text-gray-200" />
+      <icon-user-minus
+        v-else-if="type === 'queue_rejection' || type === 'unapprove'"
+        class="text-gray-200"
+      />
+      <icon-slash v-else-if="type === 'ban'" class="text-red-500" />
+      <icon-comment v-else-if="type === 'comment'" class="text-gray-200" />
     </div>
     <div class="flex-1">
       <div class="flex items-center gap-1">
