@@ -683,3 +683,8 @@ func (s *PGXStore) CreateAuditEvent(ctx context.Context, opts CreateAuditEventOp
 
 	return out, nil
 }
+
+func (s *PGXStore) GetPostByURI(ctx context.Context, uri string) (out gen.CandidatePost, err error) {
+	// TODO: Return a proto type rather than exposing gen.CandidatePost
+	return s.queries.GetPostByURI(ctx, s.pool, uri)
+}

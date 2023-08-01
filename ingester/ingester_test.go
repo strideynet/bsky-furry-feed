@@ -6,155 +6,254 @@ import (
 	"github.com/bluesky-social/indigo/api/bsky"
 	lexutil "github.com/bluesky-social/indigo/lex/util"
 	indigoTest "github.com/bluesky-social/indigo/testing"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	bff "github.com/strideynet/bsky-furry-feed"
 	"github.com/strideynet/bsky-furry-feed/ingester"
 	bffv1pb "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store"
+	"github.com/strideynet/bsky-furry-feed/store/gen"
 	"github.com/strideynet/bsky-furry-feed/testenv"
 	"testing"
 	"time"
 )
 
-func TestIngester(t *testing.T) {
+// TestFirehoseIngester intends to fully integration test the ingester against
+// a real database and a stood up Go PDS firehose. As little as possible should
+// be faked out.
+//
+// Where possible - integrate new test cases into this test - or create lower
+// level unit tests.
+func TestFirehoseIngester(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
 	}
 	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	t.Cleanup(cancel)
 	harness := testenv.StartHarness(ctx, t)
 
-	bob := harness.PDS.MustNewUser(t, "bob.tpds")
-	furry := harness.PDS.MustNewUser(t, "furry.tpds")
-
-	cac := ingester.NewActorCache(harness.Log, harness.Store)
+	nonFurry := harness.PDS.MustNewUser(t, "non-furry.tpds")
+	pendingFurry := harness.PDS.MustNewUser(t, "pending-furry.tpds")
 	_, err := harness.Store.CreateActor(ctx, store.CreateActorOpts{
-		Status:  bffv1pb.ActorStatus_ACTOR_STATUS_APPROVED,
-		Comment: "furry.tpds",
-		DID:     furry.DID(),
+		Status: bffv1pb.ActorStatus_ACTOR_STATUS_PENDING,
+		DID:    pendingFurry.DID(),
 	})
 	require.NoError(t, err)
-	require.NoError(t, cac.Sync(ctx))
+	approvedFurry := harness.PDS.MustNewUser(t, "approvedFurry.tpds")
+	_, err = harness.Store.CreateActor(ctx, store.CreateActorOpts{
+		Status: bffv1pb.ActorStatus_ACTOR_STATUS_APPROVED,
+		DID:    approvedFurry.DID(),
+	})
+	require.NoError(t, err)
 
-	fi := ingester.NewFirehoseIngester(harness.Log, harness.Store, cac, "ws://"+harness.PDS.RawHost())
-	ended := false
-	defer func() { ended = true }()
+	cac := ingester.NewActorCache(harness.Log, harness.Store)
+	require.NoError(t, cac.Sync(ctx))
+	fi := ingester.NewFirehoseIngester(
+		harness.Log, harness.Store, cac, "ws://"+harness.PDS.RawHost(),
+	)
+	fiContext, fiCancel := context.WithCancel(ctx)
+	fiWait := make(chan struct{})
 	go func() {
-		err := fi.Start(ctx)
-		if !ended {
-			require.NoError(t, err)
+		if err := fi.Start(fiContext); err != nil {
+			if fiContext.Err() == nil {
+				require.NoError(t, err)
+			}
 		}
+		close(fiWait)
 	}()
 
-	ignoredPost := bob.Post(t, "lorem ipsum dolor sit amet")
-	trackedPost := furry.Post(t, "thank u bites u")
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	testPosts := []struct {
+		name string
+		user *indigoTest.TestUser
+		post *bsky.FeedPost
 
-	// ensure ingester has processed posts
-	var postURIs []string
-	require.Eventually(t, func() bool {
-		rows, err := harness.DBConn.Query(ctx, "select uri from candidate_posts")
-		require.NoError(t, err)
-		postURIs, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (s string, err error) {
-			err = row.Scan(&s)
-			return
-		})
-		require.NoError(t, err)
-		return len(postURIs) > 0
-	}, time.Second, 10*time.Millisecond)
+		wantPost *gen.CandidatePost
 
-	assert.Equal(t, 1, len(postURIs))
-	assert.Contains(t, postURIs, trackedPost.Uri)
-	assert.NotContains(t, postURIs, ignoredPost.Uri)
-}
-
-func postWithLangs(t *testing.T, u *indigoTest.TestUser, body string, langs []string) *atproto.RepoStrongRef {
-	t.Helper()
-
-	ctx := context.TODO()
-	resp, err := atproto.RepoCreateRecord(ctx, testenv.ExtractClientFromTestUser(u), &atproto.RepoCreateRecord_Input{
-		Collection: "app.bsky.feed.post",
-		Repo:       u.DID(),
-		Record: &lexutil.LexiconTypeDecoder{
-			Val: &bsky.FeedPost{
-				CreatedAt: time.Now().Format(time.RFC3339),
-				Text:      body,
-				Langs:     langs,
+		uri string
+	}{
+		{
+			name: "non furry ignored",
+			user: nonFurry,
+			post: &bsky.FeedPost{
+				LexiconTypeID: "app.bsky.feed.post",
+				CreatedAt:     now.Format(time.RFC3339Nano),
+				Text:          "lorem ipsum dolor sit amet",
 			},
 		},
-	})
-	require.NoError(t, err)
-
-	return &atproto.RepoStrongRef{
-		Cid: resp.Cid,
-		Uri: resp.Uri,
+		{
+			name: "pending furry ignored",
+			user: pendingFurry,
+			post: &bsky.FeedPost{
+				LexiconTypeID: "app.bsky.feed.post",
+				CreatedAt:     now.Format(time.RFC3339Nano),
+				Text:          "lorem ipsum dolor sit amet",
+			},
+		},
+		{
+			name: "simple furry",
+			user: approvedFurry,
+			post: &bsky.FeedPost{
+				LexiconTypeID: "app.bsky.feed.post",
+				CreatedAt:     now.Format(time.RFC3339Nano),
+				Text:          "paws paws paws",
+			},
+			wantPost: &gen.CandidatePost{
+				ActorDID: approvedFurry.DID(),
+				CreatedAt: pgtype.Timestamptz{
+					Time:  now,
+					Valid: true,
+				},
+				Tags:     []string{},
+				Hashtags: []string{},
+				HasMedia: pgtype.Bool{
+					Bool:  false,
+					Valid: true,
+				},
+			},
+		},
+		{
+			name: "media and hashtags",
+			user: approvedFurry,
+			post: &bsky.FeedPost{
+				LexiconTypeID: "app.bsky.feed.post",
+				CreatedAt:     now.Format(time.RFC3339Nano),
+				Text:          "i love to poast #fursuit #murrsuit #furryart #commsopen #nsfw #bigBurgers",
+				Embed: &bsky.FeedPost_Embed{
+					EmbedImages: &bsky.EmbedImages{
+						LexiconTypeID: "app.bsky.embed.images",
+						Images: []*bsky.EmbedImages_Image{
+							{
+								Alt: "some alt text",
+							},
+						},
+					},
+				},
+			},
+			wantPost: &gen.CandidatePost{
+				ActorDID: approvedFurry.DID(),
+				CreatedAt: pgtype.Timestamptz{
+					Time:  now,
+					Valid: true,
+				},
+				Tags: []string{
+					bff.TagFursuitMedia,
+					bff.TagArt,
+					bff.TagNSFW,
+					bff.TagCommissionsOpen,
+				},
+				Hashtags: []string{
+					"fursuit",
+					"murrsuit",
+					"furryart",
+					"commsopen",
+					"nsfw",
+					"bigburgers",
+				},
+				HasMedia: pgtype.Bool{
+					Bool:  true,
+					Valid: true,
+				},
+			},
+		},
+		{
+			name: "internationalised hashtags",
+			user: approvedFurry,
+			post: &bsky.FeedPost{
+				LexiconTypeID: "app.bsky.feed.post",
+				CreatedAt:     now.Format(time.RFC3339Nano),
+				Text:          "#SENİ #ISIRır",
+				Langs:         []string{"tr"},
+			},
+			wantPost: &gen.CandidatePost{
+				ActorDID: approvedFurry.DID(),
+				CreatedAt: pgtype.Timestamptz{
+					Time:  now,
+					Valid: true,
+				},
+				Tags: []string{},
+				Hashtags: []string{
+					"seni", "ısırır", "isirır",
+				},
+				HasMedia: pgtype.Bool{
+					Bool:  false,
+					Valid: true,
+				},
+			},
+		},
 	}
-}
 
-func TestIngester_Hashtags(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-	t.Parallel()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	harness := testenv.StartHarness(ctx, t)
-
-	furry := harness.PDS.MustNewUser(t, "furry.tpds")
-
-	cac := ingester.NewActorCache(harness.Log, harness.Store)
-	_, err := harness.Store.CreateActor(ctx, store.CreateActorOpts{
-		Status:  bffv1pb.ActorStatus_ACTOR_STATUS_APPROVED,
-		Comment: "furry.tpds",
-		DID:     furry.DID(),
-	})
-	require.NoError(t, err)
-	require.NoError(t, cac.Sync(ctx))
-
-	fi := ingester.NewFirehoseIngester(harness.Log, harness.Store, cac, "ws://"+harness.PDS.RawHost())
-	ended := false
-	defer func() { ended = true }()
-	go func() {
-		err := fi.Start(ctx)
-		if !ended {
-			require.NoError(t, err)
-		}
-	}()
-
-	enPost := postWithLangs(t, furry, "#Thank #u #bItes #U", []string{"en"})
-	jaPost := postWithLangs(t, furry, "＃ありがとう ＃噛む", []string{"ja"})
-	trPost := postWithLangs(t, furry, "#SENİ #ISIRır", []string{"tr"})
-
-	// ensure ingester has processed posts
-	type postAndHashtag struct {
-		uri      string
-		hashtags []string
-	}
-	var postAndHashtags []postAndHashtag
-	require.Eventually(t, func() bool {
-		rows, err := harness.DBConn.Query(ctx, "select uri, hashtags from candidate_posts")
-		require.NoError(t, err)
-		postAndHashtags, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (s postAndHashtag, err error) {
-			err = row.Scan(&s.uri, &s.hashtags)
-			return
+	for i, tp := range testPosts {
+		resp, err := atproto.RepoCreateRecord(ctx, testenv.ExtractClientFromTestUser(tp.user), &atproto.RepoCreateRecord_Input{
+			Collection: "app.bsky.feed.post",
+			Repo:       tp.user.DID(),
+			Record: &lexutil.LexiconTypeDecoder{
+				Val: tp.post,
+			},
 		})
 		require.NoError(t, err)
-		return len(postAndHashtags) == 3
-	}, time.Second, 10*time.Millisecond)
+		// We don't know the URI until we post it and this makes assertion
+		// more difficult. So we persist the returned URI here.
+		testPosts[i].uri = resp.Uri
+	}
 
-	for _, post := range postAndHashtags {
-		var expectedHashtags []string
-		switch post.uri {
-		case enPost.Uri:
-			expectedHashtags = []string{"thank", "bites", "u"}
-		case jaPost.Uri:
-			expectedHashtags = []string{"ありがとう", "噛む"}
-		case trPost.Uri:
-			expectedHashtags = []string{"seni", "ısırır", "isirır"}
+	t.Run("waiting for posts", func(t *testing.T) {
+		for _, tp := range testPosts {
+			if tp.wantPost == nil {
+				// Skip posts we don't expect to show up.
+				continue
+			}
+			tp := tp
+			t.Run(tp.name, func(t *testing.T) {
+				t.Parallel()
+				require.EventuallyWithT(t, func(t *assert.CollectT) {
+					out, err := harness.Store.GetPostByURI(ctx, tp.uri)
+					if !assert.NoError(t, err) {
+						return
+					}
+
+					// We don't know these values at the time of initializing the test case
+					// so we can set them here before assertion.
+					tp.wantPost.URI = tp.uri
+					tp.wantPost.Raw = tp.post
+					assert.Empty(
+						t,
+						cmp.Diff(
+							*tp.wantPost,
+							out,
+							// We can't know IndexedAt ahead of time.
+							cmpopts.IgnoreFields(gen.CandidatePost{}, "IndexedAt"),
+							cmpopts.SortSlices(func(a, b string) bool { return a < b }),
+						),
+					)
+				}, time.Second*5, time.Millisecond*100)
+			})
 		}
-		require.ElementsMatch(t, post.hashtags, expectedHashtags)
+	})
+
+	// Now we can ensure the posts that were ignored don't show
+	// TODO: We still can't be totally sure these have been ingested...
+	// We need some way of telling that there's nothing left on the firehose
+	// to slorp.
+	for _, tp := range testPosts {
+		if tp.wantPost != nil {
+			continue
+		}
+		_, err := harness.Store.GetPostByURI(ctx, tp.uri)
+		require.ErrorIs(t, err, pgx.ErrNoRows)
+	}
+
+	// Ensure ingester closes properly
+	fiCancel()
+	select {
+	case <-time.After(time.Second * 5):
+		require.FailNow(t, "firehose ingester did not finish within deadline")
+	case <-fiWait:
 	}
 }

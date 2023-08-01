@@ -3,6 +3,7 @@ package ingester
 import (
 	"context"
 	"fmt"
+	"github.com/jonboulle/clockwork"
 	"sync"
 	"time"
 
@@ -23,6 +24,8 @@ import (
 type ActorCache struct {
 	log   *zap.Logger
 	store *store.PGXStore
+
+	clock clockwork.Clock
 
 	// period is how often to attempt to fresh the list of candidate
 	// actors.
@@ -47,6 +50,7 @@ func NewActorCache(
 ) *ActorCache {
 	return &ActorCache{
 		store:          store,
+		clock:          clockwork.NewRealClock(),
 		log:            log,
 		period:         time.Minute,
 		refreshTimeout: time.Second * 10,
@@ -85,13 +89,13 @@ func (crc *ActorCache) Sync(ctx context.Context) error {
 }
 
 func (crc *ActorCache) Start(ctx context.Context) error {
-	ticker := time.NewTicker(crc.period)
+	ticker := crc.clock.NewTicker(crc.period)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-ticker.C:
+		case <-ticker.Chan():
 			// TODO: If this fails enough times, we should bail out, this allows
 			// a process restart to potentially rectify the situation.
 			ctx, cancel := context.WithTimeout(ctx, crc.refreshTimeout)

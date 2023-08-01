@@ -43,11 +43,16 @@ var workItemsProcessed = promauto.NewSummaryVec(prometheus.SummaryOpts{
 	Help: "The total number of work items handled by the ingester worker pool.",
 }, []string{"type"})
 
+type actorCacher interface {
+	GetByDID(did string) *v1.Actor
+	CreatePendingCandidateActor(ctx context.Context, did string) (err error)
+}
+
 type FirehoseIngester struct {
 	// dependencies
-	log   *zap.Logger
-	crc   *ActorCache
-	store *store.PGXStore
+	log        *zap.Logger
+	actorCache actorCacher
+	store      *store.PGXStore
 
 	// configuration
 	subscribeURL    string
@@ -59,9 +64,9 @@ func NewFirehoseIngester(
 	log *zap.Logger, store *store.PGXStore, crc *ActorCache, pdsHost string,
 ) *FirehoseIngester {
 	return &FirehoseIngester{
-		log:   log,
-		crc:   crc,
-		store: store,
+		log:        log,
+		actorCache: crc,
+		store:      store,
 
 		subscribeURL:    pdsHost + "/xrpc/com.atproto.sync.subscribeRepos",
 		workerCount:     8,
@@ -264,7 +269,7 @@ func (fi *FirehoseIngester) handleRecordCreate(
 	}()
 	span.SetAttributes(recordUriAttr(recordUri))
 
-	actor := fi.crc.GetByDID(repoDID)
+	actor := fi.actorCache.GetByDID(repoDID)
 	if actor == nil {
 		feedFollow := fi.isFurryFeedFollow(record)
 		// If it's an unknown actor, and they've interacted, add em to
@@ -278,7 +283,7 @@ func (fi *FirehoseIngester) handleRecordCreate(
 			zap.String("did", repoDID),
 			zap.Bool("feed_follow", feedFollow),
 		)
-		if err := fi.crc.CreatePendingCandidateActor(ctx, repoDID); err != nil {
+		if err := fi.actorCache.CreatePendingCandidateActor(ctx, repoDID); err != nil {
 			return fmt.Errorf("creating pending candidate actor: %w", err)
 		}
 
@@ -333,7 +338,7 @@ func (fi *FirehoseIngester) handleRecordDelete(
 	}()
 	span.SetAttributes(recordUriAttr(recordUri))
 
-	actor := fi.crc.GetByDID(repoDID)
+	actor := fi.actorCache.GetByDID(repoDID)
 	if actor == nil {
 		// if we don’t know the actor, we don’t have their data
 		return
@@ -373,7 +378,7 @@ func (fi *FirehoseIngester) handleRecordUpdate(
 	}()
 	span.SetAttributes(recordUriAttr(recordUri))
 
-	actor := fi.crc.GetByDID(repoDID)
+	actor := fi.actorCache.GetByDID(repoDID)
 	if actor == nil {
 		return nil
 	}
