@@ -9,8 +9,8 @@ jobs:
     name: Lint Go
     runs-on: ubuntu-latest
     permissions:
-      packages: write
       contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -22,6 +22,15 @@ jobs:
         with:
           version: v1.53
           args: --timeout=5m
+  lint-protos:
+    name: Lint Protos
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@v3
+    - uses: bufbuild/buf-setup-action@v1
+    - uses: bufbuild/buf-lint-action@v1
   check-sqlc:
     name: Check sqlc generation
     runs-on: ubuntu-latest
