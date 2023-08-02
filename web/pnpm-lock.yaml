@@ -1,4 +1,4 @@
-lockfileVersion: '6.1'
+lockfileVersion: '6.0'
 
 settings:
   autoInstallPeers: true
@@ -6,7 +6,17 @@ settings:
 
 importers:
 
-  .: {}
+  .:
+    dependencies:
+      '@bufbuild/buf':
+        specifier: ^1.25.1
+        version: 1.25.1
+      '@bufbuild/protobuf':
+        specifier: ^1.3.0
+        version: 1.3.0
+      '@bufbuild/protoc-gen-es':
+        specifier: ^1.3.0
+        version: 1.3.0(@bufbuild/protobuf@1.3.0)
 
   admin:
     dependencies:
@@ -25,7 +35,7 @@ importers:
     devDependencies:
       '@nuxt/devtools':
         specifier: latest
-        version: 0.7.2(nuxt@3.6.3)(vite@4.3.9)
+        version: 0.7.4(nuxt@3.6.3)(vite@4.3.9)
       '@nuxt/eslint-config':
         specifier: ^0.1.1
         version: 0.1.1(eslint@8.28.0)
@@ -522,6 +532,74 @@ packages:
       to-fast-properties: 2.0.0
     dev: true
 
+  /@bufbuild/buf-darwin-arm64@1.25.1:
+    resolution: {integrity: sha512-1EjF4swCjxj8A7snyIFCnl0l81idYyrLLhQurAcGYJXtHl/VdF+qE+zuGI+ehuc4uSTTGp1X2BelprOnW17ZDQ==}
+    engines: {node: '>=12'}
+    cpu: [arm64]
+    os: [darwin]
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@bufbuild/buf-darwin-x64@1.25.1:
+    resolution: {integrity: sha512-LSNTqQFF9vrx/CUE2TxNhxb7VwEYmUxA2YXznbElxV6PqWaNt1McrbxCvUF7oYEKXXwps9gPkUi4rzjCOliCsQ==}
+    engines: {node: '>=12'}
+    cpu: [x64]
+    os: [darwin]
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@bufbuild/buf-linux-aarch64@1.25.1:
+    resolution: {integrity: sha512-Qwy+xos8bnyjCKSCw1l+VG9aIoZHo4CXp3A7bLtYWUZMn18WZ1xtRPFvw/ntdGoZhcoP+yYNbiVi22m4r/zVbQ==}
+    engines: {node: '>=12'}
+    cpu: [arm64]
+    os: [linux]
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@bufbuild/buf-linux-x64@1.25.1:
+    resolution: {integrity: sha512-i8EGo8dqotGdxO+UayEGqwZ4FUg7ejw0XOTgTlwH79yUV1IEuWb1+zItPeWthJHhrNT6gQEsESie/pygDtmhaA==}
+    engines: {node: '>=12'}
+    cpu: [x64]
+    os: [linux]
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@bufbuild/buf-win32-arm64@1.25.1:
+    resolution: {integrity: sha512-ut8hRAy8GQZnNKaPlwiu9cN9bCX0XWvdsPezXFsdMynuYXBgssvJ7dGbzLWDSmOm8evhsJ+ZPmrLYyk+7OD2Ng==}
+    engines: {node: '>=12'}
+    cpu: [arm64]
+    os: [win32]
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@bufbuild/buf-win32-x64@1.25.1:
+    resolution: {integrity: sha512-g4npaZs7aqXlTETaDhKh7E4LcSTCDEehUGV7Y+xiTB5r4VyCU8gzykuE7sNHxUsQ+X5lV/pFkFGz+449Pf/tww==}
+    engines: {node: '>=12'}
+    cpu: [x64]
+    os: [win32]
+    requiresBuild: true
+    dev: false
+    optional: true
+
+  /@bufbuild/buf@1.25.1:
+    resolution: {integrity: sha512-Of9mH1xzhi/8EnndGx3uOV/umjGkCSnBnN01pm5O6xUD2aAdqDPjxWrFY09oR0NIHmePpgGQn6az7Ku42mlFPQ==}
+    engines: {node: '>=12'}
+    hasBin: true
+    requiresBuild: true
+    optionalDependencies:
+      '@bufbuild/buf-darwin-arm64': 1.25.1
+      '@bufbuild/buf-darwin-x64': 1.25.1
+      '@bufbuild/buf-linux-aarch64': 1.25.1
+      '@bufbuild/buf-linux-x64': 1.25.1
+      '@bufbuild/buf-win32-arm64': 1.25.1
+      '@bufbuild/buf-win32-x64': 1.25.1
+    dev: false
+
   /@bufbuild/connect-web@0.11.0(@bufbuild/protobuf@1.2.0):
     resolution: {integrity: sha512-H0tSsn7dMJY5EQNHoQyE/TXmmRtJ6GauRl9RWk4GncQCXulo5ab5yn8cEtu7UKnPCvF7nYbK1ESE0vHi5Y2xaw==}
     peerDependencies:
@@ -541,6 +619,36 @@ packages:
 
   /@bufbuild/protobuf@1.2.0:
     resolution: {integrity: sha512-MBVuQMOBHxgGnZ9XCUIi8WOy5O/T4ma3TduCRhRvndv3UDbG9cHgd8h6nOYSGyBYPEvXf1z9nTwhp8mVIDbq2g==}
+    dev: false
+
+  /@bufbuild/protobuf@1.3.0:
+    resolution: {integrity: sha512-G372ods0pLt46yxVRsnP/e2btVPuuzArcMPFpIDeIwiGPuuglEs9y75iG0HMvZgncsj5TvbYRWqbVyOe3PLCWQ==}
+    dev: false
+
+  /@bufbuild/protoc-gen-es@1.3.0(@bufbuild/protobuf@1.3.0):
+    resolution: {integrity: sha512-XxGZwpXMYlwoSyJwCTFb7SZ2xKmv2iCRM022t1wszhY3kNL7rjpyj+3GbpCOjaM1T7NAoLnW0Hyb/M0b0XDb3Q==}
+    engines: {node: '>=14'}
+    hasBin: true
+    peerDependencies:
+      '@bufbuild/protobuf': 1.3.0
+    peerDependenciesMeta:
+      '@bufbuild/protobuf':
+        optional: true
+    dependencies:
+      '@bufbuild/protobuf': 1.3.0
+      '@bufbuild/protoplugin': 1.3.0
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@bufbuild/protoplugin@1.3.0:
+    resolution: {integrity: sha512-zye8CfJb9VWzaHR/f1qcEkddaRh9De+u6fORsj92Ten8EJUcyhiY5BivET+RMTissAKXKrp/f2zSBCV0dlFxPw==}
+    dependencies:
+      '@bufbuild/protobuf': 1.3.0
+      '@typescript/vfs': 1.5.0
+      typescript: 4.5.2
+    transitivePeerDependencies:
+      - supports-color
     dev: false
 
   /@cloudflare/kv-asset-handler@0.3.0:
@@ -1239,8 +1347,8 @@ packages:
     resolution: {integrity: sha512-GBzP8zOc7CGWyFQS6dv1lQz8VVpz5C2yRszbXufwG/9zhStTIH50EtD87NmWbTMwXDvZLNg8GIpb1UFdH93JCA==}
     dev: true
 
-  /@nuxt/devtools-kit@0.7.2(nuxt@3.6.3)(vite@4.3.9):
-    resolution: {integrity: sha512-hY4GWWkEdY68V9YdUn5Cmdxc3IbBP1YPjPs5vkHw+MOv9exlg/KnElDcbNWeWsTKIvlptdimssdh7rXY8ytfgQ==}
+  /@nuxt/devtools-kit@0.7.4(nuxt@3.6.3)(vite@4.3.9):
+    resolution: {integrity: sha512-+CKSSqalyW3elK364FamcHtXm6F03Iarfs9ftBiWmj3CdCTuv9aGpJFi0FKzXKzq/xlCtbWvIrqcaf2Iy//6NQ==}
     peerDependencies:
       nuxt: ^3.6.5
       vite: '*'
@@ -1255,8 +1363,8 @@ packages:
       - supports-color
     dev: true
 
-  /@nuxt/devtools-wizard@0.7.2:
-    resolution: {integrity: sha512-vq9QRq8NbvOiWtkOpVh6UjScYJhWJ44dedENCcVoXck1DUjd00EbNtdHOyMqF9xK4+lQpKz6JltPFdpP0CIMjg==}
+  /@nuxt/devtools-wizard@0.7.4:
+    resolution: {integrity: sha512-Ga+OgxTEZu0AnOmak5eMPrFThvLdoFVB5kEyyCrnBNdkTvX5Dtr8FvVAL+6jV0ALmqhWSXp99op2+QwHg7kgDg==}
     hasBin: true
     dependencies:
       consola: 3.2.3
@@ -1272,15 +1380,15 @@ packages:
       semver: 7.5.4
     dev: true
 
-  /@nuxt/devtools@0.7.2(nuxt@3.6.3)(vite@4.3.9):
-    resolution: {integrity: sha512-oBq88qa1L0eaUwaUqetwQpWyU5PRtcwO8BvjWSGMbh+6F0lF85C1EtsSRFoxaizY6nYM2/WV4c4VBDsKXUkqgQ==}
+  /@nuxt/devtools@0.7.4(nuxt@3.6.3)(vite@4.3.9):
+    resolution: {integrity: sha512-uaKvVIYWuJ5L1NasXYiZfOh3w2HkHwaMyyVCceabVsOh27PBIeV7rzF5zyMrkyO3vivmWUuXcoZo3M0JO41sqg==}
     hasBin: true
     peerDependencies:
       nuxt: ^3.6.5
       vite: '*'
     dependencies:
-      '@nuxt/devtools-kit': 0.7.2(nuxt@3.6.3)(vite@4.3.9)
-      '@nuxt/devtools-wizard': 0.7.2
+      '@nuxt/devtools-kit': 0.7.4(nuxt@3.6.3)(vite@4.3.9)
+      '@nuxt/devtools-wizard': 0.7.4
       '@nuxt/kit': 3.6.5
       birpc: 0.2.12
       boxen: 7.1.1
@@ -1310,7 +1418,7 @@ packages:
       sirv: 2.0.3
       unimport: 3.1.0(rollup@3.26.2)
       vite: 4.3.9(@types/node@18.16.19)
-      vite-plugin-inspect: 0.7.33(vite@4.3.9)
+      vite-plugin-inspect: 0.7.35(@nuxt/kit@3.6.5)(vite@4.3.9)
       vite-plugin-vue-inspector: 3.5.0(vite@4.3.9)
       wait-on: 7.0.1
       which: 3.0.1
@@ -2311,6 +2419,14 @@ packages:
       '@typescript-eslint/types': 6.1.0
       eslint-visitor-keys: 3.4.1
     dev: true
+
+  /@typescript/vfs@1.5.0:
+    resolution: {integrity: sha512-AJS307bPgbsZZ9ggCT3wwpg3VbTKMFNHfaY/uF0ahSkYYrPF2dSSKDNIDIQAHm9qJqbLvCsSJH7yN4Vs/CsMMg==}
+    dependencies:
+      debug: 4.3.4
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
 
   /@unhead/dom@1.1.32:
     resolution: {integrity: sha512-AMpHlKEKcm1dxSAvm6GPXhjoZHzXh7ZeR8DAnXVH7Sd9a48xaJhQjmxETweFAcNBSnAn9e7TxTPZVrUcW0ej2w==}
@@ -3763,7 +3879,6 @@ packages:
         optional: true
     dependencies:
       ms: 2.1.2
-    dev: true
 
   /decompress-tar@4.1.1:
     resolution: {integrity: sha512-JdJMaCrGpB5fESVyxwpCx4Jdj2AagLmv3y58Qy4GE6HMVjWz1FeVQk1Ct4Kye7PftcdOo/7U7UKzYBJgqnGeUQ==}
@@ -6105,7 +6220,6 @@ packages:
 
   /ms@2.1.2:
     resolution: {integrity: sha512-sGkPx+VjMtmA6MX27oA4FBFELFCZZ4S4XqeGOXCv68tT+jb3vk/RyaKWP0PTKyWtmLSM0b+adUTEvbs1PEaH2w==}
-    dev: true
 
   /ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
@@ -8736,6 +8850,12 @@ packages:
     optionalDependencies:
       rxjs: 7.8.1
 
+  /typescript@4.5.2:
+    resolution: {integrity: sha512-5BlMof9H1yGt0P8/WF+wPNw6GfctgGjXp5hkblpyT+8rkASSmkUKMXrxR0Xg8ThVCi/JnHQiKXeBaEwCeQwMFw==}
+    engines: {node: '>=4.2.0'}
+    hasBin: true
+    dev: false
+
   /typescript@4.9.5:
     resolution: {integrity: sha512-1FXk9E2Hm+QzZQ7z+McJiHL4NW1F2EzMu9Nq9i3zAaGqibafqYwCVU6WyWAuyQRRzOlxou8xZSyXLEN8oKj24g==}
     engines: {node: '>=4.2.0'}
@@ -9116,13 +9236,18 @@ packages:
       vscode-uri: 3.0.7
     dev: true
 
-  /vite-plugin-inspect@0.7.33(vite@4.3.9):
-    resolution: {integrity: sha512-cQRLQKa/+Ua++5hN0IZfqNn1JYXBg2eCQOSUatPTwhXMO7nwfSvhhSc45E1nXfBBEhzLLOxgr1OdbDu55PiDDA==}
+  /vite-plugin-inspect@0.7.35(@nuxt/kit@3.6.5)(vite@4.3.9):
+    resolution: {integrity: sha512-e5w5dJAj3vDcHTxn8hHbiH+mVqYs17gaW00f3aGuMTXiqUog+T1Lsxr9Jb4WRiip84cpuhR0KFFBT1egtXboiA==}
     engines: {node: '>=14'}
     peerDependencies:
+      '@nuxt/kit': '*'
       vite: ^3.1.0 || ^4.0.0
+    peerDependenciesMeta:
+      '@nuxt/kit':
+        optional: true
     dependencies:
       '@antfu/utils': 0.7.5
+      '@nuxt/kit': 3.6.5
       '@rollup/pluginutils': 5.0.2(rollup@3.26.2)
       debug: 4.3.4
       fs-extra: 11.1.1

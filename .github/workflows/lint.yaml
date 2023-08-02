@@ -9,33 +9,53 @@ jobs:
     name: Lint Go
     runs-on: ubuntu-latest
     permissions:
-      packages: write
       contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
         with:
           go-version: "1.20"
-          cache: false
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+      - uses: golangci/golangci-lint-action@v3
         with:
           version: v1.53
           args: --timeout=5m
-  check-sqlc:
-    name: Check sqlc generation
+  lint-protos:
+    name: Lint Protos
     runs-on: ubuntu-latest
     permissions:
-      packages: write
+      contents: read
+    steps:
+    - uses: actions/checkout@v3
+    - uses: bufbuild/buf-setup-action@v1
+    - uses: bufbuild/buf-lint-action@v1
+  check-protos-generated:
+    name: Check Proto Generation
+    runs-on: ubuntu-latest
+    permissions:
       contents: read
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
         with:
           go-version: "1.20"
-          cache: false
-      - name: Install sqlc
-        run: go install github.com/kyleconroy/sqlc/cmd/sqlc@v1.19.0
+      - run: go install $(go list -f '{{join .Imports " "}}' tools.go)
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: true
+      - run: buf generate
+      - run: git diff --exit-code
+  check-sqlc-generated:
+    name: Check Sqlc Generation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.20"
+      - run: go install github.com/kyleconroy/sqlc/cmd/sqlc@v1.19.0
       - run: sqlc generate
-      - name: Check that sqlc queries are up-to-date
-        run: git diff --exit-code
+      - run: git diff --exit-code
