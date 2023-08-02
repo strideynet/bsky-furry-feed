@@ -43,7 +43,7 @@ jobs:
       - uses: pnpm/action-setup@v2
         with:
           version: 8
-      - run: cd ./web && pnpm install
+          run_install: true
       - run: buf generate
       - run: git diff --exit-code
   check-sqlc-generated:
