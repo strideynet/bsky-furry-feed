@@ -108,6 +108,14 @@ export declare class Actor extends Message<Actor> {
    */
   createdAt?: Timestamp;
 
+  /**
+   * roles is an array of roles this actor holds in relation to actions on the
+   * moderation API.
+   *
+   * @generated from field: repeated string roles = 7;
+   */
+  roles: string[];
+
   constructor(data?: PartialMessage<Actor>);
 
   static readonly runtime: typeof proto3;
@@ -326,6 +334,9 @@ export declare class ProcessApprovalQueueRequest extends Message<ProcessApproval
   isArtist: boolean;
 
   /**
+   * reason is the reason that the actor was approved or rejected. This is
+   * currently optional but will become required for rejections eventually.
+   *
    * @generated from field: string reason = 4;
    */
   reason: string;

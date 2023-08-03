@@ -62,6 +62,9 @@ message Actor {
   // created_at indicates the time that the actor was first added to the bff
   // system - this does not necessarily indicate when they joined bluesky.
   google.protobuf.Timestamp created_at = 6;
+  // roles is an array of roles this actor holds in relation to actions on the
+  // moderation API.
+  repeated string roles = 7;
 }
 
 message Post {

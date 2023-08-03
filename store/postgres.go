@@ -99,6 +99,7 @@ func actorToProto(actor gen.CandidateActor) (*v1.Actor, error) {
 		Comment:   actor.Comment,
 		Status:    status,
 		CreatedAt: timestamppb.New(actor.CreatedAt.Time),
+		Roles:     actor.Roles,
 	}, nil
 }
 

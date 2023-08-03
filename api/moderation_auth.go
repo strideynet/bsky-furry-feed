@@ -97,8 +97,7 @@ func (a *AuthEngine) auth(ctx context.Context, req connect.AnyRequest) (*authCon
 		return nil, fmt.Errorf("fetching actor for token: %w", err)
 	}
 
-	// Calculate user permissions
-	roles := []string{}
+	// Use a map of string to bool as a quasi set.
 	permissions := map[string]bool{}
 	// We know the user is authenticated so we grant them the authenticated
 	// user role.
@@ -106,10 +105,15 @@ func (a *AuthEngine) auth(ctx context.Context, req connect.AnyRequest) (*authCon
 		permissions[permission] = true
 	}
 	// Now we grant them all the permissions from their roles
-	for _, role := range roles {
+	for _, role := range actor.Roles {
 		rolePerms, ok := roleToPermissions[role]
 		if !ok {
-			a.Log.Warn("unrecognized role", zap.String("role", role), zap.String("actor_did", actor.Did))
+			// Gracefully handle an unrecognized role
+			a.Log.Warn(
+				"unrecognized role",
+				zap.String("role", role),
+				zap.String("actor_did", actor.Did),
+			)
 			continue
 		}
 		for _, permission := range rolePerms {

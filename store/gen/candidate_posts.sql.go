@@ -14,7 +14,8 @@ import (
 
 const createCandidatePost = `-- name: CreateCandidatePost :exec
 INSERT INTO
-    candidate_posts (uri, actor_did, created_at, indexed_at, tags, hashtags, has_media, raw)
+    candidate_posts (uri, actor_did, created_at, indexed_at, tags, hashtags,
+                     has_media, raw)
 VALUES
     ($1, $2, $3, $4, $5, $6, $7, $8)
 `
@@ -107,7 +108,12 @@ func (q *Queries) GetFurryNewFeed(ctx context.Context, db DBTX, arg GetFurryNewF
 }
 
 const getPostByURI = `-- name: GetPostByURI :one
-SELECT uri, actor_did, created_at, indexed_at, is_nsfw, is_hidden, tags, deleted_at, raw, hashtags, has_media FROM candidate_posts cp WHERE cp.uri = $1 LIMIT 1
+SELECT uri, actor_did, created_at, indexed_at, is_nsfw, is_hidden, tags, deleted_at, raw, hashtags, has_media
+FROM
+    candidate_posts cp
+WHERE
+    cp.uri = $1
+LIMIT 1
 `
 
 func (q *Queries) GetPostByURI(ctx context.Context, db DBTX, uri string) (CandidatePost, error) {

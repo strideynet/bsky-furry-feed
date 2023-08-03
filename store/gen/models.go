@@ -83,6 +83,7 @@ type CandidateActor struct {
 	IsHidden         bool
 	Status           ActorStatus
 	CurrentProfileID pgtype.Text
+	Roles            []string
 }
 
 type CandidateFollow struct {
