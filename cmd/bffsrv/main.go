@@ -221,8 +221,10 @@ func runE(log *zap.Logger) error {
 			pgxStore,
 			bskyCredentials,
 			&api.AuthEngine{
-				ModeratorDIDs: moderatorDIDs,
-				PDSHost:       bluesky.DefaultPDSHost,
+				ActorGetter:    pgxStore,
+				TokenValidator: api.BSkyTokenValidator(bluesky.DefaultPDSHost),
+				ModeratorDIDs:  moderatorDIDs,
+				PDSHost:        bluesky.DefaultPDSHost,
 			},
 		)
 		if err != nil {

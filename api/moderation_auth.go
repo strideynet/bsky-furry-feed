@@ -7,12 +7,24 @@ import (
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"go.uber.org/zap"
-	"golang.org/x/exp/slices"
 	"strings"
 )
 
 type actorGetter interface {
 	GetActorByDID(ctx context.Context, did string) (*v1.Actor, error)
+}
+
+func BSkyTokenValidator(pdsHost string) func(ctx context.Context, token string) (did string, err error) {
+	// Check the presented token is valid against the real bsky.
+	// This also lets us introspect information about the user - we can't just
+	// parse the JWT as they do not use public key signing for the JWT.
+	return func(ctx context.Context, token string) (did string, err error) {
+		_, did, err = bluesky.ClientFromToken(ctx, pdsHost, token)
+		if err != nil {
+			return "", fmt.Errorf("client from token: %w", err)
+		}
+		return did, nil
+	}
 }
 
 // authenticatedUserPermissions are granted to any user who is authenticated.
@@ -40,11 +52,16 @@ var roleToPermissions = map[string][]string{
 	"moderator": moderatorPermissions,
 }
 
+// AuthEngine helps authenticate requests made by users and apply authorization
+// rules based on the identity found during authentication.
 type AuthEngine struct {
-	actorGetter   actorGetter
-	ModeratorDIDs []string
-	PDSHost       string
-	Log           *zap.Logger
+	// ActorGetter provides a way for the AuthEngine to fetch the Actor data
+	// associated with a given DID.
+	ActorGetter actorGetter
+	// TokenValidator validates a given token and returns the DID associated
+	// with that token.
+	TokenValidator func(ctx context.Context, token string) (did string, err error)
+	Log            *zap.Logger
 }
 
 type authContext struct {
@@ -54,29 +71,30 @@ type authContext struct {
 // TODO: Allow a authOpts to be passed in with a description of attempted
 // action.
 func (a *AuthEngine) auth(ctx context.Context, req connect.AnyRequest) (*authContext, error) {
+	// Extract the token from the headers
 	authHeader := req.Header().Get("Authorization")
 	if authHeader == "" {
 		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("no token provided"))
 	}
-
 	authParts := strings.Split(authHeader, " ")
 	if len(authParts) != 2 {
 		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("malformed header"))
 	}
-
 	if authParts[0] != "Bearer" {
 		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("only Bearer auth supported"))
 	}
 
-	// Check the presented token is valid against the real bsky.
-	// This also lets us introspect information about the user - we can't just
-	// parse the JWT as they do not use public key signing for the JWT.
-	_, tokenDID, err := bluesky.ClientFromToken(ctx, a.PDSHost, authParts[1])
+	// Validate the token from the header
+	did, err := a.TokenValidator(ctx, authParts[1])
 	if err != nil {
-		return nil, fmt.Errorf("verifying token: %w", err)
+		return nil, fmt.Errorf("validating token: %w", err)
 	}
-	if !slices.Contains(a.ModeratorDIDs, tokenDID) {
-		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("did not associated with moderator role: %s", tokenDID))
+
+	// Find the actor in the database so we know their roles and status to
+	// be able to evaluate authz.
+	actor, err := a.ActorGetter.GetActorByDID(ctx, did)
+	if err != nil {
+		return nil, fmt.Errorf("fetching actor for token: %w", err)
 	}
 
 	// Calculate user permissions
@@ -91,7 +109,7 @@ func (a *AuthEngine) auth(ctx context.Context, req connect.AnyRequest) (*authCon
 	for _, role := range roles {
 		rolePerms, ok := roleToPermissions[role]
 		if !ok {
-			a.Log.Warn("unrecognized role", zap.String("role", role), zap.String("actor_did", tokenDID))
+			a.Log.Warn("unrecognized role", zap.String("role", role), zap.String("actor_did", actor.Did))
 			continue
 		}
 		for _, permission := range rolePerms {
@@ -104,11 +122,11 @@ func (a *AuthEngine) auth(ctx context.Context, req connect.AnyRequest) (*authCon
 	if !permissions[procedureName] {
 		return nil, connect.NewError(
 			connect.CodePermissionDenied,
-			fmt.Errorf("user (%s) does not have permissions for %q", tokenDID, procedureName),
+			fmt.Errorf("user (%s) does not have permissions for %q", actor.Did, procedureName),
 		)
 	}
 
 	return &authContext{
-		DID: tokenDID,
+		DID: actor.Did,
 	}, nil
 }

@@ -1,6 +1,7 @@
 -- name: CreateCandidatePost :exec
 INSERT INTO
-    candidate_posts (uri, actor_did, created_at, indexed_at, tags, hashtags, has_media, raw)
+    candidate_posts (uri, actor_did, created_at, indexed_at, tags, hashtags,
+                     has_media, raw)
 VALUES
     ($1, $2, $3, $4, $5, $6, $7, $8);
 
@@ -54,4 +55,9 @@ ORDER BY
 LIMIT @_limit;
 
 -- name: GetPostByURI :one
-SELECT * FROM candidate_posts cp WHERE cp.uri = @uri LIMIT 1;
+SELECT *
+FROM
+    candidate_posts cp
+WHERE
+    cp.uri = @uri
+LIMIT 1;
