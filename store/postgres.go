@@ -179,6 +179,10 @@ func (s *PGXStore) CreateActor(ctx context.Context, opts CreateActorOpts) (out *
 		endSpan(span, err)
 	}()
 
+	if opts.Roles == nil {
+		opts.Roles = []string{}
+	}
+
 	status, err := actorStatusFromProto(opts.Status)
 	if err != nil {
 		return nil, fmt.Errorf("converting status: %w", err)
