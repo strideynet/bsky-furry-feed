@@ -5,13 +5,46 @@ import (
 	"fmt"
 	"github.com/bufbuild/connect-go"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
+	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
+	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 	"strings"
 )
 
+type actorGetter interface {
+	GetActorByDID(ctx context.Context, did string) (*v1.Actor, error)
+}
+
+// authenticatedUserPermissions are granted to any user who is authenticated.
+var authenticatedUserPermissions = []string{
+	"/bff.v1.ModerationService/Ping",
+}
+
+var moderatorPermissions = []string{
+	"/bff.v1.ModerationService/GetActor",
+	"/bff.v1.ModerationService/ListActors",
+	"/bff.v1.ModerationService/ListAuditEvents",
+	"/bff.v1.ModerationService/ProcessApprovalQueue",
+	"/bff.v1.ModerationService/CreateCommentAuditEvent",
+}
+
+var adminPermissions = append([]string{
+	"/bff.v1.ModerationService/BanActor",
+	"/bff.v1.ModerationService/UnapproveActor",
+	"/bff.v1.ModerationService/ForceApproveActor",
+	"/bff.v1.ModerationService/CreateActor",
+}, moderatorPermissions...)
+
+var roleToPermissions = map[string][]string{
+	"admin":     adminPermissions,
+	"moderator": moderatorPermissions,
+}
+
 type AuthEngine struct {
+	actorGetter   actorGetter
 	ModeratorDIDs []string
 	PDSHost       string
+	Log           *zap.Logger
 }
 
 type authContext struct {
@@ -44,6 +77,35 @@ func (a *AuthEngine) auth(ctx context.Context, req connect.AnyRequest) (*authCon
 	}
 	if !slices.Contains(a.ModeratorDIDs, tokenDID) {
 		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("did not associated with moderator role: %s", tokenDID))
+	}
+
+	// Calculate user permissions
+	roles := []string{}
+	permissions := map[string]bool{}
+	// We know the user is authenticated so we grant them the authenticated
+	// user role.
+	for _, permission := range authenticatedUserPermissions {
+		permissions[permission] = true
+	}
+	// Now we grant them all the permissions from their roles
+	for _, role := range roles {
+		rolePerms, ok := roleToPermissions[role]
+		if !ok {
+			a.Log.Warn("unrecognized role", zap.String("role", role), zap.String("actor_did", tokenDID))
+			continue
+		}
+		for _, permission := range rolePerms {
+			permissions[permission] = true
+		}
+	}
+
+	// Check user has permission for target RPC
+	procedureName := req.Spec().Procedure
+	if !permissions[procedureName] {
+		return nil, connect.NewError(
+			connect.CodePermissionDenied,
+			fmt.Errorf("user (%s) does not have permissions for %q", tokenDID, procedureName),
+		)
 	}
 
 	return &authContext{
