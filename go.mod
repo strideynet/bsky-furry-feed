@@ -4,12 +4,15 @@ go 1.20
 
 require (
 	cloud.google.com/go/cloudsqlconn v1.2.4
+	connectrpc.com/connect v1.11.0
 	github.com/bluesky-social/indigo v0.0.0-20230728184334-c2ae70612145
 	github.com/bufbuild/connect-go v1.9.0
 	github.com/bufbuild/connect-opentelemetry-go v0.3.0
 	github.com/golang-migrate/migrate/v4 v4.16.2
+	github.com/google/go-cmp v0.5.9
 	github.com/gorilla/websocket v1.5.0
 	github.com/jackc/pgx/v5 v5.3.1
+	github.com/jonboulle/clockwork v0.4.0
 	github.com/prometheus/client_golang v1.14.0
 	github.com/rs/cors v1.9.0
 	github.com/rs/xid v1.5.0
@@ -49,12 +52,10 @@ require (
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
-	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/imdario/mergo v0.3.15 // indirect
-	github.com/jonboulle/clockwork v0.4.0 // indirect
 	github.com/klauspost/compress v1.15.11 // indirect
 	github.com/labstack/echo/v4 v4.10.2 // indirect
 	github.com/labstack/gommon v0.4.0 // indirect
