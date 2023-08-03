@@ -1,11 +1,11 @@
 package api
 
 import (
+	"connectrpc.com/connect"
+	"connectrpc.com/otelconnect"
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/bufbuild/connect-go"
-	otelconnect "github.com/bufbuild/connect-opentelemetry-go"
 	"github.com/rs/cors"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/feed"

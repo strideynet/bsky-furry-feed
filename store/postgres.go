@@ -170,6 +170,7 @@ type CreateActorOpts struct {
 	DID     string
 	Comment string
 	Status  v1.ActorStatus
+	Roles   []string
 }
 
 func (s *PGXStore) CreateActor(ctx context.Context, opts CreateActorOpts) (out *v1.Actor, err error) {
@@ -190,6 +191,7 @@ func (s *PGXStore) CreateActor(ctx context.Context, opts CreateActorOpts) (out *
 			Time:  time.Now(),
 			Valid: true,
 		},
+		Roles: opts.Roles,
 	}
 	created, err := s.queries.CreateCandidateActor(ctx, s.pool, queryParams)
 	if err != nil {

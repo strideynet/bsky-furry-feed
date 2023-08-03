@@ -13,9 +13,9 @@ import (
 
 const createCandidateActor = `-- name: CreateCandidateActor :one
 INSERT INTO
-    candidate_actors (did, created_at, is_artist, comment, status)
+    candidate_actors (did, created_at, is_artist, comment, status, roles)
 VALUES
-    ($1, $2, $3, $4, $5)
+    ($1, $2, $3, $4, $5, $6)
 RETURNING did, created_at, is_artist, comment, is_nsfw, is_hidden, status, current_profile_id, roles
 `
 
@@ -25,6 +25,7 @@ type CreateCandidateActorParams struct {
 	IsArtist  bool
 	Comment   string
 	Status    ActorStatus
+	Roles     []string
 }
 
 func (q *Queries) CreateCandidateActor(ctx context.Context, db DBTX, arg CreateCandidateActorParams) (CandidateActor, error) {
@@ -34,6 +35,7 @@ func (q *Queries) CreateCandidateActor(ctx context.Context, db DBTX, arg CreateC
 		arg.IsArtist,
 		arg.Comment,
 		arg.Status,
+		arg.Roles,
 	)
 	var i CandidateActor
 	err := row.Scan(

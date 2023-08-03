@@ -1,9 +1,9 @@
 package api
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"fmt"
-	"github.com/bufbuild/connect-go"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"go.uber.org/zap"

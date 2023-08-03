@@ -40,6 +40,8 @@ cloud.google.com/go/storage v1.8.0/go.mod h1:Wv1Oy7z6Yz3DshWRJFhqM/UCfaWIRTdp0RX
 cloud.google.com/go/storage v1.10.0/go.mod h1:FLPqc6j+Ki4BU591ie1oL6qBQGu2Bl/tZ9ullr3+Kg0=
 connectrpc.com/connect v1.11.0 h1:Av2KQXxSaX4vjqhf5Cl01SX4dqYADQ38eBtr84JSUBk=
 connectrpc.com/connect v1.11.0/go.mod h1:3AGaO6RRGMx5IKFfqbe3hvK1NqLosFNP2BxDYTPmNPo=
+connectrpc.com/otelconnect v0.5.0 h1:K7xQKFbgeaHx563B+IIbd1EJe856AanueIYtGEtdnH8=
+connectrpc.com/otelconnect v0.5.0/go.mod h1:cjBMmtJmTokg4/k/3iDjLOjfNVM4qSVfIWz/qWQ8FNw=
 contrib.go.opencensus.io/exporter/prometheus v0.4.2 h1:sqfsYl5GIY/L570iT+l93ehxaWJs2/OwXtiWwew3oAg=
 contrib.go.opencensus.io/exporter/prometheus v0.4.2/go.mod h1:dvEHbiKmgvbr5pjaF9fpw1KeYcjrnC1J8B+JKjsZyRQ=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
@@ -72,10 +74,6 @@ github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6r
 github.com/bluesky-social/indigo v0.0.0-20230728184334-c2ae70612145 h1:La+KOOafHIKEK3WOJRvypdUFU0PVovMdca8wdoXuYQc=
 github.com/bluesky-social/indigo v0.0.0-20230728184334-c2ae70612145/go.mod h1:R4lTJrJ8FkabyT9oqn3nIB+49xqcGPNdlHLq2huREjY=
 github.com/brianvoe/gofakeit/v6 v6.20.2 h1:FLloufuC7NcbHqDzVQ42CG9AKryS1gAGCRt8nQRsW+Y=
-github.com/bufbuild/connect-go v1.9.0 h1:JIgAeNuFpo+SUPfU19Yt5TcWlznsN5Bv10/gI/6Pjoc=
-github.com/bufbuild/connect-go v1.9.0/go.mod h1:CAIePUgkDR5pAFaylSMtNK45ANQjp9JvpluG20rhpV8=
-github.com/bufbuild/connect-opentelemetry-go v0.3.0 h1:AuZi3asTDKmjGtd2aqpyP4p5QvBFG/YEaHopViLatnk=
-github.com/bufbuild/connect-opentelemetry-go v0.3.0/go.mod h1:r1ppyTtu1EWeRodk4Q/JbyQhIWtO7eR3GoRDzjeEcNU=
 github.com/cenkalti/backoff/v4 v4.2.1 h1:y4OZtCnogmCPw98Zjyt5a6+QwPLGkiQsYW5oUqylYbM=
 github.com/cenkalti/backoff/v4 v4.2.1/go.mod h1:Y3VNntkOUPxTVeUxJ/G5vcM//AlwfmyYozVcomhLiZE=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
