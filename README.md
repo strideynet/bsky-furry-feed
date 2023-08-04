@@ -7,17 +7,11 @@ based on people's membership of the furry community!
 
 ## For furries
 
-- Open https://skyfeed.app/, a third-party client
-- Login with an app password from [bsky settings](https://staging.bsky.app/settings/app-passwords)
-- Under `Custom Feeds`, add one with did: `did:web:feed.furryli.st` and Feed ID: `furry-new`
-
-Reach out on the [Bluesky furries discord](https://discord.gg/5UNyBtnwKy) for more information!
+Check out [https://furryli.st](https://furryli.st) for information about the feeds and how to join.
 
 ## For developers
 
-This is also a neat example of a Bluesky feed generator written in Go! If you
-are trying to build something similar in Go, and need any advice, please learn
-what you can from the source code and ask any questions.
+This is also a somewhat complex example of the a BlueSky feed generator and firehose consumer written in Go. Learn from it - and feel free to ask questions.
 
 Interested in contributing? Read our [getting started guide][developing]
 or [check out the open issues][issues].
