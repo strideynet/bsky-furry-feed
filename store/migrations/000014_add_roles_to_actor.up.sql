@@ -1,0 +1,1 @@
+ALTER TABLE candidate_actors ADD COLUMN roles TEXT[] DEFAULT ARRAY[]::TEXT[] NOT NULL;

@@ -99,6 +99,7 @@ func actorToProto(actor gen.CandidateActor) (*v1.Actor, error) {
 		Comment:   actor.Comment,
 		Status:    status,
 		CreatedAt: timestamppb.New(actor.CreatedAt.Time),
+		Roles:     actor.Roles,
 	}, nil
 }
 
@@ -169,6 +170,7 @@ type CreateActorOpts struct {
 	DID     string
 	Comment string
 	Status  v1.ActorStatus
+	Roles   []string
 }
 
 func (s *PGXStore) CreateActor(ctx context.Context, opts CreateActorOpts) (out *v1.Actor, err error) {
@@ -176,6 +178,10 @@ func (s *PGXStore) CreateActor(ctx context.Context, opts CreateActorOpts) (out *
 	defer func() {
 		endSpan(span, err)
 	}()
+
+	if opts.Roles == nil {
+		opts.Roles = []string{}
+	}
 
 	status, err := actorStatusFromProto(opts.Status)
 	if err != nil {
@@ -189,6 +195,7 @@ func (s *PGXStore) CreateActor(ctx context.Context, opts CreateActorOpts) (out *
 			Time:  time.Now(),
 			Valid: true,
 		},
+		Roles: opts.Roles,
 	}
 	created, err := s.queries.CreateCandidateActor(ctx, s.pool, queryParams)
 	if err != nil {

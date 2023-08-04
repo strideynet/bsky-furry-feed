@@ -1,15 +1,16 @@
 package api_test
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"errors"
-	"github.com/bufbuild/connect-go"
 	"github.com/stretchr/testify/require"
 	"github.com/strideynet/bsky-furry-feed/api"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/feed"
 	bffv1pb "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/proto/bff/v1/bffv1pbconnect"
+	"github.com/strideynet/bsky-furry-feed/store"
 	"github.com/strideynet/bsky-furry-feed/testenv"
 	"net"
 	"net/http"
@@ -30,6 +31,13 @@ func TestAPI_CreateActor(t *testing.T) {
 	modActor := harness.PDS.MustNewUser(t, "mod.tpds")
 	_ = harness.PDS.MustNewUser(t, "bff.tpds")
 
+	_, err := harness.Store.CreateActor(ctx, store.CreateActorOpts{
+		DID:    modActor.DID(),
+		Status: bffv1pb.ActorStatus_ACTOR_STATUS_APPROVED,
+		Roles:  []string{"admin"},
+	})
+	require.NoError(t, err)
+
 	srv, err := api.New(
 		harness.Log,
 		"",
@@ -41,10 +49,8 @@ func TestAPI_CreateActor(t *testing.T) {
 			Password:   "password",
 		},
 		&api.AuthEngine{
-			PDSHost: harness.PDS.HTTPHost(),
-			ModeratorDIDs: []string{
-				modActor.DID(),
-			},
+			TokenValidator: api.BSkyTokenValidator(harness.PDS.HTTPHost()),
+			ActorGetter:    harness.Store,
 		},
 	)
 	require.NoError(t, err)

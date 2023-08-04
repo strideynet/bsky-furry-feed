@@ -13,10 +13,10 @@ import (
 
 const createCandidateActor = `-- name: CreateCandidateActor :one
 INSERT INTO
-    candidate_actors (did, created_at, is_artist, comment, status)
+    candidate_actors (did, created_at, is_artist, comment, status, roles)
 VALUES
-    ($1, $2, $3, $4, $5)
-RETURNING did, created_at, is_artist, comment, is_nsfw, is_hidden, status, current_profile_id
+    ($1, $2, $3, $4, $5, $6)
+RETURNING did, created_at, is_artist, comment, is_nsfw, is_hidden, status, current_profile_id, roles
 `
 
 type CreateCandidateActorParams struct {
@@ -25,6 +25,7 @@ type CreateCandidateActorParams struct {
 	IsArtist  bool
 	Comment   string
 	Status    ActorStatus
+	Roles     []string
 }
 
 func (q *Queries) CreateCandidateActor(ctx context.Context, db DBTX, arg CreateCandidateActorParams) (CandidateActor, error) {
@@ -34,6 +35,7 @@ func (q *Queries) CreateCandidateActor(ctx context.Context, db DBTX, arg CreateC
 		arg.IsArtist,
 		arg.Comment,
 		arg.Status,
+		arg.Roles,
 	)
 	var i CandidateActor
 	err := row.Scan(
@@ -45,6 +47,7 @@ func (q *Queries) CreateCandidateActor(ctx context.Context, db DBTX, arg CreateC
 		&i.IsHidden,
 		&i.Status,
 		&i.CurrentProfileID,
+		&i.Roles,
 	)
 	return i, err
 }
@@ -85,7 +88,7 @@ func (q *Queries) CreateLatestActorProfile(ctx context.Context, db DBTX, arg Cre
 }
 
 const getCandidateActorByDID = `-- name: GetCandidateActorByDID :one
-SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden, status, current_profile_id
+SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden, status, current_profile_id, roles
 FROM
     candidate_actors
 WHERE
@@ -104,12 +107,13 @@ func (q *Queries) GetCandidateActorByDID(ctx context.Context, db DBTX, did strin
 		&i.IsHidden,
 		&i.Status,
 		&i.CurrentProfileID,
+		&i.Roles,
 	)
 	return i, err
 }
 
 const listCandidateActors = `-- name: ListCandidateActors :many
-SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden, status, current_profile_id
+SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden, status, current_profile_id, roles
 FROM
     candidate_actors ca
 WHERE
@@ -137,6 +141,7 @@ func (q *Queries) ListCandidateActors(ctx context.Context, db DBTX, status NullA
 			&i.IsHidden,
 			&i.Status,
 			&i.CurrentProfileID,
+			&i.Roles,
 		); err != nil {
 			return nil, err
 		}
@@ -149,7 +154,7 @@ func (q *Queries) ListCandidateActors(ctx context.Context, db DBTX, status NullA
 }
 
 const listCandidateActorsRequiringProfileBackfill = `-- name: ListCandidateActorsRequiringProfileBackfill :many
-SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden, status, current_profile_id
+SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden, status, current_profile_id, roles
 FROM
     candidate_actors ca
 WHERE
@@ -177,6 +182,7 @@ func (q *Queries) ListCandidateActorsRequiringProfileBackfill(ctx context.Contex
 			&i.IsHidden,
 			&i.Status,
 			&i.CurrentProfileID,
+			&i.Roles,
 		); err != nil {
 			return nil, err
 		}
@@ -196,7 +202,7 @@ SET
     comment=COALESCE($3, ca.comment)
 WHERE
     did = $4
-RETURNING did, created_at, is_artist, comment, is_nsfw, is_hidden, status, current_profile_id
+RETURNING did, created_at, is_artist, comment, is_nsfw, is_hidden, status, current_profile_id, roles
 `
 
 type UpdateCandidateActorParams struct {
@@ -223,6 +229,7 @@ func (q *Queries) UpdateCandidateActor(ctx context.Context, db DBTX, arg UpdateC
 		&i.IsHidden,
 		&i.Status,
 		&i.CurrentProfileID,
+		&i.Roles,
 	)
 	return i, err
 }

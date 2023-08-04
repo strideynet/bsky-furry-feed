@@ -10,9 +10,9 @@ ORDER BY
 
 -- name: CreateCandidateActor :one
 INSERT INTO
-    candidate_actors (did, created_at, is_artist, comment, status)
+    candidate_actors (did, created_at, is_artist, comment, status, roles)
 VALUES
-    ($1, $2, $3, $4, $5)
+    ($1, $2, $3, $4, $5, $6)
 RETURNING *;
 
 -- name: UpdateCandidateActor :one
