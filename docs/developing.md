@@ -131,3 +131,8 @@ While the official Bluesky client supports feeds, you may prefer using
 You need HTTPS, so use Cloudflare Tunnel or similar when developing.
 
 [skyfeed]: https://skyfeed.app/#/
+
+## Archictural Overview
+
+![image](https://github.com/strideynet/bsky-furry-feed/assets/16336790/14e85bd6-de4f-4bbb-96aa-c6bb4cfc5394)
+
