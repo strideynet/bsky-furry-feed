@@ -95,7 +95,6 @@ func actorToProto(actor gen.CandidateActor) (*v1.Actor, error) {
 	}
 	return &v1.Actor{
 		Did:       actor.DID,
-		IsHidden:  actor.IsHidden,
 		IsArtist:  actor.IsArtist,
 		Comment:   actor.Comment,
 		Status:    status,
