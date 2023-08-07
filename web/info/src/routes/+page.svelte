@@ -8,17 +8,16 @@
   <Heading level={2}>The purremier furry feed for BlueSky</Heading>
 
   <p>
-    Want to find your fellow furs and view the hottest furry posts on BlueSky? <strong
-      >You're in the right place.</strong
-    >
+    We operate a set of feeds which serve up furry content straight to your BlueSky
+    client.
   </p>
 
   <p>
-    We operate a set of feeds which serve up furry content straight to your BlueSky
-    client. Read on to find out more!
+    Check out the <Link href="/welcome">Welcome Guide</Link> for all the information you'll
+    need about getting set up on BlueSky as a furry.
   </p>
 
-  <Heading level={3}>Getting started</Heading>
+  <Heading level={3}>Our Feeds</Heading>
   <p>Click any of the following links to open the feed in your client:</p>
 
   <ul>
@@ -26,37 +25,38 @@
       <Link
         href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-new"
         >New</Link
-      >
+      > - Posts by all furries on furryli.st, sorted chronologically.
     </li>
     <li>
       <Link
         href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-hot"
         >Hot</Link
-      >
+      > - Posts by all furries on furryli.st, sorted by "hotness".
     </li>
     <li>
       <Link
         href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-fursuit"
         >Fursuits</Link
-      >
+      > - All posts by furries on furryli.st that have the #fursuit hashtag, sorted chronologically.
     </li>
     <li>
       <Link
         href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-art"
         >Art</Link
-      >
+      > - All posts by furries on furryli.st that have the #art or #furryart hashtag, sorted
+      chronologically.
     </li>
     <li>
       <Link
         href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-nsfw"
         >NSFW</Link
-      >
+      > - All posts by furries on furryli.st that have the #nsfw hashtag, sorted chronologically.
     </li>
     <li>
       <Link
         href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-comms"
         >Commissions Open</Link
-      >
+      > - All posts by furries on furryli.st that have the #commsopen hashtag, sorted chronologically.
     </li>
   </ul>
 
@@ -77,18 +77,11 @@
     post to make sure it shows up in the right place. These are:
   </p>
   <ul>
-    <li>
-      NSFW <ul><li>#nsfw</li></ul>
-    </li>
-    <li>
-      Art <ul><li>#art</li></ul>
-    </li>
-    <li>
-      Fursuits <ul><li>#fursuit</li></ul>
-    </li>
-    <li>
-      Commissions Open <ul><li>#commsopen</li></ul>
-    </li>
+    <li>#fursuit</li>
+    <li>#art / #furryart</li>
+    <li>#commsopen</li>
+    <li>#nsfw</li>
+    <li>#murrsuit</li>
   </ul>
 
   <Heading level={3}>Moderation policy</Heading>
@@ -115,7 +108,14 @@
     > that's worth joining to learn more about other resources in the Furry community.
   </p>
 
-  <Heading level={5}>I have more questions!</Heading>
+  <Heading level={5}>Can I support the feeds?</Heading>
+
+  <p>
+    Running these feeds for the community isn't free! We'd welcome donations to help with
+    the cost of running the feeds on our <a href="https://ko-fi.com/furrylist">Ko-Fi</a>
+  </p>
+
+  <Heading level={5}>I need help!</Heading>
 
   <p>
     First of all, that's not a question! But, yes, you can find our support channel in <Link
