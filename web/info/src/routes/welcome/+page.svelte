@@ -96,8 +96,9 @@
   <p>
     Our feeds are curated to show only furry accounts. To do that we manually verify each
     and every account that gets shown in our feeds. If you'd like to get verified, all you
-    need to do is follow <a href="https://bsky.app/profile/furryli.st">@furryli.st</a> on BlueSky.
-    You'll know you're verified when we follow you back.
+    need to do is follow <Link href="https://bsky.app/profile/furryli.st"
+      >@furryli.st</Link
+    > on BlueSky. You'll know you're verified when we follow you back.
   </p>
 
   <p>
@@ -122,8 +123,8 @@
   <Heading level={4}>Questions? Problems?</Heading>
 
   <p>
-    We can answer questions and look into problems with furryli.st for you in our <a
-      href="https://discord.gg/7X467r4UXF">Discord</a
+    We can answer questions and look into problems with furryli.st for you in our <Link
+      href="https://discord.gg/7X467r4UXF">Discord</Link
     >. Please try to work out if your question is specific to the feeds or is related to
     BlueSky in general, we don't have the time to answer questions related to BlueSky
     generally.
@@ -133,16 +134,18 @@
 
   <p>
     Running these feeds for the community isn't free! We'd welcome donations to help with
-    the cost of running the feeds on our <a href="https://ko-fi.com/furrylist">Ko-Fi</a>
+    the cost of running the feeds on our <Link href="https://ko-fi.com/furrylist"
+      >Ko-Fi</Link
+    >
   </p>
 
   <Heading level={3}>Community Resources</Heading>
   <p>There's a bunch of great resources available for furs who are new to BlueSky.</p>
 
   <p>
-    <a href="https://discord.gg/fursky">FurSky</a> is an online discord community of furs who
-    are on BlueSky - it's a great place to ask BlueSky questions that aren't related to the
-    furryli.st feeds!
+    <Link href="https://discord.gg/fursky">FurSky</Link> is an online discord community of
+    furs who are on BlueSky - it's a great place to ask BlueSky questions that aren't related
+    to the furryli.st feeds!
   </p>
 </StaticPage>
 
