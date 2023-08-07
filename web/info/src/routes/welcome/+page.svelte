@@ -147,6 +147,14 @@
     furs who are on BlueSky - it's a great place to ask BlueSky questions that aren't related
     to the furryli.st feeds!
   </p>
+
+  <p>
+    You can find more information in <Link
+      href="https://bsky.app/profile/kamu.bsky.social/post/3k3w6w3q4by2b"
+      >Kamu's "Furry Newbie Orientation"</Link
+    >. Kamu also includes a few more options to get your account set up that aren't
+    related to feeds, make sure to go check it out!
+  </p>
 </StaticPage>
 
 <style lang="scss">
