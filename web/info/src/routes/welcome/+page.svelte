@@ -101,9 +101,9 @@
   </p>
 
   <p>
-    Once you're verified your skeets will start showing up in "New" and "Hot" immediately.
-    In order to get your skeets included in the tagged feeds, make sure to include the
-    appropriate tag in your skeet. Currently, the available tags are:
+    Once you're verified your posts will start showing up in "New" and "Hot" immediately.
+    In order to get your posts included in the tagged feeds, make sure to include the
+    appropriate tag in your post. Currently, the available tags are:
   </p>
 
   <ul>
