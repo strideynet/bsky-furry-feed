@@ -16,7 +16,7 @@
 </script>
 
 <Menu class="relative">
-  <MenuButton>
+  <MenuButton aria-label="Toggle user menu">
     <img
       src={profileAvatarSrc}
       alt="Avatar"

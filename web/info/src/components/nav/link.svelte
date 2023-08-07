@@ -1,13 +1,30 @@
 <script lang="ts">
+  import { createEventDispatcher } from 'svelte';
+
   import { page } from '$app/stores';
 
-  export let href: string,
+  const dispatch = createEventDispatcher();
+
+  export let text: string | undefined,
+    href: string,
     target = '';
 
   $: isActive = $page?.url.pathname.startsWith(href);
 </script>
 
-<a class:isActive {href} {target}><slot /></a>
+<a
+  class:isActive
+  {href}
+  {target}
+  on:click={(e) => dispatch('click', e)}
+  on:keydown={(e) => dispatch('keydown', e)}
+>
+  {#if $$slots.default}
+    <slot />
+  {:else}
+    {text}
+  {/if}
+</a>
 
 <style lang="scss">
   a {
