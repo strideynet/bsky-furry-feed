@@ -24,38 +24,38 @@
     <li>
       <Link
         href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-new"
-        >New</Link
+        >🐾 New</Link
       > - Posts by all furries on furryli.st, sorted chronologically.
     </li>
     <li>
       <Link
+        href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-nsfw"
+        >🐾 New 🌙</Link
+      > - All posts by furries on furryli.st that have the #nsfw hashtag, sorted chronologically.
+    </li>
+    <li>
+      <Link
         href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-hot"
-        >Hot</Link
+        >🐾 Hot</Link
       > - Posts by all furries on furryli.st, sorted by "hotness".
     </li>
     <li>
       <Link
         href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-fursuit"
-        >Fursuits</Link
+        >🐾 Fursuits</Link
       > - All posts by furries on furryli.st that have the #fursuit hashtag, sorted chronologically.
     </li>
     <li>
       <Link
         href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-art"
-        >Art</Link
+        >🐾 Art</Link
       > - All posts by furries on furryli.st that have the #art or #furryart hashtag, sorted
       chronologically.
     </li>
     <li>
       <Link
-        href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-nsfw"
-        >NSFW</Link
-      > - All posts by furries on furryli.st that have the #nsfw hashtag, sorted chronologically.
-    </li>
-    <li>
-      <Link
         href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-comms"
-        >Commissions Open</Link
+        >🐾 #commsopen</Link
       > - All posts by furries on furryli.st that have the #commsopen hashtag, sorted chronologically.
     </li>
   </ul>
