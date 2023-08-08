@@ -13,7 +13,7 @@ const $emit = defineEmits(["next"]);
 const api = await useAPI();
 const isArtist = ref(false);
 const loading = ref(false);
-const status = ref() as Ref<ActorStatus>;
+const status = ref<ActorStatus>();
 const data = ref<ProfileViewDetailed>();
 const loadProfile = async () => {
   const result = await getProfile(props.did);
@@ -22,7 +22,7 @@ const loadProfile = async () => {
     .getActor({ did: result.data.did })
     .catch(() => ({ actor: undefined }));
   isArtist.value = Boolean(actor?.isArtist);
-  status.value = actor?.status || ActorStatus.UNSPECIFIED;
+  status.value = actor?.status;
 };
 
 async function next() {
