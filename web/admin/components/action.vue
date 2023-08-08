@@ -105,7 +105,7 @@ const comment = computed(() => {
         }}</span>
       </div>
       <shared-card v-if="comment" no-padding class="text-sm px-3 py-2 mt-2">
-        {{ comment }}
+        <shared-markdown :markdown="comment" />
       </shared-card>
     </div>
   </div>
