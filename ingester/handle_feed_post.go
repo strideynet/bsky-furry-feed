@@ -16,12 +16,26 @@ import (
 	"golang.org/x/text/language"
 )
 
+// postTextWithAlts appends the alt texts of images to the text itself. This
+// lets us detect hashtags within an alt text.
+func postTextWithAlts(data *bsky.FeedPost) string {
+	text := data.Text
+	if data.Embed != nil && data.Embed.EmbedImages != nil && data.Embed.EmbedImages.Images != nil {
+		for _, image := range data.Embed.EmbedImages.Images {
+			if image.Alt != "" {
+				text = text + "\n" + image.Alt
+			}
+		}
+	}
+	return text
+}
+
 func hasMedia(data *bsky.FeedPost) bool {
 	return data.Embed != nil && data.Embed.EmbedImages != nil && len(data.Embed.EmbedImages.Images) > 0
 }
 
 func hasKeyword(data *bsky.FeedPost, keywords ...string) bool {
-	text := strings.ToLower(data.Text)
+	text := strings.ToLower(postTextWithAlts(data))
 	for _, keyword := range keywords {
 		if strings.Contains(text, keyword) {
 			return true
@@ -47,6 +61,7 @@ func isCommissionsOpen(data *bsky.FeedPost) bool {
 }
 
 func extractNormalizedHashtags(post *bsky.FeedPost) []string {
+	text := postTextWithAlts(post)
 	// Casing gets kind of wacky, so we try to compute all possible hashtag casings and store them:
 	// - First, we use the default Unicode lowercasing algorithm, e.g. AEIOU -> aeiou.
 	// - Then, we lowercase for all languages marked explicitly in the post, e.g. for Turkish, AEIOU -> aeıou.
@@ -57,7 +72,7 @@ func extractNormalizedHashtags(post *bsky.FeedPost) []string {
 	}
 
 	hashtagsSet := make(map[string]bool)
-	for _, hashtag := range hashtag.ExtractHashtags(post.Text) {
+	for _, hashtag := range hashtag.ExtractHashtags(text) {
 		hashtagsSet[strings.ToLower(hashtag)] = true
 		for _, caser := range casers {
 			hashtagsSet[caser.String(hashtag)] = true

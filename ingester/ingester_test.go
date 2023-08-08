@@ -187,6 +187,50 @@ func TestFirehoseIngester(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "hashtags in alt",
+			user: approvedFurry,
+			post: &bsky.FeedPost{
+				LexiconTypeID: "app.bsky.feed.post",
+				CreatedAt:     now.Format(time.RFC3339Nano),
+				Text:          "some very undescriptive text",
+				Embed: &bsky.FeedPost_Embed{
+					EmbedImages: &bsky.EmbedImages{
+						LexiconTypeID: "app.bsky.embed.images",
+						Images: []*bsky.EmbedImages_Image{
+							{
+								Alt: "#fursuit #murrsuit #furryart #commsopen #nsfw #bigBurgers",
+							},
+						},
+					},
+				},
+			},
+			wantPost: &gen.CandidatePost{
+				ActorDID: approvedFurry.DID(),
+				CreatedAt: pgtype.Timestamptz{
+					Time:  now,
+					Valid: true,
+				},
+				Tags: []string{
+					bff.TagFursuitMedia,
+					bff.TagArt,
+					bff.TagNSFW,
+					bff.TagCommissionsOpen,
+				},
+				Hashtags: []string{
+					"fursuit",
+					"murrsuit",
+					"furryart",
+					"commsopen",
+					"nsfw",
+					"bigburgers",
+				},
+				HasMedia: pgtype.Bool{
+					Bool:  true,
+					Valid: true,
+				},
+			},
+		},
 	}
 
 	for i, tp := range testPosts {
