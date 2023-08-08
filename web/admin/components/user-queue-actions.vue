@@ -38,7 +38,7 @@ async function process(did: string, action: ApprovalQueueAction) {
         ({{ pending }} more...)
       </span>
       <button
-        class="py-0.5 px-2 max-md:ml-auto mr-1 text-white bg-blue-400 dark:bg-blue-600 rounded-lg hover:bg-blue-500 dark:hover:bg-blue-700 disabled:bg-blue-300 disabled:dark:bg-blue-500 disabled:cursor-not-allowed"
+        class="py-0.5 px-2 max-md:ml-auto mr-1 text-white bg-blue-500 dark:bg-blue-600 rounded-lg hover:bg-blue-600 dark:hover:bg-blue-700 disabled:bg-blue-300 disabled:dark:bg-blue-500 disabled:cursor-not-allowed"
         :disabled="loading"
         @click="accept"
       >
