@@ -26,15 +26,19 @@ WHERE
 RETURNING *;
 
 -- name: CreateLatestActorProfile :exec
-WITH ap as (
-    INSERT INTO actor_profiles
-        (actor_did, id, created_at, indexed_at, display_name, description)
-    VALUES
-        (sqlc.arg(did), sqlc.arg(id), sqlc.arg(created_at), sqlc.arg(indexed_at), sqlc.arg(display_name), sqlc.arg(description))
-    RETURNING actor_did, id
-)
+WITH
+    ap as (
+        INSERT INTO actor_profiles
+            (actor_did, id, created_at, indexed_at, display_name, description,
+             self_labels)
+            VALUES
+                (sqlc.arg(did), sqlc.arg(id), sqlc.arg(created_at),
+                 sqlc.arg(indexed_at), sqlc.arg(display_name),
+                 sqlc.arg(description), sqlc.arg(self_labels))
+            RETURNING actor_did, id)
 UPDATE candidate_actors ca
-SET current_profile_id = (SELECT id FROM ap)
+SET
+    current_profile_id = (SELECT id FROM ap)
 WHERE
     did = (SELECT actor_did FROM ap);
 
@@ -50,7 +54,7 @@ SELECT *
 FROM
     candidate_actors ca
 WHERE
-    ca.status = 'approved' AND
-    ca.current_profile_id IS NULL
+      ca.status = 'approved'
+  AND ca.current_profile_id IS NULL
 ORDER BY
     did;

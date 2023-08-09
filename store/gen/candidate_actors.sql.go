@@ -53,15 +53,19 @@ func (q *Queries) CreateCandidateActor(ctx context.Context, db DBTX, arg CreateC
 }
 
 const createLatestActorProfile = `-- name: CreateLatestActorProfile :exec
-WITH ap as (
-    INSERT INTO actor_profiles
-        (actor_did, id, created_at, indexed_at, display_name, description)
-    VALUES
-        ($1, $2, $3, $4, $5, $6)
-    RETURNING actor_did, id
-)
+WITH
+    ap as (
+        INSERT INTO actor_profiles
+            (actor_did, id, created_at, indexed_at, display_name, description,
+             self_labels)
+            VALUES
+                ($1, $2, $3,
+                 $4, $5,
+                 $6, $7)
+            RETURNING actor_did, id)
 UPDATE candidate_actors ca
-SET current_profile_id = (SELECT id FROM ap)
+SET
+    current_profile_id = (SELECT id FROM ap)
 WHERE
     did = (SELECT actor_did FROM ap)
 `
@@ -73,6 +77,7 @@ type CreateLatestActorProfileParams struct {
 	IndexedAt   pgtype.Timestamptz
 	DisplayName pgtype.Text
 	Description pgtype.Text
+	SelfLabels  []string
 }
 
 func (q *Queries) CreateLatestActorProfile(ctx context.Context, db DBTX, arg CreateLatestActorProfileParams) error {
@@ -83,6 +88,7 @@ func (q *Queries) CreateLatestActorProfile(ctx context.Context, db DBTX, arg Cre
 		arg.IndexedAt,
 		arg.DisplayName,
 		arg.Description,
+		arg.SelfLabels,
 	)
 	return err
 }
@@ -158,8 +164,8 @@ SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden, status, current_
 FROM
     candidate_actors ca
 WHERE
-    ca.status = 'approved' AND
-    ca.current_profile_id IS NULL
+      ca.status = 'approved'
+  AND ca.current_profile_id IS NULL
 ORDER BY
     did
 `

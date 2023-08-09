@@ -177,7 +177,6 @@ func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncS
 	if err != nil {
 		return fmt.Errorf("parsing timestamp: %w", err)
 	}
-
 	rr, err := repo.ReadRepoFromCar(ctx, bytes.NewReader(evt.Blocks))
 	if err != nil {
 		return fmt.Errorf("reading repo from car: %w", err)

@@ -300,6 +300,7 @@ type CreateLatestActorProfileOpts struct {
 	IndexedAt   time.Time
 	DisplayName string
 	Description string
+	SelfLabels  []string
 }
 
 func (s *PGXStore) CreateLatestActorProfile(ctx context.Context, opts CreateLatestActorProfileOpts) (err error) {
@@ -307,6 +308,10 @@ func (s *PGXStore) CreateLatestActorProfile(ctx context.Context, opts CreateLate
 	defer func() {
 		endSpan(span, err)
 	}()
+
+	if opts.SelfLabels == nil {
+		opts.SelfLabels = []string{}
+	}
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -337,6 +342,7 @@ func (s *PGXStore) CreateLatestActorProfile(ctx context.Context, opts CreateLate
 			Valid:  true,
 			String: opts.Description,
 		},
+		SelfLabels: opts.SelfLabels,
 	}
 	err = s.queries.CreateLatestActorProfile(ctx, tx, queryParams)
 	if err != nil {
@@ -404,13 +410,14 @@ func (s *PGXStore) DeleteLike(ctx context.Context, opts DeleteLikeOpts) (err err
 }
 
 type CreatePostOpts struct {
-	URI       string
-	ActorDID  string
-	CreatedAt time.Time
-	IndexedAt time.Time
-	Hashtags  []string
-	HasMedia  bool
-	Raw       *bsky.FeedPost
+	URI        string
+	ActorDID   string
+	CreatedAt  time.Time
+	IndexedAt  time.Time
+	Hashtags   []string
+	HasMedia   bool
+	Raw        *bsky.FeedPost
+	SelfLabels []string
 }
 
 func (s *PGXStore) CreatePost(ctx context.Context, opts CreatePostOpts) (err error) {
@@ -418,6 +425,10 @@ func (s *PGXStore) CreatePost(ctx context.Context, opts CreatePostOpts) (err err
 	defer func() {
 		endSpan(span, err)
 	}()
+
+	if opts.SelfLabels == nil {
+		opts.SelfLabels = []string{}
+	}
 
 	queryParams := gen.CreateCandidatePostParams{
 		URI:      opts.URI,
@@ -435,7 +446,8 @@ func (s *PGXStore) CreatePost(ctx context.Context, opts CreatePostOpts) (err err
 			Valid: true,
 			Bool:  opts.HasMedia,
 		},
-		Raw: opts.Raw,
+		Raw:        opts.Raw,
+		SelfLabels: opts.SelfLabels,
 	}
 	err = s.queries.CreateCandidatePost(ctx, s.pool, queryParams)
 	if err != nil {

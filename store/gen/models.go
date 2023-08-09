@@ -63,6 +63,7 @@ type ActorProfile struct {
 	IndexedAt   pgtype.Timestamptz
 	DisplayName pgtype.Text
 	Description pgtype.Text
+	SelfLabels  []string
 }
 
 type AuditEvent struct {
@@ -105,15 +106,16 @@ type CandidateLike struct {
 }
 
 type CandidatePost struct {
-	URI       string
-	ActorDID  string
-	CreatedAt pgtype.Timestamptz
-	IndexedAt pgtype.Timestamptz
-	IsNSFW    bool
-	IsHidden  bool
-	Tags      []string
-	DeletedAt pgtype.Timestamptz
-	Raw       *bsky.FeedPost
-	Hashtags  []string
-	HasMedia  pgtype.Bool
+	URI        string
+	ActorDID   string
+	CreatedAt  pgtype.Timestamptz
+	IndexedAt  pgtype.Timestamptz
+	IsNSFW     bool
+	IsHidden   bool
+	Tags       []string
+	DeletedAt  pgtype.Timestamptz
+	Raw        *bsky.FeedPost
+	Hashtags   []string
+	HasMedia   pgtype.Bool
+	SelfLabels []string
 }
