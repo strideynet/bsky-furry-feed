@@ -67,7 +67,7 @@ WHERE
       -- Filter by NSFW status. If unspecified, do not filter.
   AND ($3::BOOLEAN IS NULL OR
        ((ARRAY ['nsfw', 'mursuit', 'murrsuit'] && cp.hashtags) OR
-        ARRAY ['nsfw', 'mursuit', 'murrsuit'] && cp.self_labels) = $3)
+        ARRAY ['TODO-TEMPORARY'] && cp.self_labels) = $3)
 
       -- Remove posts newer than the cursor timestamp
   AND (cp.indexed_at < $4)

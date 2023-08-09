@@ -82,6 +82,8 @@ func (fi *FirehoseIngester) handleFeedPostCreate(
 				Raw:       data,
 				Hashtags:  extractNormalizedHashtags(data),
 				HasMedia:  hasMedia(data),
+				// TODO: Extract SelfLabels from post
+				SelfLabels: []string{},
 			},
 		)
 		if err != nil {
