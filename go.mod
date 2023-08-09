@@ -1,6 +1,6 @@
 module github.com/strideynet/bsky-furry-feed
 
-go 1.20
+go 1.21
 
 require (
 	cloud.google.com/go/cloudsqlconn v1.2.4
