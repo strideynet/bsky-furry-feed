@@ -294,8 +294,8 @@ func (s *PGXStore) UpdateActor(ctx context.Context, opts UpdateActorOpts) (out *
 
 type CreateLatestActorProfileOpts struct {
 	// DID is the DID of the actor to update.
-	DID         string
-	ID          string
+	ActorDID    string
+	CommitCID   string
 	CreatedAt   time.Time
 	IndexedAt   time.Time
 	DisplayName string
@@ -319,8 +319,8 @@ func (s *PGXStore) CreateLatestActorProfile(ctx context.Context, opts CreateLate
 	}()
 
 	queryParams := gen.CreateLatestActorProfileParams{
-		DID: opts.DID,
-		ID:  opts.ID,
+		ActorDID:  opts.ActorDID,
+		CommitCID: opts.CommitCID,
 		CreatedAt: pgtype.Timestamptz{
 			Valid: true,
 			Time:  opts.CreatedAt,
@@ -703,4 +703,14 @@ func (s *PGXStore) CreateAuditEvent(ctx context.Context, opts CreateAuditEventOp
 func (s *PGXStore) GetPostByURI(ctx context.Context, uri string) (out gen.CandidatePost, err error) {
 	// TODO: Return a proto type rather than exposing gen.CandidatePost
 	return s.queries.GetPostByURI(ctx, s.pool, uri)
+}
+
+func (s *PGXStore) GetLatestActorProfile(ctx context.Context, did string) (out gen.ActorProfile, err error) {
+	// TODO: Return a proto type rather than exposing gen.ActorProfile
+	return s.queries.GetLatestActorProfile(ctx, s.pool, did)
+}
+
+func (s *PGXStore) GetActorProfileHistory(ctx context.Context, did string) (out []gen.ActorProfile, err error) {
+	// TODO: Return a proto type rather than exposing gen.ActorProfile
+	return s.queries.GetActorProfileHistory(ctx, s.pool, did)
 }
