@@ -115,6 +115,7 @@ func TestFirehoseIngester(t *testing.T) {
 					Bool:  false,
 					Valid: true,
 				},
+				SelfLabels: []string{},
 			},
 		},
 		{
@@ -153,6 +154,7 @@ func TestFirehoseIngester(t *testing.T) {
 					Bool:  true,
 					Valid: true,
 				},
+				SelfLabels: []string{},
 			},
 		},
 		{
@@ -177,6 +179,7 @@ func TestFirehoseIngester(t *testing.T) {
 					Bool:  false,
 					Valid: true,
 				},
+				SelfLabels: []string{},
 			},
 		},
 		{
@@ -215,6 +218,7 @@ func TestFirehoseIngester(t *testing.T) {
 					Bool:  true,
 					Valid: true,
 				},
+				SelfLabels: []string{},
 			},
 		},
 	}
