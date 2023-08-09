@@ -8,7 +8,6 @@ import (
 
 	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/srinathh/hashtag"
-	bff "github.com/strideynet/bsky-furry-feed"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"golang.org/x/exp/maps"
@@ -32,32 +31,6 @@ func postTextWithAlts(data *bsky.FeedPost) string {
 
 func hasMedia(data *bsky.FeedPost) bool {
 	return data.Embed != nil && data.Embed.EmbedImages != nil && len(data.Embed.EmbedImages.Images) > 0
-}
-
-func hasKeyword(data *bsky.FeedPost, keywords ...string) bool {
-	text := strings.ToLower(postTextWithAlts(data))
-	for _, keyword := range keywords {
-		if strings.Contains(text, keyword) {
-			return true
-		}
-	}
-	return false
-}
-
-func isFursuitMedia(data *bsky.FeedPost) bool {
-	return hasMedia(data) && hasKeyword(data, "#fursuitfriday", "#fursuit", "#murrsuit", "#mursuit")
-}
-
-func isArt(data *bsky.FeedPost) bool {
-	return hasMedia(data) && hasKeyword(data, "#art", "#furryart")
-}
-
-func isNSFW(data *bsky.FeedPost) bool {
-	return hasKeyword(data, "#nsfw", "#murrsuit", "#mursuit")
-}
-
-func isCommissionsOpen(data *bsky.FeedPost) bool {
-	return hasKeyword(data, "#commsopen")
 }
 
 func extractNormalizedHashtags(post *bsky.FeedPost) []string {
@@ -99,21 +72,6 @@ func (fi *FirehoseIngester) handleFeedPostCreate(
 			return fmt.Errorf("parsing post time: %w", err)
 		}
 
-		// TODO: Break this out in a more extensible way
-		tags := []string{}
-		if isFursuitMedia(data) {
-			tags = append(tags, bff.TagFursuitMedia)
-		}
-		if isArt(data) {
-			tags = append(tags, bff.TagArt)
-		}
-		if isNSFW(data) {
-			tags = append(tags, bff.TagNSFW)
-		}
-		if isCommissionsOpen(data) {
-			tags = append(tags, bff.TagCommissionsOpen)
-		}
-
 		err = fi.store.CreatePost(
 			ctx,
 			store.CreatePostOpts{
@@ -122,7 +80,6 @@ func (fi *FirehoseIngester) handleFeedPostCreate(
 				CreatedAt: createdAt,
 				IndexedAt: time.Now(),
 				Raw:       data,
-				Tags:      tags,
 				Hashtags:  extractNormalizedHashtags(data),
 				HasMedia:  hasMedia(data),
 			},

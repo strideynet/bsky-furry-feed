@@ -13,6 +13,7 @@ import (
 	"github.com/rs/xid"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store/gen"
+	"github.com/strideynet/bsky-furry-feed/tristate"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -407,7 +408,6 @@ type CreatePostOpts struct {
 	ActorDID  string
 	CreatedAt time.Time
 	IndexedAt time.Time
-	Tags      []string
 	Hashtags  []string
 	HasMedia  bool
 	Raw       *bsky.FeedPost
@@ -430,7 +430,6 @@ func (s *PGXStore) CreatePost(ctx context.Context, opts CreatePostOpts) (err err
 			Time:  opts.IndexedAt,
 			Valid: true,
 		},
-		Tags:     opts.Tags,
 		Hashtags: opts.Hashtags,
 		HasMedia: pgtype.Bool{
 			Valid: true,
@@ -518,10 +517,19 @@ func (s *PGXStore) DeleteFollow(ctx context.Context, opts DeleteFollowOpts) (err
 }
 
 type ListPostsForNewFeedOpts struct {
-	CursorTime  time.Time
-	RequireTags []string
-	ExcludeTags []string
-	Limit       int
+	CursorTime time.Time
+	Hashtags   []string
+	IsNSFW     tristate.Tristate
+	HasMedia   tristate.Tristate
+	Limit      int
+}
+
+func tristateToPgtypeBool(t tristate.Tristate) pgtype.Bool {
+	b := (*bool)(t)
+	if b == nil {
+		return pgtype.Bool{Valid: false}
+	}
+	return pgtype.Bool{Valid: true, Bool: *b}
 }
 
 func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNewFeedOpts) (out []gen.CandidatePost, err error) {
@@ -536,8 +544,9 @@ func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNew
 			Valid: true,
 			Time:  opts.CursorTime,
 		},
-		RequireTags: opts.RequireTags,
-		ExcludeTags: opts.ExcludeTags,
+		Hashtags: opts.Hashtags,
+		HasMedia: tristateToPgtypeBool(opts.HasMedia),
+		IsNSFW:   tristateToPgtypeBool(opts.IsNSFW),
 	}
 	if opts.Limit != 0 {
 		queryParams.Limit = int32(opts.Limit)
