@@ -3,12 +3,13 @@ package api
 import (
 	"context"
 	"fmt"
-	"github.com/strideynet/bsky-furry-feed/bluesky"
-	"golang.org/x/exp/slices"
 	"time"
 
+	"github.com/bluesky-social/indigo/api/bsky"
+	"github.com/strideynet/bsky-furry-feed/bluesky"
+	"golang.org/x/exp/slices"
+
 	"connectrpc.com/connect"
-	"github.com/rs/xid"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.uber.org/zap"
@@ -374,9 +375,22 @@ func (m *ModerationServiceHandler) ForceApproveActor(ctx context.Context, req *c
 }
 
 func (m *ModerationServiceHandler) updateProfileAndFollow(ctx context.Context, actorDID string, c *bluesky.Client) error {
-	profile, err := c.GetProfile(ctx, actorDID)
+	head, err := c.GetHead(ctx, actorDID)
+	if err != nil {
+		return fmt.Errorf("getting head: %w", err)
+	}
+
+	record, err := c.GetRecord(ctx, "app.bsky.actor.profile", head, actorDID, "self")
 	if err != nil {
 		return fmt.Errorf("getting profile: %w", err)
+	}
+
+	var profile *bsky.ActorProfile
+	switch record := record.(type) {
+	case *bsky.ActorProfile:
+		profile = record
+	default:
+		return fmt.Errorf("expected *bsky.ActorProfile, got %T", record)
 	}
 
 	displayName := ""
@@ -390,8 +404,8 @@ func (m *ModerationServiceHandler) updateProfileAndFollow(ctx context.Context, a
 	}
 
 	if err := m.store.CreateLatestActorProfile(ctx, store.CreateLatestActorProfileOpts{
-		DID:         actorDID,
-		ID:          xid.New().String(),
+		ActorDID:    actorDID,
+		CommitCID:   head.String(),
 		CreatedAt:   time.Now(), // NOTE: The Firehose reader uses the server time but we use the local time here. This may cause staleness if the firehose gives us an older timestamp but a newer update.
 		IndexedAt:   time.Now(),
 		DisplayName: displayName,

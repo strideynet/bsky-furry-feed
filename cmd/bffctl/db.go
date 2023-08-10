@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/rs/xid"
 	"github.com/strideynet/bsky-furry-feed/store/gen"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
@@ -155,6 +155,7 @@ func dbCandidateActorsAddCmd(log *zap.Logger, env *environment) *cli.Command {
 					Time:  time.Now(),
 					Valid: true,
 				},
+				Roles:    []string{},
 				IsArtist: isArtist,
 				Comment:  handle,
 				Status:   gen.ActorStatusApproved,
@@ -294,9 +295,22 @@ func dbCandidateActorsBackfillProfiles(log *zap.Logger, env *environment) *cli.C
 			}
 			for _, r := range repos {
 				// TODO: Does this need throttling?
-				profile, err := client.GetProfile(cctx.Context, r.DID)
+				head, err := client.GetHead(cctx.Context, r.DID)
 				if err != nil {
-					return err
+					return fmt.Errorf("getting head: %w", err)
+				}
+
+				record, err := client.GetRecord(cctx.Context, "app.bsky.actor.profile", head, r.DID, "self")
+				if err != nil {
+					return fmt.Errorf("getting profile: %w", err)
+				}
+
+				var profile *bsky.ActorProfile
+				switch record := record.(type) {
+				case *bsky.ActorProfile:
+					profile = record
+				default:
+					return fmt.Errorf("expected *bsky.ActorProfile, got %T", record)
 				}
 
 				displayName := ""
@@ -310,8 +324,8 @@ func dbCandidateActorsBackfillProfiles(log *zap.Logger, env *environment) *cli.C
 				}
 
 				params := gen.CreateLatestActorProfileParams{
-					DID: r.DID,
-					ID:  xid.New().String(),
+					ActorDID:  r.DID,
+					CommitCID: head.String(),
 					CreatedAt: pgtype.Timestamptz{
 						Valid: true,
 						// NOTE: The Firehose reader uses the server time but we use the local time here. This may cause staleness if the firehose gives us an older timestamp but a newer update.

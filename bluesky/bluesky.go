@@ -1,6 +1,7 @@
 package bluesky
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -9,8 +10,11 @@ import (
 	"github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/bluesky-social/indigo/lex/util"
+	"github.com/bluesky-social/indigo/repo"
 	indigoUtils "github.com/bluesky-social/indigo/util"
 	"github.com/bluesky-social/indigo/xrpc"
+	"github.com/ipfs/go-cid"
+	typegen "github.com/whyrusleeping/cbor-gen"
 )
 
 const DefaultPDSHost = "https://bsky.social"
@@ -115,6 +119,42 @@ func (c *Client) GetProfile(
 	ctx context.Context, actor string,
 ) (*bsky.ActorDefs_ProfileViewDetailed, error) {
 	return bsky.ActorGetProfile(ctx, c.xrpc, actor)
+}
+
+func (c *Client) GetHead(
+	ctx context.Context, actorDID string,
+) (cid.Cid, error) {
+	resp, err := atproto.SyncGetHead(ctx, c.xrpc, actorDID)
+	if err != nil {
+		return cid.Cid{}, err
+	}
+	out, err := cid.Parse(resp.Root)
+	if err != nil {
+		return cid.Cid{}, err
+	}
+	return out, nil
+}
+
+func (c *Client) GetRecord(
+	ctx context.Context, collection string, commitCID cid.Cid, actorDID string, rkey string,
+) (typegen.CBORMarshaler, error) {
+	// We can't use RepoGetRecord here, because RepoGetRecord gets the record by the record's CID and not the commit's CID.
+	blocks, err := atproto.SyncGetRecord(ctx, c.xrpc, collection, commitCID.String(), actorDID, rkey)
+	if err != nil {
+		return nil, err
+	}
+
+	rr, err := repo.ReadRepoFromCar(ctx, bytes.NewReader(blocks))
+	if err != nil {
+		return nil, err
+	}
+
+	_, record, err := rr.GetRecord(ctx, collection+"/"+rkey)
+	if err != nil {
+		return nil, err
+	}
+
+	return record, nil
 }
 
 // Follow creates an app.bsky.graph.follow for the user the client is
