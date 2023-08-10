@@ -29,18 +29,45 @@ RETURNING *;
 WITH
     ap as (
         INSERT INTO actor_profiles
-            (actor_did, id, created_at, indexed_at, display_name, description,
-             self_labels)
+            (actor_did, commit_cid, created_at, indexed_at, display_name,
+             description)
             VALUES
-                (sqlc.arg(did), sqlc.arg(id), sqlc.arg(created_at),
-                 sqlc.arg(indexed_at), sqlc.arg(display_name),
-                 sqlc.arg(description), sqlc.arg(self_labels))
-            RETURNING actor_did, id)
+                (sqlc.arg(actor_did), sqlc.arg(commit_cid),
+                 sqlc.arg(created_at), sqlc.arg(indexed_at),
+                 sqlc.arg(display_name), sqlc.arg(description))
+            ON CONFLICT (actor_did, commit_cid) DO
+                UPDATE SET
+                    created_at = EXCLUDED.created_at,
+                    indexed_at = EXCLUDED.indexed_at,
+                    display_name = EXCLUDED.display_name,
+                    description = EXCLUDED.description
+            RETURNING actor_did, commit_cid)
 UPDATE candidate_actors ca
 SET
-    current_profile_id = (SELECT id FROM ap)
+    current_profile_commit_cid = (SELECT commit_cid FROM ap)
 WHERE
     did = (SELECT actor_did FROM ap);
+
+-- name: GetLatestActorProfile :one
+SELECT
+    ap.*
+FROM
+    candidate_actors ca
+        INNER JOIN actor_profiles ap ON ap.actor_did = ca.did AND
+                                        ap.commit_cid =
+                                        ca.current_profile_commit_cid
+WHERE
+    ca.did = $1;
+
+-- name: GetActorProfileHistory :many
+SELECT
+    ap.*
+FROM
+    actor_profiles ap
+WHERE
+    ap.actor_did = $1
+ORDER BY
+    created_at DESC;
 
 -- name: GetCandidateActorByDID :one
 SELECT *
@@ -55,6 +82,6 @@ FROM
     candidate_actors ca
 WHERE
       ca.status = 'approved'
-  AND ca.current_profile_id IS NULL
+  AND ca.current_profile_commit_cid IS NULL
 ORDER BY
     did;

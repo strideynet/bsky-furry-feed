@@ -5,6 +5,7 @@ overrides:
        did: DID
        uri: URI
        actor_did: ActorDID
+       commit_cid: CommitCID
        subject_uri: SubjectURI
        is_nsfw: IsNSFW
      overrides:
