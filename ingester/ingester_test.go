@@ -259,8 +259,6 @@ func TestFirehoseIngester(t *testing.T) {
 							out,
 							// We can't know IndexedAt ahead of time.
 							cmpopts.IgnoreFields(gen.CandidatePost{}, "IndexedAt"),
-							// Ignore tags, we're deprecating it.
-							cmpopts.IgnoreFields(gen.CandidatePost{}, "Tags"),
 							cmpopts.SortSlices(func(a, b string) bool { return a < b }),
 						),
 					)
