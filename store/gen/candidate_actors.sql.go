@@ -16,7 +16,7 @@ INSERT INTO
     candidate_actors (did, created_at, is_artist, comment, status, roles)
 VALUES
     ($1, $2, $3, $4, $5, $6)
-RETURNING did, created_at, is_artist, comment, status, current_profile_id, roles
+RETURNING did, created_at, is_artist, comment, status, roles, current_profile_commit_cid
 `
 
 type CreateCandidateActorParams struct {
@@ -44,8 +44,8 @@ func (q *Queries) CreateCandidateActor(ctx context.Context, db DBTX, arg CreateC
 		&i.IsArtist,
 		&i.Comment,
 		&i.Status,
-		&i.CurrentProfileID,
 		&i.Roles,
+		&i.CurrentProfileCommitCid,
 	)
 	return i, err
 }
@@ -53,20 +53,26 @@ func (q *Queries) CreateCandidateActor(ctx context.Context, db DBTX, arg CreateC
 const createLatestActorProfile = `-- name: CreateLatestActorProfile :exec
 WITH ap as (
     INSERT INTO actor_profiles
-        (actor_did, id, created_at, indexed_at, display_name, description)
+        (actor_did, commit_cid, created_at, indexed_at, display_name, description)
     VALUES
         ($1, $2, $3, $4, $5, $6)
-    RETURNING actor_did, id
+    ON CONFLICT (actor_did, commit_cid) DO
+    UPDATE SET
+        created_at = EXCLUDED.created_at,
+        indexed_at = EXCLUDED.indexed_at,
+        display_name = EXCLUDED.display_name,
+        description = EXCLUDED.description
+    RETURNING actor_did, commit_cid
 )
 UPDATE candidate_actors ca
-SET current_profile_id = (SELECT id FROM ap)
+SET current_profile_commit_cid = (SELECT commit_cid FROM ap)
 WHERE
     did = (SELECT actor_did FROM ap)
 `
 
 type CreateLatestActorProfileParams struct {
-	DID         string
-	ID          string
+	ActorDID    string
+	CommitCID   string
 	CreatedAt   pgtype.Timestamptz
 	IndexedAt   pgtype.Timestamptz
 	DisplayName pgtype.Text
@@ -75,8 +81,8 @@ type CreateLatestActorProfileParams struct {
 
 func (q *Queries) CreateLatestActorProfile(ctx context.Context, db DBTX, arg CreateLatestActorProfileParams) error {
 	_, err := db.Exec(ctx, createLatestActorProfile,
-		arg.DID,
-		arg.ID,
+		arg.ActorDID,
+		arg.CommitCID,
 		arg.CreatedAt,
 		arg.IndexedAt,
 		arg.DisplayName,
@@ -85,8 +91,44 @@ func (q *Queries) CreateLatestActorProfile(ctx context.Context, db DBTX, arg Cre
 	return err
 }
 
+const getActorProfileHistory = `-- name: GetActorProfileHistory :many
+SELECT ap.actor_did, ap.commit_cid, ap.created_at, ap.indexed_at, ap.display_name, ap.description
+FROM
+    actor_profiles ap
+WHERE
+    ap.actor_did = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) GetActorProfileHistory(ctx context.Context, db DBTX, actorDid string) ([]ActorProfile, error) {
+	rows, err := db.Query(ctx, getActorProfileHistory, actorDid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ActorProfile
+	for rows.Next() {
+		var i ActorProfile
+		if err := rows.Scan(
+			&i.ActorDID,
+			&i.CommitCID,
+			&i.CreatedAt,
+			&i.IndexedAt,
+			&i.DisplayName,
+			&i.Description,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getCandidateActorByDID = `-- name: GetCandidateActorByDID :one
-SELECT did, created_at, is_artist, comment, status, current_profile_id, roles
+SELECT did, created_at, is_artist, comment, status, roles, current_profile_commit_cid
 FROM
     candidate_actors
 WHERE
@@ -102,14 +144,37 @@ func (q *Queries) GetCandidateActorByDID(ctx context.Context, db DBTX, did strin
 		&i.IsArtist,
 		&i.Comment,
 		&i.Status,
-		&i.CurrentProfileID,
 		&i.Roles,
+		&i.CurrentProfileCommitCid,
+	)
+	return i, err
+}
+
+const getLatestActorProfile = `-- name: GetLatestActorProfile :one
+SELECT ap.actor_did, ap.commit_cid, ap.created_at, ap.indexed_at, ap.display_name, ap.description
+FROM
+    candidate_actors ca
+INNER JOIN actor_profiles ap ON ap.actor_did = ca.did AND ap.commit_cid = ca.current_profile_commit_cid
+WHERE
+    ca.did = $1
+`
+
+func (q *Queries) GetLatestActorProfile(ctx context.Context, db DBTX, did string) (ActorProfile, error) {
+	row := db.QueryRow(ctx, getLatestActorProfile, did)
+	var i ActorProfile
+	err := row.Scan(
+		&i.ActorDID,
+		&i.CommitCID,
+		&i.CreatedAt,
+		&i.IndexedAt,
+		&i.DisplayName,
+		&i.Description,
 	)
 	return i, err
 }
 
 const listCandidateActors = `-- name: ListCandidateActors :many
-SELECT did, created_at, is_artist, comment, status, current_profile_id, roles
+SELECT did, created_at, is_artist, comment, status, roles, current_profile_commit_cid
 FROM
     candidate_actors ca
 WHERE
@@ -134,8 +199,8 @@ func (q *Queries) ListCandidateActors(ctx context.Context, db DBTX, status NullA
 			&i.IsArtist,
 			&i.Comment,
 			&i.Status,
-			&i.CurrentProfileID,
 			&i.Roles,
+			&i.CurrentProfileCommitCid,
 		); err != nil {
 			return nil, err
 		}
@@ -148,12 +213,12 @@ func (q *Queries) ListCandidateActors(ctx context.Context, db DBTX, status NullA
 }
 
 const listCandidateActorsRequiringProfileBackfill = `-- name: ListCandidateActorsRequiringProfileBackfill :many
-SELECT did, created_at, is_artist, comment, status, current_profile_id, roles
+SELECT did, created_at, is_artist, comment, status, roles, current_profile_commit_cid
 FROM
     candidate_actors ca
 WHERE
     ca.status = 'approved' AND
-    ca.current_profile_id IS NULL
+    ca.current_profile_commit_cid IS NULL
 ORDER BY
     did
 `
@@ -173,8 +238,8 @@ func (q *Queries) ListCandidateActorsRequiringProfileBackfill(ctx context.Contex
 			&i.IsArtist,
 			&i.Comment,
 			&i.Status,
-			&i.CurrentProfileID,
 			&i.Roles,
+			&i.CurrentProfileCommitCid,
 		); err != nil {
 			return nil, err
 		}
@@ -194,7 +259,7 @@ SET
     comment=COALESCE($3, ca.comment)
 WHERE
     did = $4
-RETURNING did, created_at, is_artist, comment, status, current_profile_id, roles
+RETURNING did, created_at, is_artist, comment, status, roles, current_profile_commit_cid
 `
 
 type UpdateCandidateActorParams struct {
@@ -218,8 +283,8 @@ func (q *Queries) UpdateCandidateActor(ctx context.Context, db DBTX, arg UpdateC
 		&i.IsArtist,
 		&i.Comment,
 		&i.Status,
-		&i.CurrentProfileID,
 		&i.Roles,
+		&i.CurrentProfileCommitCid,
 	)
 	return i, err
 }
