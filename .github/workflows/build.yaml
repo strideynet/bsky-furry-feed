@@ -33,8 +33,6 @@ jobs:
           # generate Docker tags based on the following events/attributes
           tags: |
             type=semver,pattern=v{{version}}
-            type=semver,pattern=v{{major}}.{{minor}}
-            type=semver,pattern=v{{major}}
             type=sha
       - name: Build and push
         uses: docker/build-push-action@v4
