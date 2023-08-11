@@ -221,6 +221,37 @@ func TestFirehoseIngester(t *testing.T) {
 				SelfLabels: []string{},
 			},
 		},
+		{
+			name: "self labels",
+			user: approvedFurry,
+			post: &bsky.FeedPost{
+				LexiconTypeID: "app.bsky.feed.post",
+				CreatedAt:     now.Format(time.RFC3339Nano),
+				Text:          "paws paws paws",
+				Labels: &bsky.FeedPost_Labels{
+					LabelDefs_SelfLabels: &atproto.LabelDefs_SelfLabels{
+						Values: []*atproto.LabelDefs_SelfLabel{
+							{
+								Val: "adult",
+							},
+						},
+					},
+				},
+			},
+			wantPost: &gen.CandidatePost{
+				ActorDID: approvedFurry.DID(),
+				CreatedAt: pgtype.Timestamptz{
+					Time:  now,
+					Valid: true,
+				},
+				Hashtags: []string{},
+				HasMedia: pgtype.Bool{
+					Bool:  false,
+					Valid: true,
+				},
+				SelfLabels: []string{},
+			},
+		},
 	}
 
 	for i, tp := range testPosts {

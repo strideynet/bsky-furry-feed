@@ -66,32 +66,40 @@ func (fi *FirehoseIngester) handleFeedPostCreate(
 		endSpan(span, err)
 	}()
 
-	if data.Reply == nil {
-		createdAt, err := bluesky.ParseTime(data.CreatedAt)
-		if err != nil {
-			return fmt.Errorf("parsing post time: %w", err)
-		}
-
-		err = fi.store.CreatePost(
-			ctx,
-			store.CreatePostOpts{
-				URI:       recordUri,
-				ActorDID:  repoDID,
-				CreatedAt: createdAt,
-				IndexedAt: time.Now(),
-				Raw:       data,
-				Hashtags:  extractNormalizedHashtags(data),
-				HasMedia:  hasMedia(data),
-				// TODO: Extract SelfLabels from post
-				SelfLabels: []string{},
-			},
-		)
-		if err != nil {
-			return fmt.Errorf("creating post: %w", err)
-		}
-	} else {
+	if data.Reply != nil {
 		span.AddEvent("ignoring post as it is a reply")
+		return
 	}
+
+	createdAt, err := bluesky.ParseTime(data.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("parsing post time: %w", err)
+	}
+
+	selfLabels := []string{}
+	if data.Labels != nil && data.Labels.LabelDefs_SelfLabels != nil {
+		for _, label := range data.Labels.LabelDefs_SelfLabels.Values {
+			selfLabels = append(selfLabels, label.Val)
+		}
+	}
+
+	err = fi.store.CreatePost(
+		ctx,
+		store.CreatePostOpts{
+			URI:        recordUri,
+			ActorDID:   repoDID,
+			CreatedAt:  createdAt,
+			IndexedAt:  time.Now(),
+			Raw:        data,
+			Hashtags:   extractNormalizedHashtags(data),
+			HasMedia:   hasMedia(data),
+			SelfLabels: selfLabels,
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("creating post: %w", err)
+	}
+
 	return nil
 }
 

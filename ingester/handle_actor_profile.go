@@ -33,6 +33,13 @@ func (fi *FirehoseIngester) handleActorProfileUpdate(
 		description = *data.Description
 	}
 
+	selfLabels := []string{}
+	if data.Labels != nil && data.Labels.LabelDefs_SelfLabels != nil {
+		for _, label := range data.Labels.LabelDefs_SelfLabels.Values {
+			selfLabels = append(selfLabels, label.Val)
+		}
+	}
+
 	err = fi.store.CreateLatestActorProfile(
 		ctx,
 		store.CreateLatestActorProfileOpts{
