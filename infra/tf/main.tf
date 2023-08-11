@@ -101,6 +101,15 @@ resource "google_dns_record_set" "feed_furrylist" {
   rrdatas = [google_compute_global_address.ingress.address]
 }
 
+resource "google_dns_record_set" "feed_run_experiment_furrylist" {
+  name         = "feed-run-experiment.${google_dns_managed_zone.furrylist.dns_name}"
+  managed_zone = google_dns_managed_zone.furrylist.name
+  type         = "CNAME"
+  ttl          = 300
+
+  rrdatas = ["ghs.googlehosted.com."]
+}
+
 resource "google_dns_record_set" "furrylist" {
   name         = "${google_dns_managed_zone.furrylist.dns_name}"
   managed_zone = google_dns_managed_zone.furrylist.name
