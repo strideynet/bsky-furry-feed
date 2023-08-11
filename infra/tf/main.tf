@@ -129,3 +129,13 @@ resource "google_dns_record_set" "_atproto_furrylist" {
   rrdatas = ["did=did:plc:jdkvwye2lf4mingzk7qdebzc"]
 }
 
+resource "google_dns_record_set" "domain_ownership_furrylist" {
+  name         = google_dns_managed_zone.furrylist.dns_name
+  managed_zone = google_dns_managed_zone.furrylist.name
+  type         = "TXT"
+  ttl          = 300
+
+  rrdatas = ["google-site-verification=O9lNlNsUw6dJaeSXu9fS5SrR9EQydksMzr9XDx5M9n0"]
+}
+
+
