@@ -47,7 +47,7 @@ func (q *Queries) CreateCandidatePost(ctx context.Context, db DBTX, arg CreateCa
 
 const getFurryNewFeed = `-- name: GetFurryNewFeed :many
 SELECT
-    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden, cp.tags, cp.deleted_at, cp.raw, cp.hashtags, cp.has_media, cp.self_labels
+    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_hidden, cp.deleted_at, cp.raw, cp.hashtags, cp.has_media, cp.self_labels
 FROM
     candidate_posts cp
         INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
@@ -104,9 +104,7 @@ func (q *Queries) GetFurryNewFeed(ctx context.Context, db DBTX, arg GetFurryNewF
 			&i.ActorDID,
 			&i.CreatedAt,
 			&i.IndexedAt,
-			&i.IsNSFW,
 			&i.IsHidden,
-			&i.Tags,
 			&i.DeletedAt,
 			&i.Raw,
 			&i.Hashtags,
@@ -124,7 +122,7 @@ func (q *Queries) GetFurryNewFeed(ctx context.Context, db DBTX, arg GetFurryNewF
 }
 
 const getPostByURI = `-- name: GetPostByURI :one
-SELECT uri, actor_did, created_at, indexed_at, is_nsfw, is_hidden, tags, deleted_at, raw, hashtags, has_media, self_labels
+SELECT uri, actor_did, created_at, indexed_at, is_hidden, deleted_at, raw, hashtags, has_media, self_labels
 FROM
     candidate_posts cp
 WHERE
@@ -140,9 +138,7 @@ func (q *Queries) GetPostByURI(ctx context.Context, db DBTX, uri string) (Candid
 		&i.ActorDID,
 		&i.CreatedAt,
 		&i.IndexedAt,
-		&i.IsNSFW,
 		&i.IsHidden,
-		&i.Tags,
 		&i.DeletedAt,
 		&i.Raw,
 		&i.Hashtags,
@@ -154,7 +150,7 @@ func (q *Queries) GetPostByURI(ctx context.Context, db DBTX, uri string) (Candid
 
 const getPostsWithLikes = `-- name: GetPostsWithLikes :many
 SELECT
-    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden, cp.tags, cp.deleted_at, cp.raw, cp.hashtags, cp.has_media, cp.self_labels,
+    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_hidden, cp.deleted_at, cp.raw, cp.hashtags, cp.has_media, cp.self_labels,
     (SELECT
          COUNT(*)
      FROM
@@ -187,9 +183,7 @@ type GetPostsWithLikesRow struct {
 	ActorDID   string
 	CreatedAt  pgtype.Timestamptz
 	IndexedAt  pgtype.Timestamptz
-	IsNSFW     bool
 	IsHidden   bool
-	Tags       []string
 	DeletedAt  pgtype.Timestamptz
 	Raw        *bsky.FeedPost
 	Hashtags   []string
@@ -212,9 +206,7 @@ func (q *Queries) GetPostsWithLikes(ctx context.Context, db DBTX, arg GetPostsWi
 			&i.ActorDID,
 			&i.CreatedAt,
 			&i.IndexedAt,
-			&i.IsNSFW,
 			&i.IsHidden,
-			&i.Tags,
 			&i.DeletedAt,
 			&i.Raw,
 			&i.Hashtags,

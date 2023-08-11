@@ -80,8 +80,6 @@ type CandidateActor struct {
 	CreatedAt               pgtype.Timestamptz
 	IsArtist                bool
 	Comment                 string
-	IsNSFW                  bool
-	IsHidden                bool
 	Status                  ActorStatus
 	Roles                   []string
 	CurrentProfileCommitCid pgtype.Text
@@ -110,9 +108,7 @@ type CandidatePost struct {
 	ActorDID   string
 	CreatedAt  pgtype.Timestamptz
 	IndexedAt  pgtype.Timestamptz
-	IsNSFW     bool
 	IsHidden   bool
-	Tags       []string
 	DeletedAt  pgtype.Timestamptz
 	Raw        *bsky.FeedPost
 	Hashtags   []string

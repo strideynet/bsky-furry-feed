@@ -16,7 +16,7 @@ INSERT INTO
     candidate_actors (did, created_at, is_artist, comment, status, roles)
 VALUES
     ($1, $2, $3, $4, $5, $6)
-RETURNING did, created_at, is_artist, comment, is_nsfw, is_hidden, status, roles, current_profile_commit_cid
+RETURNING did, created_at, is_artist, comment, status, roles, current_profile_commit_cid
 `
 
 type CreateCandidateActorParams struct {
@@ -43,8 +43,6 @@ func (q *Queries) CreateCandidateActor(ctx context.Context, db DBTX, arg CreateC
 		&i.CreatedAt,
 		&i.IsArtist,
 		&i.Comment,
-		&i.IsNSFW,
-		&i.IsHidden,
 		&i.Status,
 		&i.Roles,
 		&i.CurrentProfileCommitCid,
@@ -137,7 +135,7 @@ func (q *Queries) GetActorProfileHistory(ctx context.Context, db DBTX, actorDid 
 }
 
 const getCandidateActorByDID = `-- name: GetCandidateActorByDID :one
-SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden, status, roles, current_profile_commit_cid
+SELECT did, created_at, is_artist, comment, status, roles, current_profile_commit_cid
 FROM
     candidate_actors
 WHERE
@@ -152,8 +150,6 @@ func (q *Queries) GetCandidateActorByDID(ctx context.Context, db DBTX, did strin
 		&i.CreatedAt,
 		&i.IsArtist,
 		&i.Comment,
-		&i.IsNSFW,
-		&i.IsHidden,
 		&i.Status,
 		&i.Roles,
 		&i.CurrentProfileCommitCid,
@@ -189,7 +185,7 @@ func (q *Queries) GetLatestActorProfile(ctx context.Context, db DBTX, did string
 }
 
 const listCandidateActors = `-- name: ListCandidateActors :many
-SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden, status, roles, current_profile_commit_cid
+SELECT did, created_at, is_artist, comment, status, roles, current_profile_commit_cid
 FROM
     candidate_actors ca
 WHERE
@@ -213,8 +209,6 @@ func (q *Queries) ListCandidateActors(ctx context.Context, db DBTX, status NullA
 			&i.CreatedAt,
 			&i.IsArtist,
 			&i.Comment,
-			&i.IsNSFW,
-			&i.IsHidden,
 			&i.Status,
 			&i.Roles,
 			&i.CurrentProfileCommitCid,
@@ -230,7 +224,7 @@ func (q *Queries) ListCandidateActors(ctx context.Context, db DBTX, status NullA
 }
 
 const listCandidateActorsRequiringProfileBackfill = `-- name: ListCandidateActorsRequiringProfileBackfill :many
-SELECT did, created_at, is_artist, comment, is_nsfw, is_hidden, status, roles, current_profile_commit_cid
+SELECT did, created_at, is_artist, comment, status, roles, current_profile_commit_cid
 FROM
     candidate_actors ca
 WHERE
@@ -254,8 +248,6 @@ func (q *Queries) ListCandidateActorsRequiringProfileBackfill(ctx context.Contex
 			&i.CreatedAt,
 			&i.IsArtist,
 			&i.Comment,
-			&i.IsNSFW,
-			&i.IsHidden,
 			&i.Status,
 			&i.Roles,
 			&i.CurrentProfileCommitCid,
@@ -278,7 +270,7 @@ SET
     comment=COALESCE($3, ca.comment)
 WHERE
     did = $4
-RETURNING did, created_at, is_artist, comment, is_nsfw, is_hidden, status, roles, current_profile_commit_cid
+RETURNING did, created_at, is_artist, comment, status, roles, current_profile_commit_cid
 `
 
 type UpdateCandidateActorParams struct {
@@ -301,8 +293,6 @@ func (q *Queries) UpdateCandidateActor(ctx context.Context, db DBTX, arg UpdateC
 		&i.CreatedAt,
 		&i.IsArtist,
 		&i.Comment,
-		&i.IsNSFW,
-		&i.IsHidden,
 		&i.Status,
 		&i.Roles,
 		&i.CurrentProfileCommitCid,
