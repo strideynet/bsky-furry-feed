@@ -29,8 +29,8 @@ type CreateCandidatePostParams struct {
 	Raw       *bsky.FeedPost
 }
 
-func (q *Queries) CreateCandidatePost(ctx context.Context, db DBTX, arg CreateCandidatePostParams) error {
-	_, err := db.Exec(ctx, createCandidatePost,
+func (q *Queries) CreateCandidatePost(ctx context.Context, arg CreateCandidatePostParams) error {
+	_, err := q.db.Exec(ctx, createCandidatePost,
 		arg.URI,
 		arg.ActorDID,
 		arg.CreatedAt,
@@ -69,8 +69,8 @@ type GetFurryNewFeedParams struct {
 	Limit           int32
 }
 
-func (q *Queries) GetFurryNewFeed(ctx context.Context, db DBTX, arg GetFurryNewFeedParams) ([]CandidatePost, error) {
-	rows, err := db.Query(ctx, getFurryNewFeed,
+func (q *Queries) GetFurryNewFeed(ctx context.Context, arg GetFurryNewFeedParams) ([]CandidatePost, error) {
+	rows, err := q.db.Query(ctx, getFurryNewFeed,
 		arg.Hashtags,
 		arg.HasMedia,
 		arg.IsNSFW,
@@ -114,8 +114,8 @@ WHERE
 LIMIT 1
 `
 
-func (q *Queries) GetPostByURI(ctx context.Context, db DBTX, uri string) (CandidatePost, error) {
-	row := db.QueryRow(ctx, getPostByURI, uri)
+func (q *Queries) GetPostByURI(ctx context.Context, uri string) (CandidatePost, error) {
+	row := q.db.QueryRow(ctx, getPostByURI, uri)
 	var i CandidatePost
 	err := row.Scan(
 		&i.URI,
@@ -174,8 +174,8 @@ type GetPostsWithLikesRow struct {
 	Likes     int64
 }
 
-func (q *Queries) GetPostsWithLikes(ctx context.Context, db DBTX, arg GetPostsWithLikesParams) ([]GetPostsWithLikesRow, error) {
-	rows, err := db.Query(ctx, getPostsWithLikes, arg.CursorTimestamp, arg.Limit)
+func (q *Queries) GetPostsWithLikes(ctx context.Context, arg GetPostsWithLikesParams) ([]GetPostsWithLikesRow, error) {
+	rows, err := q.db.Query(ctx, getPostsWithLikes, arg.CursorTimestamp, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +214,7 @@ WHERE
     uri = $1
 `
 
-func (q *Queries) SoftDeleteCandidatePost(ctx context.Context, db DBTX, uri string) error {
-	_, err := db.Exec(ctx, softDeleteCandidatePost, uri)
+func (q *Queries) SoftDeleteCandidatePost(ctx context.Context, uri string) error {
+	_, err := q.db.Exec(ctx, softDeleteCandidatePost, uri)
 	return err
 }
