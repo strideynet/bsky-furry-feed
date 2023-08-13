@@ -3,7 +3,8 @@ on:
   push:
     branches:
       - main
-
+    tags:
+      - "v*.*.*"
 jobs:
   build-and-push-docker:
     name: Build and push Docker image
@@ -22,12 +23,23 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Generate docker tags
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          # list of Docker images to use as base name for tags
+          images: |
+            ghcr.io/${{ github.repository }}/bffsrv
+          # generate Docker tags based on the following events/attributes
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern=v{{version}}
+            type=sha
       - name: Build and push
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           push: true
           context: .
           file: bffsrv.Dockerfile
-          tags: |
-            ghcr.io/${{ github.repository }}/bffsrv:latest
-            ghcr.io/${{ github.repository }}/bffsrv:${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

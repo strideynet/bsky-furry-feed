@@ -44,8 +44,8 @@ func dbCandidateActorsList(log *zap.Logger, env *environment) *cli.Command {
 			}
 			defer conn.Close(cctx.Context)
 
-			db := gen.New()
-			repos, err := db.ListCandidateActors(cctx.Context, conn, gen.NullActorStatus{})
+			db := gen.New(conn)
+			repos, err := db.ListCandidateActors(cctx.Context, gen.NullActorStatus{})
 			if err != nil {
 				return err
 			}
@@ -68,7 +68,7 @@ func dbCandidateActorsSeedCmd(log *zap.Logger, env *environment) *cli.Command {
 			}
 			defer conn.Close(cctx.Context)
 
-			db := gen.New()
+			db := gen.New(conn)
 
 			log.Info("seed candidates", zap.Int("count", len(seedCandidateActors)))
 			for did, candidate := range seedCandidateActors {
@@ -78,7 +78,6 @@ func dbCandidateActorsSeedCmd(log *zap.Logger, env *environment) *cli.Command {
 				)
 				_, err := db.CreateCandidateActor(
 					cctx.Context,
-					conn,
 					gen.CreateCandidateActorParams{
 						DID: did,
 						CreatedAt: pgtype.Timestamptz{
@@ -147,7 +146,7 @@ func dbCandidateActorsAddCmd(log *zap.Logger, env *environment) *cli.Command {
 			}
 			log.Info("found did", zap.String("did", did.Did))
 
-			db := gen.New()
+			db := gen.New(conn)
 
 			params := gen.CreateCandidateActorParams{
 				DID: did.Did,
@@ -165,7 +164,6 @@ func dbCandidateActorsAddCmd(log *zap.Logger, env *environment) *cli.Command {
 			)
 			_, err = db.CreateCandidateActor(
 				cctx.Context,
-				conn,
 				params,
 			)
 			if err != nil {
@@ -288,8 +286,8 @@ func dbCandidateActorsBackfillProfiles(log *zap.Logger, env *environment) *cli.C
 				return err
 			}
 
-			db := gen.New()
-			repos, err := db.ListCandidateActorsRequiringProfileBackfill(cctx.Context, conn)
+			db := gen.New(conn)
+			repos, err := db.ListCandidateActorsRequiringProfileBackfill(cctx.Context)
 			if err != nil {
 				return err
 			}
@@ -347,7 +345,7 @@ func dbCandidateActorsBackfillProfiles(log *zap.Logger, env *environment) *cli.C
 				log.Info("backfilling candidate actor profile",
 					zap.Any("data", params),
 				)
-				if err := db.CreateLatestActorProfile(cctx.Context, conn, params); err != nil {
+				if err := db.CreateLatestActorProfile(cctx.Context, params); err != nil {
 					return err
 				}
 
