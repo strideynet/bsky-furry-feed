@@ -54,7 +54,7 @@ func ConnectPGXStore(ctx context.Context, log *zap.Logger, connector PoolConnect
 	return &PGXStore{
 		log:     log,
 		pool:    pool,
-		queries: gen.New(),
+		queries: gen.New(pool),
 	}, nil
 }
 
@@ -111,6 +111,53 @@ func endSpan(span trace.Span, err error) {
 	span.End()
 }
 
+type PGXTX struct {
+	*PGXStore
+	tx pgx.Tx
+}
+
+// Rollback rolls back a transaction if it has not already been committed.
+// This is safe to call when the transaction has been committed, so defer this
+// when creating a transaction.
+func (s *PGXTX) Rollback() {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	err := s.tx.Rollback(ctx)
+	if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+		s.PGXStore.log.Error(
+			"failed to rollback transaction", zap.Error(err),
+		)
+	}
+}
+
+func (s *PGXTX) Commit(ctx context.Context) error {
+	// return without wrapping since it'll just result in duplication of
+	// "committing transaction".
+	return s.tx.Commit(ctx)
+}
+
+func (s *PGXTX) TX(_ context.Context) (*PGXStore, error) {
+	// TODO(noah): Evaluate if we can support nested TX.
+	return nil, fmt.Errorf("nested transactions not supported")
+}
+
+func (s *PGXStore) TX(ctx context.Context) (*PGXTX, error) {
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("starting transaction: %w", err)
+	}
+
+	return &PGXTX{
+		tx: tx,
+		PGXStore: &PGXStore{
+			log:     s.log,
+			pool:    s.pool,
+			queries: gen.New(tx),
+		},
+	}, nil
+}
+
 type ListActorsOpts struct {
 	FilterStatus v1.ActorStatus
 }
@@ -131,7 +178,7 @@ func (s *PGXStore) ListActors(ctx context.Context, opts ListActorsOpts) (out []*
 		statusFilter.ActorStatus = status
 	}
 
-	actors, err := s.queries.ListCandidateActors(ctx, s.pool, statusFilter)
+	actors, err := s.queries.ListCandidateActors(ctx, statusFilter)
 	if err != nil {
 		return nil, fmt.Errorf("executing ListCandidateActors query: %w", err)
 	}
@@ -153,7 +200,7 @@ func (s *PGXStore) GetActorByDID(ctx context.Context, did string) (out *v1.Actor
 		endSpan(span, err)
 	}()
 
-	actor, err := s.queries.GetCandidateActorByDID(ctx, s.pool, did)
+	actor, err := s.queries.GetCandidateActorByDID(ctx, did)
 	if err != nil {
 		return nil, fmt.Errorf("executing GetCandidateActorByDID query: %w", err)
 	}
@@ -197,7 +244,7 @@ func (s *PGXStore) CreateActor(ctx context.Context, opts CreateActorOpts) (out *
 		},
 		Roles: opts.Roles,
 	}
-	created, err := s.queries.CreateCandidateActor(ctx, s.pool, queryParams)
+	created, err := s.queries.CreateCandidateActor(ctx, queryParams)
 	if err != nil {
 		return nil, fmt.Errorf("executing CreateCandidateActor query: %w", err)
 	}
@@ -213,10 +260,6 @@ func (s *PGXStore) CreateActor(ctx context.Context, opts CreateActorOpts) (out *
 type UpdateActorOpts struct {
 	// DID is the DID of the actor to update.
 	DID string
-	// Predicate is a function which is called on the fetched actor before
-	// updating it. This allows rules to be placed that prevent invalid state
-	// transitions.
-	Predicate func(actor *v1.Actor) error
 	// TODO: These fields should be optional
 	UpdateStatus   v1.ActorStatus
 	UpdateIsArtist bool
@@ -228,33 +271,6 @@ func (s *PGXStore) UpdateActor(ctx context.Context, opts UpdateActorOpts) (out *
 	defer func() {
 		endSpan(span, err)
 	}()
-
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("beginning transaction: %w", err)
-	}
-	defer func() {
-		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			s.log.Warn("failed to roll back transaction", zap.Error(err))
-		}
-	}()
-
-	dbActor, err := s.queries.GetCandidateActorByDID(ctx, tx, opts.DID)
-	if err != nil {
-		return nil, fmt.Errorf("fetching actor: %w", err)
-	}
-
-	actor, err := actorToProto(dbActor)
-	if err != nil {
-		return nil, fmt.Errorf("converting actor: %w", err)
-	}
-
-	if opts.Predicate != nil {
-		err = opts.Predicate(actor)
-		if err != nil {
-			return nil, fmt.Errorf("update predicate: %w", err)
-		}
-	}
 
 	status, err := actorStatusFromProto(opts.UpdateStatus)
 	if err != nil {
@@ -275,16 +291,12 @@ func (s *PGXStore) UpdateActor(ctx context.Context, opts UpdateActorOpts) (out *
 			String: opts.UpdateComment,
 		},
 	}
-	created, err := s.queries.UpdateCandidateActor(ctx, tx, queryParams)
+	created, err := s.queries.UpdateCandidateActor(ctx, queryParams)
 	if err != nil {
 		return nil, fmt.Errorf("executing UpdateCandidateActor query: %w", err)
 	}
 
-	if err = tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("committing transaction: %w", err)
-	}
-
-	actor, err = actorToProto(created)
+	actor, err := actorToProto(created)
 	if err != nil {
 		return nil, fmt.Errorf("converting actor: %w", err)
 	}
@@ -337,7 +349,7 @@ func (s *PGXStore) CreateLatestActorProfile(ctx context.Context, opts CreateLate
 			String: opts.Description,
 		},
 	}
-	err = s.queries.CreateLatestActorProfile(ctx, tx, queryParams)
+	err = s.queries.CreateLatestActorProfile(ctx, queryParams)
 	if err != nil {
 		return fmt.Errorf("executing CreateLatestActorProfile query: %w", err)
 	}
@@ -376,7 +388,7 @@ func (s *PGXStore) CreateLike(ctx context.Context, opts CreateLikeOpts) (err err
 			Valid: true,
 		},
 	}
-	err = s.queries.CreateCandidateLike(ctx, s.pool, queryParams)
+	err = s.queries.CreateCandidateLike(ctx, queryParams)
 	if err != nil {
 		return fmt.Errorf("executing CreateCandidateLike query: %w", err)
 	}
@@ -394,7 +406,7 @@ func (s *PGXStore) DeleteLike(ctx context.Context, opts DeleteLikeOpts) (err err
 		endSpan(span, err)
 	}()
 
-	err = s.queries.SoftDeleteCandidateLike(ctx, s.pool, opts.URI)
+	err = s.queries.SoftDeleteCandidateLike(ctx, opts.URI)
 	if err != nil {
 		return fmt.Errorf("executing SoftDeleteCandidateLike query: %w", err)
 	}
@@ -436,7 +448,7 @@ func (s *PGXStore) CreatePost(ctx context.Context, opts CreatePostOpts) (err err
 		},
 		Raw: opts.Raw,
 	}
-	err = s.queries.CreateCandidatePost(ctx, s.pool, queryParams)
+	err = s.queries.CreateCandidatePost(ctx, queryParams)
 	if err != nil {
 		return fmt.Errorf("executing CreateCandidatePost query: %w", err)
 	}
@@ -454,7 +466,7 @@ func (s *PGXStore) DeletePost(ctx context.Context, opts DeletePostOpts) (err err
 		endSpan(span, err)
 	}()
 
-	err = s.queries.SoftDeleteCandidatePost(ctx, s.pool, opts.URI)
+	err = s.queries.SoftDeleteCandidatePost(ctx, opts.URI)
 	if err != nil {
 		return fmt.Errorf("executing SoftDeleteCandidatePost query: %w", err)
 	}
@@ -489,7 +501,7 @@ func (s *PGXStore) CreateFollow(ctx context.Context, opts CreateFollowOpts) (err
 			Valid: true,
 		},
 	}
-	err = s.queries.CreateCandidateFollow(ctx, s.pool, queryParams)
+	err = s.queries.CreateCandidateFollow(ctx, queryParams)
 	if err != nil {
 		return fmt.Errorf("executing CreateCandidateFollowParams query: %w", err)
 	}
@@ -507,7 +519,7 @@ func (s *PGXStore) DeleteFollow(ctx context.Context, opts DeleteFollowOpts) (err
 		endSpan(span, err)
 	}()
 
-	err = s.queries.SoftDeleteCandidateFollow(ctx, s.pool, opts.URI)
+	err = s.queries.SoftDeleteCandidateFollow(ctx, opts.URI)
 	if err != nil {
 		return fmt.Errorf("executing SoftDeleteCandidateFollow query: %w", err)
 	}
@@ -551,7 +563,7 @@ func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNew
 		queryParams.Limit = int32(opts.Limit)
 	}
 
-	posts, err := s.queries.GetFurryNewFeed(ctx, s.pool, queryParams)
+	posts, err := s.queries.GetFurryNewFeed(ctx, queryParams)
 	if err != nil {
 		return nil, fmt.Errorf("executing GetFurryNewFeed query: %w", err)
 	}
@@ -582,7 +594,7 @@ func (s *PGXStore) ListPostsWithLikes(ctx context.Context, opts ListPostsWithLik
 		queryParams.Limit = int32(opts.Limit)
 	}
 
-	posts, err := s.queries.GetPostsWithLikes(ctx, s.pool, queryParams)
+	posts, err := s.queries.GetPostsWithLikes(ctx, queryParams)
 	if err != nil {
 		return nil, fmt.Errorf("executing GetFurryNewFeed query: %w", err)
 	}
@@ -637,7 +649,7 @@ func (s *PGXStore) ListAuditEvents(ctx context.Context, opts ListAuditEventsOpts
 		}
 	}
 
-	data, err := s.queries.ListAuditEvents(ctx, s.pool, queryParams)
+	data, err := s.queries.ListAuditEvents(ctx, queryParams)
 	if err != nil {
 		return nil, fmt.Errorf("executing ListAuditEvents query: %w", err)
 	}
@@ -686,7 +698,7 @@ func (s *PGXStore) CreateAuditEvent(ctx context.Context, opts CreateAuditEventOp
 		SubjectRecordUri: opts.SubjectRecordURI,
 		Payload:          payloadBytes,
 	}
-	data, err := s.queries.CreateAuditEvent(ctx, s.pool, queryParams)
+	data, err := s.queries.CreateAuditEvent(ctx, queryParams)
 	if err != nil {
 		return nil, fmt.Errorf("executing CreateAuditEvent query: %w", err)
 	}
@@ -701,15 +713,15 @@ func (s *PGXStore) CreateAuditEvent(ctx context.Context, opts CreateAuditEventOp
 
 func (s *PGXStore) GetPostByURI(ctx context.Context, uri string) (out gen.CandidatePost, err error) {
 	// TODO: Return a proto type rather than exposing gen.CandidatePost
-	return s.queries.GetPostByURI(ctx, s.pool, uri)
+	return s.queries.GetPostByURI(ctx, uri)
 }
 
 func (s *PGXStore) GetLatestActorProfile(ctx context.Context, did string) (out gen.ActorProfile, err error) {
 	// TODO: Return a proto type rather than exposing gen.ActorProfile
-	return s.queries.GetLatestActorProfile(ctx, s.pool, did)
+	return s.queries.GetLatestActorProfile(ctx, did)
 }
 
 func (s *PGXStore) GetActorProfileHistory(ctx context.Context, did string) (out []gen.ActorProfile, err error) {
 	// TODO: Return a proto type rather than exposing gen.ActorProfile
-	return s.queries.GetActorProfileHistory(ctx, s.pool, did)
+	return s.queries.GetActorProfileHistory(ctx, did)
 }
