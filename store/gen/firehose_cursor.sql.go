@@ -13,8 +13,8 @@ const getFirehoseCommitCursor = `-- name: GetFirehoseCommitCursor :one
 SELECT cursor FROM firehose_commit_cursor
 `
 
-func (q *Queries) GetFirehoseCommitCursor(ctx context.Context, db DBTX) (int64, error) {
-	row := db.QueryRow(ctx, getFirehoseCommitCursor)
+func (q *Queries) GetFirehoseCommitCursor(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, getFirehoseCommitCursor)
 	var cursor int64
 	err := row.Scan(&cursor)
 	return cursor, err
@@ -27,7 +27,7 @@ ON CONFLICT ((0)) DO
 UPDATE SET cursor = EXCLUDED.cursor
 `
 
-func (q *Queries) SetFirehoseCommitCursor(ctx context.Context, db DBTX, cursor int64) error {
-	_, err := db.Exec(ctx, setFirehoseCommitCursor, cursor)
+func (q *Queries) SetFirehoseCommitCursor(ctx context.Context, cursor int64) error {
+	_, err := q.db.Exec(ctx, setFirehoseCommitCursor, cursor)
 	return err
 }
