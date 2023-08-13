@@ -192,10 +192,9 @@ func runE(log *zap.Logger) error {
 		feedService := feed.ServiceWithDefaultFeeds(pgxStore)
 
 		// Setup the public HTTP/XRPC server
-		// TODO: Make these externally configurable
-		hostname := "dev-feed.ottr.sh"
-		if mode == productionMode {
-			hostname = "feed.furryli.st"
+		hostname := os.Getenv("BFF_HOSTNAME")
+		if hostname == "" {
+			return fmt.Errorf("BFF_HOSTNAME not set")
 		}
 		listenAddr := ":1337"
 		srv, err := api.New(

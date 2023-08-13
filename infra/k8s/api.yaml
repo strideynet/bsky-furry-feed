@@ -35,6 +35,8 @@ spec:
               value: production
             - name: BFF_API_ENABLED
               value: "1"
+            - name: BFF_HOSTNAME
+              value: feed.furryli.st
           envFrom:
             - secretRef:
                 name: shared-env
