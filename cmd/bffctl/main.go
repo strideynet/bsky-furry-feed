@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"golang.org/x/exp/slices"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -13,12 +14,16 @@ import (
 )
 
 type environment struct {
-	dbURL string
+	dbURL                   string
+	blacklistBlueskyHandles []string
 }
 
 var environments = map[string]environment{
 	"local": {
 		dbURL: "postgres://bff:bff@localhost:5432/bff?sslmode=disable",
+		blacklistBlueskyHandles: []string{
+			"furryli.st",
+		},
 	},
 	"production": {
 		// Requires noah has run
@@ -29,10 +34,13 @@ var environments = map[string]environment{
 }
 
 // TODO: Have a `login` and `logout` command that persists auth state to disk.
-func getBlueskyClient(ctx context.Context) (*bluesky.Client, error) {
+func getBlueskyClient(ctx context.Context, e *environment) (*bluesky.Client, error) {
 	creds, err := bluesky.CredentialsFromEnv()
 	if err != nil {
 		return nil, err
+	}
+	if slices.Contains(e.blacklistBlueskyHandles, creds.Identifier) {
+		return nil, fmt.Errorf("prohibited handle for environment used")
 	}
 	return bluesky.ClientFromCredentials(ctx, bluesky.DefaultPDSHost, creds)
 }
@@ -68,38 +76,11 @@ func main() {
 		},
 		Commands: []*cli.Command{
 			dbCmd(log, env),
-			findDIDCmd(log),
+			bskyCmd(log, env),
 		},
 	}
 	if err := app.Run(os.Args); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
-	}
-}
-
-func findDIDCmd(log *zap.Logger) *cli.Command {
-	handle := ""
-	return &cli.Command{
-		Name: "find-did",
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:        "handle",
-				Usage:       "Find DID for handle",
-				Destination: &handle,
-				Required:    true,
-			},
-		},
-		Action: func(cctx *cli.Context) error {
-			client, err := getBlueskyClient(cctx.Context)
-			if err != nil {
-				return err
-			}
-			did, err := client.ResolveHandle(cctx.Context, handle)
-			if err != nil {
-				return err
-			}
-			log.Info("found did", zap.String("did", did.Did))
-			return nil
-		},
 	}
 }
