@@ -1,7 +1,11 @@
 <script lang="ts">
+  import FeedCard from '$components/feeds/card.svelte';
+  import ViewMoreFeeds from '$components/feeds/view-more.svelte';
   import StaticPage from '$components/layouts/static-page.svelte';
   import Heading from '$components/text/heading.svelte';
   import Link from '$components/text/link.svelte';
+
+  export let data;
 </script>
 
 <StaticPage>
@@ -13,63 +17,34 @@
   </p>
 
   <p>
-    Check out the <Link href="/welcome">Welcome Guide</Link> for all the information you'll
-    need about getting set up on BlueSky as a furry.
+    Check out the <Link href="/welcome" internal>Welcome Guide</Link> for all the information
+    you'll need about getting set up on BlueSky as a furry.
   </p>
 
   <Heading level={3}>Our Feeds</Heading>
   <p>Click any of the following links to open the feed in your client:</p>
 
-  <ul>
-    <li>
-      <Link
-        href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-new"
-        >🐾 New</Link
-      > - Posts by all furries on furryli.st, sorted chronologically.
-    </li>
-    <li>
-      <Link
-        href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-nsfw"
-        >🐾 New 🌙</Link
-      > - All posts by furries on furryli.st that have the #nsfw hashtag, sorted chronologically.
-    </li>
-    <li>
-      <Link
-        href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-hot"
-        >🐾 Hot</Link
-      > - Posts by all furries on furryli.st, sorted by "hotness".
-    </li>
-    <li>
-      <Link
-        href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-fursuit"
-        >🐾 Fursuits</Link
-      > - All posts by furries on furryli.st that have the #fursuit hashtag, sorted chronologically.
-    </li>
-    <li>
-      <Link
-        href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-art"
-        >🐾 Art</Link
-      > - All posts by furries on furryli.st that have the #art or #furryart hashtag, sorted
-      chronologically.
-    </li>
-    <li>
-      <Link
-        href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-comms"
-        >🐾 #commsopen</Link
-      > - All posts by furries on furryli.st that have the #commsopen hashtag, sorted chronologically.
-    </li>
-  </ul>
+  <div class="my-5 flex flex-col flex-wrap gap-4 md:flex-row">
+    {#each data.featuredFeeds as feed}
+      <FeedCard {feed} />
+    {/each}
+    {#if data.featuredFeeds.length < data.feeds.length}
+      <ViewMoreFeeds />
+    {/if}
+  </div>
 
   <p>
     After opening the feed, you'll be able to pin it in your client. We'd love it if you
     also gave the feed a like!
   </p>
 
-  <Heading level={4}>Joining the feed</Heading>
+  <Heading level={4}>Joining the feeds</Heading>
 
   <p>
     Only approved furries will show up in our feeds. To request approval, follow the
-    @furryli.st account. Once you are approved, that account will follow you back.
+    <Link href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc"
+      >@furryli.st</Link
+    > account. Once you are approved, that account will follow you back.
   </p>
 
   <p>
@@ -87,7 +62,7 @@
   <Heading level={3}>Moderation policy</Heading>
 
   <p>
-    Read our <Link href="/community-guidelines">Community Guidelines.</Link>
+    Read our <Link href="/community-guidelines" internal>Community Guidelines.</Link>
   </p>
 
   <Heading level={3}>FAQs</Heading>
@@ -112,7 +87,9 @@
 
   <p>
     Running these feeds for the community isn't free! We'd welcome donations to help with
-    the cost of running the feeds on our <a href="https://ko-fi.com/furrylist">Ko-Fi</a>
+    the cost of running the feeds on our <Link href="https://ko-fi.com/furrylist"
+      >Ko-Fi</Link
+    >
   </p>
 
   <Heading level={5}>I need help!</Heading>

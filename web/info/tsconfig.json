@@ -18,7 +18,7 @@
       "$assets/*": ["src/static/*"],
       "$styles": ["src/styles"],
       "$styles/*": ["src/styles/*"],
-      "$types": ["types/app/index.d.ts"],
+      "$types": ["types/app/index.ts"],
       "$types/*": ["types/app/*"],
       "*": ["types/*"]
     },

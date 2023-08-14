@@ -11,10 +11,62 @@ import {
 } from '$lib/atp';
 
 import type { LayoutLoad } from './$types';
+import type { FeedInfo } from '$types';
+
+const mockFeedData = [
+  {
+    id: 'furry-new',
+    displayName: '🐾 New',
+    description: 'Posts by all furries on furryli.st, sorted chronologically.',
+    priority: 101,
+    link: 'https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-new'
+  },
+  {
+    id: 'furry-nsfw',
+    displayName: '🐾 New 🌙',
+    description:
+      'All posts by furries on furryli.st that have the #nsfw hashtag, sorted chronologically.',
+    priority: 100,
+    link: 'https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-nsfw'
+  },
+  {
+    id: 'furry-hot',
+    displayName: '🐾 Hot',
+    description: 'Posts by all furries on furryli.st, sorted by "hotness".',
+    priority: 99,
+    link: 'https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-hot'
+  },
+  {
+    id: 'furry-fursuit',
+    displayName: '🐾 Fursuit',
+    description:
+      'All posts by furries on furryli.st that have the #fursuit hashtag, sorted chronologically.',
+    priority: 98,
+    link: 'https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-fursuit'
+  },
+  {
+    id: 'furry-art',
+    displayName: '🐾 Art',
+    description:
+      'All posts by furries on furryli.st that have the #art or #furryart hashtag, sorted chronologically.',
+    priority: 97,
+    link: 'https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-art'
+  },
+  {
+    id: 'furry-comms',
+    displayName: '🐾 #commsopen',
+    description:
+      'All posts by furries on furryli.st that have the #commsopen hashtag, sorted chronologically.',
+    priority: 96,
+    link: 'https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-comms'
+  }
+] satisfies FeedInfo[];
 
 export const load = (async ({ url }) => {
+  const feeds = mockFeedData;
+
   if (!browser) {
-    return { url };
+    return { url, feeds };
   }
 
   if (!get(agent)) {
@@ -42,5 +94,5 @@ export const load = (async ({ url }) => {
     }
   }
 
-  return { url };
+  return { url, feeds };
 }) satisfies LayoutLoad;
