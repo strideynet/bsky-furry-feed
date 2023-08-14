@@ -117,3 +117,11 @@ type CandidatePost struct {
 type FirehoseCommitCursor struct {
 	Cursor int64
 }
+
+type PostHotness struct {
+	URI           string
+	Alg           string
+	GenerationSeq int64
+	Score         float32
+	GeneratedAt   pgtype.Timestamptz
+}

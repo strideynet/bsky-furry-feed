@@ -8,6 +8,7 @@ overrides:
        commit_cid: CommitCID
        subject_uri: SubjectURI
        is_nsfw: IsNSFW
+       after_uri: AfterURI
      overrides:
        - column: candidate_posts.raw
          go_type:
