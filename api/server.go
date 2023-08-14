@@ -101,6 +101,17 @@ func New(
 			),
 		),
 	)
+	mux.Handle(
+		bffv1pbconnect.NewPublicServiceHandler(
+			&PublicServiceHandler{
+				feedMetaSourcer: feedRegistry,
+			},
+			connect.WithInterceptors(
+				unaryLoggingInterceptor(log),
+				otelconnect.NewInterceptor(),
+			),
+		),
+	)
 
 	// Mount root/not found handler
 	mux.Handle(rootHandler(log))

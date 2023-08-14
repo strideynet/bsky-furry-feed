@@ -38,7 +38,6 @@ export const Actor = proto3.makeMessageType(
   "bff.v1.Actor",
   () => [
     { no: 1, name: "did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "is_hidden", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 3, name: "is_artist", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 4, name: "comment", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "status", kind: "enum", T: proto3.getEnumType(ActorStatus) },

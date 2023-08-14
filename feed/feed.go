@@ -23,9 +23,18 @@ var feedRequestMetric = promauto.NewSummaryVec(prometheus.SummaryOpts{
 
 type Meta struct {
 	// ID is the rkey that is used to identify the Feed in generation requests.
-	ID          string
+	ID string
+	// DisplayName is the short name of the feed used in the BlueSky client.
 	DisplayName string
+	// Description is a long description of the feed used in the BlueSky client.
 	Description string
+
+	// Priority controls where the feed shows up on FurryList UIs.
+	// Higher priority wins. Negative values indicate the feed should be hidden
+	// in the UI.
+	Priority int32
+	// TODO: Categories
+	// TODO: "Parents"
 }
 
 type feed struct {
@@ -243,6 +252,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		ID:          "furry-hot",
 		DisplayName: "🐾 Hot",
 		Description: "Hottest posts by furries across Bluesky. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
+		Priority:    100,
 	}, scoreBasedGenerator(1.85, time.Hour*2))
 
 	// Reverse chronological based feeds
@@ -250,6 +260,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		ID:          "furry-new",
 		DisplayName: "🐾 New",
 		Description: "Posts by furries across Bluesky. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
+		Priority:    101,
 	}, chronologicalGenerator(chronologicalGeneratorOpts{}))
 	r.Register(Meta{
 		ID:          "furry-fursuit",
@@ -342,6 +353,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		ID:          "furry-test",
 		DisplayName: "🐾 Test 🚨🛠️",
 		Description: "Experimental version of the '🐾 Hot' feed.\ntest\ntest\n\ndouble break",
+		Priority:    -1,
 	}, func(_ context.Context, _ *store.PGXStore, _ string, limit int) ([]Post, error) {
 		return []Post{
 			{
