@@ -49,8 +49,7 @@ func (fi *FirehoseIngester) handleActorProfileUpdate(
 			IndexedAt:   time.Now(),
 			DisplayName: displayName,
 			Description: description,
-			// TODO: Extract SelfLabels from post
-			SelfLabels: []string{},
+			SelfLabels:  selfLabels,
 		},
 	)
 	if err != nil {

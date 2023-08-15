@@ -55,17 +55,19 @@ WITH
     ap as (
         INSERT INTO actor_profiles
             (actor_did, commit_cid, created_at, indexed_at, display_name,
-             description)
+             description, self_labels)
             VALUES
                 ($1, $2,
                  $3, $4,
-                 $5, $6)
+                 $5, $6,
+                 $7)
             ON CONFLICT (actor_did, commit_cid) DO
                 UPDATE SET
                     created_at = EXCLUDED.created_at,
                     indexed_at = EXCLUDED.indexed_at,
                     display_name = EXCLUDED.display_name,
-                    description = EXCLUDED.description
+                    description = EXCLUDED.description,
+                    self_labels = EXCLUDED.self_labels
             RETURNING actor_did, commit_cid)
 UPDATE candidate_actors ca
 SET
@@ -81,6 +83,7 @@ type CreateLatestActorProfileParams struct {
 	IndexedAt   pgtype.Timestamptz
 	DisplayName pgtype.Text
 	Description pgtype.Text
+	SelfLabels  []string
 }
 
 func (q *Queries) CreateLatestActorProfile(ctx context.Context, arg CreateLatestActorProfileParams) error {
@@ -91,6 +94,7 @@ func (q *Queries) CreateLatestActorProfile(ctx context.Context, arg CreateLatest
 		arg.IndexedAt,
 		arg.DisplayName,
 		arg.Description,
+		arg.SelfLabels,
 	)
 	return err
 }

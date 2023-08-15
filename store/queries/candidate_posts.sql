@@ -35,7 +35,7 @@ WHERE
       -- Filter by NSFW status. If unspecified, do not filter.
   AND (sqlc.narg(is_nsfw)::BOOLEAN IS NULL OR
        ((ARRAY ['nsfw', 'mursuit', 'murrsuit'] && cp.hashtags) OR
-        ARRAY ['TODO-TEMPORARY'] && cp.self_labels) = @is_nsfw)
+        (ARRAY ['porn', 'nudity', 'suggestive'] && cp.self_labels)) = @is_nsfw)
 
       -- Remove posts newer than the cursor timestamp
   AND (cp.indexed_at < @cursor_timestamp)

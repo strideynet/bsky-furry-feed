@@ -30,17 +30,19 @@ WITH
     ap as (
         INSERT INTO actor_profiles
             (actor_did, commit_cid, created_at, indexed_at, display_name,
-             description)
+             description, self_labels)
             VALUES
                 (sqlc.arg(actor_did), sqlc.arg(commit_cid),
                  sqlc.arg(created_at), sqlc.arg(indexed_at),
-                 sqlc.arg(display_name), sqlc.arg(description))
+                 sqlc.arg(display_name), sqlc.arg(description),
+                 sqlc.arg(self_labels))
             ON CONFLICT (actor_did, commit_cid) DO
                 UPDATE SET
                     created_at = EXCLUDED.created_at,
                     indexed_at = EXCLUDED.indexed_at,
                     display_name = EXCLUDED.display_name,
-                    description = EXCLUDED.description
+                    description = EXCLUDED.description,
+                    self_labels = EXCLUDED.self_labels
             RETURNING actor_did, commit_cid)
 UPDATE candidate_actors ca
 SET
