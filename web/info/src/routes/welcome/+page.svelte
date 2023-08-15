@@ -29,9 +29,10 @@
   </p>
 
   <p>
-    The BlueSky NSFW content detection can be a little inaccurate at times. It's not
-    currently possibly to mark a post as NSFW within the app itself, but, if you add #nsfw
-    to the post text, it'll be hidden from the SFW furryli.st feeds.
+    The BlueSky NSFW content detection can be a little inaccurate at times. Manual tagging
+    of posts is now present in the client, so if you're posting anything suggestive or
+    NSFW, please mark it as such! Adding #nsfw to posts will also serve to hide them from
+    the SFW furryli.st feeds.
   </p>
 
   <Heading level={3}>Our Feeds</Heading>
