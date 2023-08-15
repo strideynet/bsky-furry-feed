@@ -4,11 +4,11 @@
 
   import type { FeedInfo } from '$types';
 
-  export let feeds: FeedInfo[], featured: FeedInfo[];
+  export let feeds: FeedInfo[] | null, featured: FeedInfo[] | null;
 </script>
 
 <FeedsList feeds={featured}>
-  {#if featured.length !== feeds.length}
+  {#if featured?.length !== feeds?.length}
     <ViewMore />
   {/if}
 </FeedsList>

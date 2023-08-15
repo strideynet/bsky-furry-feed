@@ -33,8 +33,8 @@ export const load = (async ({ url, fetch }) => {
             return b.priority - a.priority;
           });
       })
-      .catch(console.error)) ?? []),
-    (featuredFeeds ||= feeds?.filter((feed) => feed.priority >= 100) ?? []);
+      .catch(console.error)) ?? null),
+    (featuredFeeds ||= feeds?.filter((feed) => feed.priority >= 100) ?? null);
 
   if (!browser) {
     return { apiClient, url, feeds, featuredFeeds };
