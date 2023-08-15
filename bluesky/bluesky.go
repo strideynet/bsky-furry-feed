@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/bluesky-social/indigo/api/atproto"
@@ -14,14 +15,35 @@ import (
 	"github.com/bluesky-social/indigo/repo"
 	indigoUtils "github.com/bluesky-social/indigo/util"
 	"github.com/bluesky-social/indigo/xrpc"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/ipfs/go-cid"
 	typegen "github.com/whyrusleeping/cbor-gen"
 )
 
 const DefaultPDSHost = "https://bsky.social"
 
+type tokenInfo struct {
+	authInfo  *xrpc.AuthInfo
+	expiresAt time.Time
+}
+
+func tokenInfoFromAuthInfo(authInfo *xrpc.AuthInfo) (tokenInfo, error) {
+	var claims jwt.RegisteredClaims
+	if _, _, err := jwt.NewParser().ParseUnverified(authInfo.AccessJwt, &claims); err != nil {
+		return tokenInfo{}, fmt.Errorf("failed to parse jwt: %w", err)
+	}
+
+	return tokenInfo{
+		authInfo:  authInfo,
+		expiresAt: claims.ExpiresAt.Time,
+	}, nil
+}
+
 type Client struct {
-	xrpc *xrpc.Client
+	pdsHost string
+
+	tokenInfo   tokenInfo
+	tokenInfoMu sync.Mutex
 }
 
 type Credentials struct {
@@ -42,20 +64,14 @@ func CredentialsFromEnv() (*Credentials, error) {
 	return &Credentials{Identifier: identifier, Password: password}, nil
 }
 
-func baseXRPC(pdsHost string) *xrpc.Client {
-	// TODO: Introduce a ClientConfig we can control these with
-	ua := "github.com/strideynet/bluesky-furry-feed"
-	return &xrpc.Client{
-		Host:      pdsHost,
-		UserAgent: &ua,
-	}
-}
-
 func ClientFromCredentials(ctx context.Context, pdsHost string, credentials *Credentials) (*Client, error) {
-	xrpcClient := baseXRPC(pdsHost)
-	out, err := atproto.ServerCreateSession(
+	c := &Client{
+		pdsHost: pdsHost,
+	}
+
+	sess, err := atproto.ServerCreateSession(
 		ctx,
-		xrpcClient,
+		c.baseXRPCClient(),
 		&atproto.ServerCreateSession_Input{
 			Identifier: credentials.Identifier,
 			Password:   credentials.Password,
@@ -65,67 +81,115 @@ func ClientFromCredentials(ctx context.Context, pdsHost string, credentials *Cre
 		return nil, fmt.Errorf("creating session: %w", err)
 	}
 
-	xrpcClient.Auth = &xrpc.AuthInfo{
-		AccessJwt:  out.AccessJwt,
-		RefreshJwt: out.RefreshJwt,
-		Did:        out.Did,
-		Handle:     out.Handle,
+	ti, err := tokenInfoFromAuthInfo(&xrpc.AuthInfo{
+		AccessJwt:  sess.AccessJwt,
+		RefreshJwt: sess.RefreshJwt,
+		Did:        sess.Did,
+		Handle:     sess.Handle,
+	})
+	if err != nil {
+		return nil, err
 	}
 
-	return &Client{xrpc: xrpcClient}, nil
+	// c.tokenInfoMu does not need to be locked here on first initialization.
+	c.tokenInfo = ti
+
+	return c, nil
 }
 
-// ClientFromToken takes a JWT access token, and makes a client. It then calls
-// GetSession to verify the token.
-//
-// On success, an authenticated client is returned along with the JWTs DID
-func ClientFromToken(ctx context.Context, pdsHost string, token string) (*Client, string, error) {
-	xrpcClient := baseXRPC(pdsHost)
-	xrpcClient.Auth = &xrpc.AuthInfo{
-		AccessJwt: token,
+const UserAgent = "github.com/strideynet/bluesky-furry-feed"
+
+func (c *Client) baseXRPCClient() *xrpc.Client {
+	// TODO: Introduce a ClientConfig we can control these with
+	ua := UserAgent
+	return &xrpc.Client{
+		Host:      c.pdsHost,
+		UserAgent: &ua,
+	}
+}
+
+func (c *Client) xrpcClient(ctx context.Context) (*xrpc.Client, error) {
+	c.tokenInfoMu.Lock()
+	defer c.tokenInfoMu.Unlock()
+
+	if time.Now().After(c.tokenInfo.expiresAt.Add(-10 * time.Minute)) {
+		if err := c.refreshToken(ctx); err != nil {
+			return nil, fmt.Errorf("failed to refresh token: %w", err)
+		}
 	}
 
-	res, err := atproto.ServerGetSession(ctx, xrpcClient)
+	xc := c.baseXRPCClient()
+	xc.Auth = &xrpc.AuthInfo{
+		AccessJwt:  c.tokenInfo.authInfo.AccessJwt,
+		RefreshJwt: c.tokenInfo.authInfo.RefreshJwt,
+		Handle:     c.tokenInfo.authInfo.Handle,
+		Did:        c.tokenInfo.authInfo.Did,
+	}
+	return xc, nil
+}
+
+func (c *Client) refreshToken(ctx context.Context) error {
+	xc := c.baseXRPCClient()
+	xc.Auth = &xrpc.AuthInfo{
+		AccessJwt: c.tokenInfo.authInfo.RefreshJwt,
+	}
+
+	sess, err := atproto.ServerRefreshSession(ctx, xc)
 	if err != nil {
-		return nil, "", fmt.Errorf("fetching session: %w", err)
+		return fmt.Errorf("refresh session: %w", err)
 	}
-	xrpcClient.Auth.Did = res.Did
-	xrpcClient.Auth.Handle = res.Handle
 
-	return &Client{xrpc: xrpcClient}, res.Did, nil
+	ti, err := tokenInfoFromAuthInfo(&xrpc.AuthInfo{
+		AccessJwt:  sess.AccessJwt,
+		RefreshJwt: sess.RefreshJwt,
+		Did:        sess.Did,
+		Handle:     sess.Handle,
+	})
+	if err != nil {
+		return err
+	}
+
+	c.tokenInfo = ti
+	return nil
 }
 
 func (c *Client) ResolveHandle(ctx context.Context, handle string) (*atproto.IdentityResolveHandle_Output, error) {
-	return atproto.IdentityResolveHandle(
-		ctx,
-		c.xrpc,
-		handle,
-	)
+	xc, err := c.xrpcClient(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get xrpc client: %w", err)
+	}
+	return atproto.IdentityResolveHandle(ctx, xc, handle)
 }
 
 func (c *Client) GetFollowers(
 	ctx context.Context, actor string, cursor string, limit int64,
 ) (*bsky.GraphGetFollowers_Output, error) {
-	return bsky.GraphGetFollowers(
-		ctx,
-		c.xrpc,
-		actor,
-		cursor,
-		limit,
-	)
+	xc, err := c.xrpcClient(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get xrpc client: %w", err)
+	}
+	return bsky.GraphGetFollowers(ctx, xc, actor, cursor, limit)
 }
 
 // GetProfile fetches an actor's profile. actor can be a DID or a handle.
 func (c *Client) GetProfile(
 	ctx context.Context, actor string,
 ) (*bsky.ActorDefs_ProfileViewDetailed, error) {
-	return bsky.ActorGetProfile(ctx, c.xrpc, actor)
+	xc, err := c.xrpcClient(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get xrpc client: %w", err)
+	}
+	return bsky.ActorGetProfile(ctx, xc, actor)
 }
 
 func (c *Client) GetHead(
 	ctx context.Context, actorDID string,
 ) (cid.Cid, error) {
-	resp, err := atproto.SyncGetHead(ctx, c.xrpc, actorDID)
+	xc, err := c.xrpcClient(ctx)
+	if err != nil {
+		return cid.Cid{}, fmt.Errorf("get xrpc client: %w", err)
+	}
+	resp, err := atproto.SyncGetHead(ctx, xc, actorDID)
 	if err != nil {
 		return cid.Cid{}, err
 	}
@@ -139,8 +203,13 @@ func (c *Client) GetHead(
 func (c *Client) GetRecord(
 	ctx context.Context, collection string, commitCID cid.Cid, actorDID string, rkey string,
 ) (typegen.CBORMarshaler, error) {
+	xc, err := c.xrpcClient(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get xrpc client: %w", err)
+	}
+
 	// We can't use RepoGetRecord here, because RepoGetRecord gets the record by the record's CID and not the commit's CID.
-	blocks, err := atproto.SyncGetRecord(ctx, c.xrpc, collection, commitCID.String(), actorDID, rkey)
+	blocks, err := atproto.SyncGetRecord(ctx, xc, collection, commitCID.String(), actorDID, rkey)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +232,12 @@ func (c *Client) GetRecord(
 func (c *Client) Follow(
 	ctx context.Context, subjectDID string,
 ) error {
-	profile, err := c.GetProfile(ctx, subjectDID)
+	xc, err := c.xrpcClient(ctx)
+	if err != nil {
+		return fmt.Errorf("get xrpc client: %w", err)
+	}
+
+	profile, err := bsky.ActorGetProfile(ctx, xc, subjectDID)
 	if err != nil {
 		return fmt.Errorf("getting profile: %w", err)
 	}
@@ -175,7 +249,7 @@ func (c *Client) Follow(
 
 	createRecord := &atproto.RepoCreateRecord_Input{
 		Collection: "app.bsky.graph.follow",
-		Repo:       c.xrpc.Auth.Did,
+		Repo:       xc.Auth.Did,
 		Record: &util.LexiconTypeDecoder{
 			Val: &bsky.GraphFollow{
 				CreatedAt: FormatTime(time.Now()),
@@ -183,7 +257,7 @@ func (c *Client) Follow(
 			},
 		},
 	}
-	_, err = atproto.RepoCreateRecord(ctx, c.xrpc, createRecord)
+	_, err = atproto.RepoCreateRecord(ctx, xc, createRecord)
 	if err != nil {
 		return fmt.Errorf("creating follow record: %w", err)
 	}
@@ -221,12 +295,16 @@ func (c *Client) Unfollow(
 func (c *Client) DeleteRecord(
 	ctx context.Context, uri *indigoUtils.ParsedUri,
 ) error {
-	err := atproto.RepoDeleteRecord(ctx, c.xrpc, &atproto.RepoDeleteRecord_Input{
+	xc, err := c.xrpcClient(ctx)
+	if err != nil {
+		return fmt.Errorf("get xrpc client: %w", err)
+	}
+
+	if err := atproto.RepoDeleteRecord(ctx, xc, &atproto.RepoDeleteRecord_Input{
 		Collection: uri.Collection,
 		Repo:       uri.Did,
 		Rkey:       uri.Rkey,
-	})
-	if err != nil {
+	}); err != nil {
 		return fmt.Errorf("deleting record: %w", err)
 	}
 	return nil
@@ -236,8 +314,13 @@ func (c *Client) DeleteRecord(
 func (c *Client) PurgeFeeds(
 	ctx context.Context,
 ) error {
+	xc, err := c.xrpcClient(ctx)
+	if err != nil {
+		return fmt.Errorf("get xrpc client: %w", err)
+	}
+
 	// TODO: Pagination
-	out, err := bsky.FeedGetActorFeeds(ctx, c.xrpc, c.xrpc.Auth.Did, "", 100)
+	out, err := bsky.FeedGetActorFeeds(ctx, xc, xc.Auth.Did, "", 100)
 	if err != nil {
 		return fmt.Errorf("getting feeds: %w", err)
 	}
@@ -280,10 +363,15 @@ type RepoPutRecord_Input struct {
 func (c *Client) PutRecord(
 	ctx context.Context, collection, rkey string, record repo.CborMarshaler,
 ) error {
+	xc, err := c.xrpcClient(ctx)
+	if err != nil {
+		return fmt.Errorf("get xrpc client: %w", err)
+	}
+
 	var out atproto.RepoPutRecord_Output
-	if err := c.xrpc.Do(ctx, xrpc.Procedure, "application/json", "com.atproto.repo.putRecord", nil, &RepoPutRecord_Input{
+	if err := xc.Do(ctx, xrpc.Procedure, "application/json", "com.atproto.repo.putRecord", nil, &RepoPutRecord_Input{
 		Collection: collection,
-		Repo:       c.xrpc.Auth.Did,
+		Repo:       xc.Auth.Did,
 		Rkey:       rkey,
 		Record: &util.LexiconTypeDecoder{
 			Val: record,
@@ -297,8 +385,13 @@ func (c *Client) PutRecord(
 func (c *Client) UploadBlob(
 	ctx context.Context, blob io.Reader,
 ) (*util.LexBlob, error) {
+	xc, err := c.xrpcClient(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get xrpc client: %w", err)
+	}
+
 	// set encoding: 'image/png'
-	out, err := atproto.RepoUploadBlob(ctx, c.xrpc, blob)
+	out, err := atproto.RepoUploadBlob(ctx, xc, blob)
 	if err != nil {
 		return nil, fmt.Errorf("uploading blob: %w", err)
 	}

@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/strideynet/bsky-furry-feed/scoring"
 	"os"
 	"os/signal"
 	"time"
+
+	"github.com/strideynet/bsky-furry-feed/scoring"
 
 	"github.com/joho/godotenv"
 	"github.com/strideynet/bsky-furry-feed/api"
@@ -200,11 +201,13 @@ func runE(log *zap.Logger) error {
 		}
 		listenAddr := ":1337"
 		srv, err := api.New(
+			ctx,
 			log.Named("api"),
 			hostname,
 			listenAddr,
 			feedService,
 			pgxStore,
+			bluesky.DefaultPDSHost,
 			bskyCredentials,
 			&api.AuthEngine{
 				ActorGetter:    pgxStore,

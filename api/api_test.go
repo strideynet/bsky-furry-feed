@@ -1,18 +1,19 @@
 package api
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
+	"testing"
+
+	"connectrpc.com/connect"
 	indigoTest "github.com/bluesky-social/indigo/testing"
 	"github.com/stretchr/testify/require"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/feed"
 	"github.com/strideynet/bsky-furry-feed/testenv"
-	"net"
-	"net/http"
-	"testing"
 )
 
 func actorAuthInterceptor(actor *indigoTest.TestUser) connect.UnaryInterceptorFunc {
@@ -51,6 +52,7 @@ func startAPIHarness(ctx context.Context, t *testing.T) *apiHarness {
 
 	_ = harness.PDS.MustNewUser(t, "bff.tpds")
 	srv, err := New(
+		context.Background(),
 		harness.Log,
 		"feed.test.furryli.st",
 		"",
@@ -64,6 +66,7 @@ func startAPIHarness(ctx context.Context, t *testing.T) *apiHarness {
 			},
 		},
 		harness.Store,
+		harness.PDS.HTTPHost(),
 		&bluesky.Credentials{
 			Identifier: "bff.tpds",
 			Password:   "password",

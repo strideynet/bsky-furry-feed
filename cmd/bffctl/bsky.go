@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"time"
+
 	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/feed"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
-	"os"
-	"time"
 )
 
 func bskyCmd(log *zap.Logger, env *environment) *cli.Command {
