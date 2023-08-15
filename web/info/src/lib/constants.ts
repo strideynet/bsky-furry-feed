@@ -7,6 +7,8 @@ export const BASE_TRANSITION_DURATION = 150;
 
 export const ATP_API = 'https://bsky.social';
 
+export const API_URL = import.meta.env.ADMIN_API_URL || 'https://feed.furryli.st';
+
 export const LOCALSTORAGE_ATP_SESSION_KEY = 'bff-atp-session';
 
 export const ATP_SESSION_COOKIE = 'bff-atp-session';

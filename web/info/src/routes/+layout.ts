@@ -1,6 +1,7 @@
 import { get } from 'svelte/store';
 
 import { browser } from '$app/environment';
+import { getClient } from '$lib/api';
 import {
   agent,
   fetchProfile,
@@ -13,65 +14,29 @@ import {
 import type { LayoutLoad } from './$types';
 import type { FeedInfo } from '$types';
 
-const mockFeedData = [
-  {
-    id: 'furry-new',
-    displayName: '🐾 New',
-    description: 'Posts by all furries on furryli.st, sorted chronologically.',
-    priority: 101,
-    link: 'https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-new'
-  },
-  {
-    id: 'furry-nsfw',
-    displayName: '🐾 New 🌙',
-    description:
-      'All posts by furries on furryli.st that have the #nsfw hashtag, sorted chronologically.',
-    priority: 100,
-    link: 'https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-nsfw'
-  },
-  {
-    id: 'furry-hot',
-    displayName: '🐾 Hot',
-    description: 'Posts by all furries on furryli.st, sorted by "hotness".',
-    priority: 99,
-    link: 'https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-hot'
-  },
-  {
-    id: 'furry-fursuit',
-    displayName: '🐾 Fursuit',
-    description:
-      'All posts by furries on furryli.st that have the #fursuit hashtag, sorted chronologically.',
-    priority: 98,
-    link: 'https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-fursuit'
-  },
-  {
-    id: 'furry-art',
-    displayName: '🐾 Art',
-    description:
-      'All posts by furries on furryli.st that have the #art or #furryart hashtag, sorted chronologically.',
-    priority: 97,
-    link: 'https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-art'
-  },
-  {
-    id: 'furry-comms',
-    displayName: '🐾 #commsopen',
-    description:
-      'All posts by furries on furryli.st that have the #commsopen hashtag, sorted chronologically.',
-    priority: 96,
-    link: 'https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-comms'
-  }
-] satisfies FeedInfo[];
+let feeds: FeedInfo[] | null = null,
+  featuredFeeds: FeedInfo[] | null = null;
 
-export const load = (async ({ url }) => {
-  const feeds = mockFeedData
-      // Exclude negative priorities
-      ?.filter((feed) => feed.priority >= 0)
-      // Sort by priority (descending)
-      ?.sort((a, b) => b.priority - a.priority),
-    featuredFeeds = feeds?.filter((feed) => feed.priority >= 100) ?? [];
+export const load = (async ({ url, fetch }) => {
+  const apiClient = getClient(fetch);
+
+  (feeds ||=
+    (await (apiClient.listFeeds as () => Promise<{ feeds: FeedInfo[] }>)()
+      .then((res) => {
+        return res.feeds
+          .filter((f) => f.priority >= 0)
+          .sort((a, b) => {
+            if (a.priority === b.priority) {
+              return a.id.localeCompare(b.id);
+            }
+            return b.priority - a.priority;
+          });
+      })
+      .catch(console.error)) ?? []),
+    (featuredFeeds ||= feeds?.filter((feed) => feed.priority >= 100) ?? []);
 
   if (!browser) {
-    return { url, feeds, featuredFeeds };
+    return { apiClient, url, feeds, featuredFeeds };
   }
 
   if (!get(agent)) {
@@ -99,5 +64,5 @@ export const load = (async ({ url }) => {
     }
   }
 
-  return { url, feeds, featuredFeeds };
+  return { apiClient, url, feeds, featuredFeeds };
 }) satisfies LayoutLoad;
