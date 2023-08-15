@@ -88,7 +88,7 @@ func TestChronologicalGenerator(t *testing.T) {
 			Hashtags:   []string{"art"},
 			HasMedia:   true,
 			Raw:        &bsky.FeedPost{},
-			SelfLabels: []string{"TODO-TEMPORARY"},
+			SelfLabels: []string{"sexual"},
 		},
 	} {
 		require.NoError(t, harness.Store.CreatePost(ctx, opts))
