@@ -10,6 +10,7 @@
     "sourceMap": true,
     "strict": true,
     "paths": {
+      "$api/*": ["../proto/bff/v1/*"],
       "$lib": ["src/lib"],
       "$lib/*": ["src/lib/*"],
       "$components/*": ["src/components/*"],

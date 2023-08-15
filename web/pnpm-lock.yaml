@@ -75,7 +75,7 @@ importers:
         specifier: ^0.11.0
         version: 0.11.0(@bufbuild/protobuf@1.2.0)
       '@bufbuild/protobuf':
-        specifier: 1.2.0
+        specifier: ~1.2.0
         version: 1.2.0
       '@rgossiaux/svelte-headlessui':
         specifier: ^2.0.0
@@ -164,6 +164,12 @@ importers:
       vitest:
         specifier: ^0.32.2
         version: 0.32.2(sass@1.63.6)
+
+  proto:
+    dependencies:
+      '@bufbuild/protobuf':
+        specifier: ~1.2.0
+        version: 1.2.0
 
 packages:
 

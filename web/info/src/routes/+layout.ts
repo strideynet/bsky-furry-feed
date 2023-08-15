@@ -21,7 +21,8 @@ export const load = (async ({ url, fetch }) => {
   const apiClient = getClient(fetch);
 
   (feeds ||=
-    (await (apiClient.listFeeds as () => Promise<{ feeds: FeedInfo[] }>)()
+    (await apiClient
+      .listFeeds({})
       .then((res) => {
         return res.feeds
           .filter((f) => f.priority >= 0)
