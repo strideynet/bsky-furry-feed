@@ -1,6 +1,7 @@
 import { get } from 'svelte/store';
 
 import { browser } from '$app/environment';
+import { getClient } from '$lib/api';
 import {
   agent,
   fetchProfile,
@@ -11,10 +12,32 @@ import {
 } from '$lib/atp';
 
 import type { LayoutLoad } from './$types';
+import type { FeedInfo } from '$types';
 
-export const load = (async ({ url }) => {
+let feeds: FeedInfo[] | null = null,
+  featuredFeeds: FeedInfo[] | null = null;
+
+export const load = (async ({ url, fetch }) => {
+  const apiClient = getClient(fetch);
+
+  (feeds ||=
+    (await apiClient
+      .listFeeds({})
+      .then((res) => {
+        return res.feeds
+          .filter((f) => f.priority >= 0)
+          .sort((a, b) => {
+            if (a.priority === b.priority) {
+              return a.id.localeCompare(b.id);
+            }
+            return b.priority - a.priority;
+          });
+      })
+      .catch(console.error)) ?? null),
+    (featuredFeeds ||= feeds?.filter((feed) => feed.priority >= 100) ?? null);
+
   if (!browser) {
-    return { url };
+    return { apiClient, url, feeds, featuredFeeds };
   }
 
   if (!get(agent)) {
@@ -42,5 +65,5 @@ export const load = (async ({ url }) => {
     }
   }
 
-  return { url };
+  return { apiClient, url, feeds, featuredFeeds };
 }) satisfies LayoutLoad;

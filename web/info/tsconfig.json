@@ -10,6 +10,7 @@
     "sourceMap": true,
     "strict": true,
     "paths": {
+      "$api/*": ["../proto/bff/v1/*"],
       "$lib": ["src/lib"],
       "$lib/*": ["src/lib/*"],
       "$components/*": ["src/components/*"],
@@ -18,7 +19,7 @@
       "$assets/*": ["src/static/*"],
       "$styles": ["src/styles"],
       "$styles/*": ["src/styles/*"],
-      "$types": ["types/app/index.d.ts"],
+      "$types": ["types/app/index.ts"],
       "$types/*": ["types/app/*"],
       "*": ["types/*"]
     },

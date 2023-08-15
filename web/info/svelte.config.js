@@ -14,6 +14,7 @@ const config = {
 
   kit: {
     alias: {
+      $api: '../proto/bff/v1',
       $components: 'src/components',
       $stores: 'src/stores',
       $routes: 'src/routes'

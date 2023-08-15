@@ -1,24 +1,14 @@
 <script lang="ts">
   import { slide } from 'svelte/transition';
 
+  import { NAV_OPTIONS } from '$lib/constants';
+
   import NavLink from '$components/nav/link.svelte';
   import MenuButton from '$components/nav/menu-button.svelte';
   import NavProfileDropdown from '$components/nav/profile-dropdown.svelte';
 
   export let hasSession: boolean,
     isAtTop = false;
-
-  const navLinks = [
-    {
-      href: '/community-guidelines',
-      text: 'Community Guidelines'
-    },
-    {
-      href: 'https://discord.gg/7X467r4UXF',
-      target: '_blank',
-      text: 'Discord'
-    }
-  ];
 
   let navExpanded = false;
 </script>
@@ -53,7 +43,7 @@
         out:slide={{ duration: 200 }}
       >
         <NavProfileDropdown {hasSession} />
-        {#each navLinks as link}
+        {#each NAV_OPTIONS as link}
           <NavLink
             {...link}
             on:click={() => (navExpanded = false)}
@@ -71,7 +61,7 @@
     <a class="block w-fit text-2xl font-bold md:mb-1" href="/">🐕 furryli.st</a>
     <div class="flex flex-1 flex-row items-center justify-between gap-6">
       <div class="flex flex-row gap-4">
-        {#each navLinks as link}
+        {#each NAV_OPTIONS as link}
           <NavLink {...link} />
         {/each}
       </div>
