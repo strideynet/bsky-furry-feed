@@ -27,8 +27,8 @@ type CreateCandidateLikeParams struct {
 	IndexedAt  pgtype.Timestamptz
 }
 
-func (q *Queries) CreateCandidateLike(ctx context.Context, db DBTX, arg CreateCandidateLikeParams) error {
-	_, err := db.Exec(ctx, createCandidateLike,
+func (q *Queries) CreateCandidateLike(ctx context.Context, arg CreateCandidateLikeParams) error {
+	_, err := q.db.Exec(ctx, createCandidateLike,
 		arg.URI,
 		arg.ActorDID,
 		arg.SubjectURI,
@@ -47,7 +47,7 @@ WHERE
     uri = $1
 `
 
-func (q *Queries) SoftDeleteCandidateLike(ctx context.Context, db DBTX, uri string) error {
-	_, err := db.Exec(ctx, softDeleteCandidateLike, uri)
+func (q *Queries) SoftDeleteCandidateLike(ctx context.Context, uri string) error {
+	_, err := q.db.Exec(ctx, softDeleteCandidateLike, uri)
 	return err
 }

@@ -24,7 +24,17 @@ var feedRequestMetric = promauto.NewSummaryVec(prometheus.SummaryOpts{
 type Meta struct {
 	// ID is the rkey that is used to identify the Feed in generation requests.
 	ID string
-	// TODO: Add desc/name fields which can then be used in feed upload command.
+	// DisplayName is the short name of the feed used in the BlueSky client.
+	DisplayName string
+	// Description is a long description of the feed used in the BlueSky client.
+	Description string
+
+	// Priority controls where the feed shows up on FurryList UIs.
+	// Higher priority wins. Negative values indicate the feed should be hidden
+	// in the UI.
+	Priority int32
+	// TODO: Categories
+	// TODO: "Parents"
 }
 
 type feed struct {
@@ -57,11 +67,19 @@ func (s *Service) Register(m Meta, generateFunc GenerateFunc) {
 
 // IDs returns a slice of the IDs of feeds which are eligible for generation.
 func (s *Service) IDs() []string {
-	ids := make([]string, len(s.feeds))
+	ids := make([]string, 0, len(s.feeds))
 	for _, f := range s.feeds {
 		ids = append(ids, f.meta.ID)
 	}
 	return ids
+}
+
+func (s *Service) Metas() []Meta {
+	metas := make([]Meta, 0, len(s.feeds))
+	for _, f := range s.feeds {
+		metas = append(metas, f.meta)
+	}
+	return metas
 }
 
 func (s *Service) GetFeedPosts(ctx context.Context, feedKey string, cursor string, limit int) (posts []Post, err error) {
@@ -230,45 +248,113 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	}
 
 	// Hot based feeds
-	r.Register(Meta{ID: "furry-hot"}, scoreBasedGenerator(1.85, time.Hour*2))
+	r.Register(Meta{
+		ID:          "furry-hot",
+		DisplayName: "🐾 Hot",
+		Description: "Hottest posts by furries across Bluesky. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
+		Priority:    100,
+	}, scoreBasedGenerator(1.85, time.Hour*2))
 
 	// Reverse chronological based feeds
-	r.Register(Meta{ID: "furry-new"}, chronologicalGenerator(chronologicalGeneratorOpts{}))
-	r.Register(Meta{ID: "furry-fursuit"}, chronologicalGenerator(chronologicalGeneratorOpts{
+	r.Register(Meta{
+		ID:          "furry-new",
+		DisplayName: "🐾 New",
+		Description: "Posts by furries across Bluesky. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
+		Priority:    101,
+	}, chronologicalGenerator(chronologicalGeneratorOpts{}))
+	r.Register(Meta{
+		ID:          "furry-fursuit",
+		DisplayName: "🐾 Fursuits",
+		Description: "Posts by furries with #fursuit.\n\nJoin the furry feeds by following @furryli.st",
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		Hashtags: []string{"fursuit"},
 		HasMedia: tristate.True,
 	}))
-	r.Register(Meta{ID: "fursuit-nsfw"}, chronologicalGenerator(chronologicalGeneratorOpts{
+	r.Register(Meta{
+		ID:          "fursuit-nsfw",
+		DisplayName: "🐾 Murrsuits 🌙",
+		Description: "Posts by furries that have an image and #murrsuit or #fursuit.\n\nJoin the furry feeds by following @furryli.st",
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		Hashtags: []string{"fursuit", "murrsuit", "mursuit"},
 		HasMedia: tristate.True,
 		IsNSFW:   tristate.True,
 	}))
-	r.Register(Meta{ID: "fursuit-clean"}, chronologicalGenerator(chronologicalGeneratorOpts{
+	r.Register(Meta{
+		ID:          "fursuit-clean",
+		DisplayName: "🐾 Fursuits 🧼",
+		Description: "Posts by furries with #fursuit and without #nsfw.\n\nJoin the furry feeds by following @furryli.st",
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		Hashtags: []string{"fursuit"},
 		HasMedia: tristate.True,
 		IsNSFW:   tristate.False,
 	}))
-	r.Register(Meta{ID: "furry-art"}, chronologicalGenerator(chronologicalGeneratorOpts{
+	r.Register(Meta{
+		ID:          "furry-art",
+		DisplayName: "🐾 Art",
+		Description: "Posts by furries with #art or #furryart. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		Hashtags: []string{"art", "furryart"},
 		HasMedia: tristate.True,
 	}))
-	r.Register(Meta{ID: "art-clean"}, chronologicalGenerator(chronologicalGeneratorOpts{
+	r.Register(Meta{
+		ID:          "art-clean",
+		DisplayName: "🐾 Art 🧼",
+		Description: "Posts by furries with #art or #furryart and without #nsfw.\n\nJoin the furry feeds by following @furryli.st",
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		Hashtags: []string{"art", "furryart"},
 		HasMedia: tristate.True,
 		IsNSFW:   tristate.False,
 	}))
-	r.Register(Meta{ID: "art-nsfw"}, chronologicalGenerator(chronologicalGeneratorOpts{
+	r.Register(Meta{
+		ID:          "art-nsfw",
+		DisplayName: "🐾 Art 🌙",
+		Description: "Posts by furries with #art or #furryart and #nsfw.\n\nJoin the furry feeds by following @furryli.st",
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		Hashtags: []string{"art", "furryart"},
 		HasMedia: tristate.True,
 		IsNSFW:   tristate.True,
 	}))
-	r.Register(Meta{ID: "furry-nsfw"}, chronologicalGenerator(chronologicalGeneratorOpts{
+	r.Register(Meta{
+		ID:          "furry-nsfw",
+		DisplayName: "🐾 New 🌙",
+		Description: "Posts by furries that have #nsfw.\n\nJoin the furry feeds by following @furryli.st",
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		IsNSFW: tristate.True,
 	}))
-	r.Register(Meta{ID: "furry-comms"}, chronologicalGenerator(chronologicalGeneratorOpts{
+	r.Register(Meta{
+		ID:          "furry-comms",
+		DisplayName: "🐾 #CommsOpen",
+		Description: "Posts by furries that have #commsopen.\n\nJoin the furry feeds by following @furryli.st",
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		Hashtags: []string{"commsopen"},
 	}))
-	r.Register(Meta{ID: "furry-test"}, func(_ context.Context, _ *store.PGXStore, _ string, limit int) ([]Post, error) {
+	r.Register(Meta{
+		ID:          "con-denfur",
+		DisplayName: "🐾 DenFur 2023",
+		Description: "A feed for all things DenFur! Use #denfur or #denfur2023 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
+		Hashtags: []string{"denfur", "denfur2023"},
+	}))
+	r.Register(Meta{
+		ID:          "merch",
+		DisplayName: "🐾 #FurSale",
+		Description: "Buy and sell furry merch on the FurSale feed. Use #fursale or #merch to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
+		Hashtags: []string{"fursale", "merch"},
+	}))
+	r.Register(Meta{
+		ID:          "streamers",
+		DisplayName: "🐾 Streamers",
+		Description: "Find furs going live on streaming platforms. Use #goinglive or #furrylive to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
+		Hashtags: []string{"goinglive", "furrylive"},
+	}))
+	r.Register(Meta{
+		ID:          "furry-test",
+		DisplayName: "🐾 Test 🚨🛠️",
+		Description: "Experimental version of the '🐾 Hot' feed.\ntest\ntest\n\ndouble break",
+		Priority:    -1,
+	}, func(_ context.Context, _ *store.PGXStore, _ string, limit int) ([]Post, error) {
 		return []Post{
 			{
 				URI: "at://did:plc:dllwm3fafh66ktjofzxhylwk/app.bsky.feed.post/3jznh32lq6s2c",

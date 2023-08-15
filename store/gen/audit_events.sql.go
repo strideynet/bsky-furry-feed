@@ -29,8 +29,8 @@ type CreateAuditEventParams struct {
 	Payload          []byte
 }
 
-func (q *Queries) CreateAuditEvent(ctx context.Context, db DBTX, arg CreateAuditEventParams) (AuditEvent, error) {
-	row := db.QueryRow(ctx, createAuditEvent,
+func (q *Queries) CreateAuditEvent(ctx context.Context, arg CreateAuditEventParams) (AuditEvent, error) {
+	row := q.db.QueryRow(ctx, createAuditEvent,
 		arg.ID,
 		arg.CreatedAt,
 		arg.ActorDID,
@@ -75,8 +75,8 @@ type ListAuditEventsParams struct {
 	Limit            int32
 }
 
-func (q *Queries) ListAuditEvents(ctx context.Context, db DBTX, arg ListAuditEventsParams) ([]AuditEvent, error) {
-	rows, err := db.Query(ctx, listAuditEvents,
+func (q *Queries) ListAuditEvents(ctx context.Context, arg ListAuditEventsParams) ([]AuditEvent, error) {
+	rows, err := q.db.Query(ctx, listAuditEvents,
 		arg.SubjectDid,
 		arg.ActorDID,
 		arg.SubjectRecordUri,

@@ -115,3 +115,7 @@ type CandidatePost struct {
 	HasMedia   pgtype.Bool
 	SelfLabels []string
 }
+
+type FirehoseCommitCursor struct {
+	Cursor int64
+}

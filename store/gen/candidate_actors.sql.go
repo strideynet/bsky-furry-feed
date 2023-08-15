@@ -28,8 +28,8 @@ type CreateCandidateActorParams struct {
 	Roles     []string
 }
 
-func (q *Queries) CreateCandidateActor(ctx context.Context, db DBTX, arg CreateCandidateActorParams) (CandidateActor, error) {
-	row := db.QueryRow(ctx, createCandidateActor,
+func (q *Queries) CreateCandidateActor(ctx context.Context, arg CreateCandidateActorParams) (CandidateActor, error) {
+	row := q.db.QueryRow(ctx, createCandidateActor,
 		arg.DID,
 		arg.CreatedAt,
 		arg.IsArtist,
@@ -83,8 +83,8 @@ type CreateLatestActorProfileParams struct {
 	Description pgtype.Text
 }
 
-func (q *Queries) CreateLatestActorProfile(ctx context.Context, db DBTX, arg CreateLatestActorProfileParams) error {
-	_, err := db.Exec(ctx, createLatestActorProfile,
+func (q *Queries) CreateLatestActorProfile(ctx context.Context, arg CreateLatestActorProfileParams) error {
+	_, err := q.db.Exec(ctx, createLatestActorProfile,
 		arg.ActorDID,
 		arg.CommitCID,
 		arg.CreatedAt,
@@ -106,8 +106,8 @@ ORDER BY
     created_at DESC
 `
 
-func (q *Queries) GetActorProfileHistory(ctx context.Context, db DBTX, actorDid string) ([]ActorProfile, error) {
-	rows, err := db.Query(ctx, getActorProfileHistory, actorDid)
+func (q *Queries) GetActorProfileHistory(ctx context.Context, actorDid string) ([]ActorProfile, error) {
+	rows, err := q.db.Query(ctx, getActorProfileHistory, actorDid)
 	if err != nil {
 		return nil, err
 	}
@@ -142,8 +142,8 @@ WHERE
     did = $1
 `
 
-func (q *Queries) GetCandidateActorByDID(ctx context.Context, db DBTX, did string) (CandidateActor, error) {
-	row := db.QueryRow(ctx, getCandidateActorByDID, did)
+func (q *Queries) GetCandidateActorByDID(ctx context.Context, did string) (CandidateActor, error) {
+	row := q.db.QueryRow(ctx, getCandidateActorByDID, did)
 	var i CandidateActor
 	err := row.Scan(
 		&i.DID,
@@ -169,8 +169,8 @@ WHERE
     ca.did = $1
 `
 
-func (q *Queries) GetLatestActorProfile(ctx context.Context, db DBTX, did string) (ActorProfile, error) {
-	row := db.QueryRow(ctx, getLatestActorProfile, did)
+func (q *Queries) GetLatestActorProfile(ctx context.Context, did string) (ActorProfile, error) {
+	row := q.db.QueryRow(ctx, getLatestActorProfile, did)
 	var i ActorProfile
 	err := row.Scan(
 		&i.ActorDID,
@@ -195,8 +195,8 @@ ORDER BY
     did
 `
 
-func (q *Queries) ListCandidateActors(ctx context.Context, db DBTX, status NullActorStatus) ([]CandidateActor, error) {
-	rows, err := db.Query(ctx, listCandidateActors, status)
+func (q *Queries) ListCandidateActors(ctx context.Context, status NullActorStatus) ([]CandidateActor, error) {
+	rows, err := q.db.Query(ctx, listCandidateActors, status)
 	if err != nil {
 		return nil, err
 	}
@@ -234,8 +234,8 @@ ORDER BY
     did
 `
 
-func (q *Queries) ListCandidateActorsRequiringProfileBackfill(ctx context.Context, db DBTX) ([]CandidateActor, error) {
-	rows, err := db.Query(ctx, listCandidateActorsRequiringProfileBackfill)
+func (q *Queries) ListCandidateActorsRequiringProfileBackfill(ctx context.Context) ([]CandidateActor, error) {
+	rows, err := q.db.Query(ctx, listCandidateActorsRequiringProfileBackfill)
 	if err != nil {
 		return nil, err
 	}
@@ -280,8 +280,8 @@ type UpdateCandidateActorParams struct {
 	DID      string
 }
 
-func (q *Queries) UpdateCandidateActor(ctx context.Context, db DBTX, arg UpdateCandidateActorParams) (CandidateActor, error) {
-	row := db.QueryRow(ctx, updateCandidateActor,
+func (q *Queries) UpdateCandidateActor(ctx context.Context, arg UpdateCandidateActorParams) (CandidateActor, error) {
+	row := q.db.QueryRow(ctx, updateCandidateActor,
 		arg.Status,
 		arg.IsArtist,
 		arg.Comment,

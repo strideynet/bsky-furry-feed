@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package bff.v1;
+
+option go_package = "github.com/strideynet/bsky-furry-feed/proto/bff/v1;bffv1pb";
+
+service PublicService {
+  // ListFeeds returns a list of all feeds hosted by this server.
+  rpc ListFeeds(ListFeedsRequest) returns (ListFeedsResponse) {}
+
+}
+
+message ListFeedsRequest {}
+
+message ListFeedsResponse {
+  repeated Feed feeds = 1;
+}
+
+message Feed {
+  // id is the unique identifier of the feed. This is also the rkey it is
+  // published under on bluesky.
+  string id = 1;
+  // link is a link to the feed in the official BlueSky client.
+  string link = 2;
+  // display_name is the short name of the feed shown in the BlueSky client.
+  string display_name = 3;
+  // description is a long description of the feed shown in the BlueSky client.
+  string description = 4;
+  // priority indicates where to show this feed in BFF UIs, allowing more
+  // common feeds to be shown first. Higher priority wins. Negative values
+  // indicate the feed should be hidden in the UI.
+  int32 priority = 5;
+}

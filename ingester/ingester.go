@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/bluesky-social/indigo/util"
 	"github.com/ipfs/go-cid"
@@ -49,6 +50,16 @@ type actorCacher interface {
 	CreatePendingCandidateActor(ctx context.Context, did string) (err error)
 }
 
+var workerCursors = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	Name: "bff_ingester_worker_cursors",
+	Help: "The current cursor a worker is at.",
+}, []string{"worker"})
+
+var flushedWorkerCursor = promauto.NewGauge(prometheus.GaugeOpts{
+	Name: "bff_ingester_flushed_worker_cursor",
+	Help: "The current cursor flushed to persistent storage.",
+})
+
 type FirehoseIngester struct {
 	// dependencies
 	log        *zap.Logger
@@ -56,9 +67,17 @@ type FirehoseIngester struct {
 	store      *store.PGXStore
 
 	// configuration
-	subscribeURL    string
-	workerCount     int
-	workItemTimeout time.Duration
+	subscribeURL        string
+	workerCount         int
+	workItemTimeout     time.Duration
+	cursorFlushInterval time.Duration
+}
+
+// TODO: Eventually make this a worker struct.
+// TODO: Capture a worker "status" e.g idle/working
+type workerState struct {
+	mu               sync.Mutex
+	lastProcessedSeq int64
 }
 
 func NewFirehoseIngester(
@@ -69,9 +88,10 @@ func NewFirehoseIngester(
 		actorCache: crc,
 		store:      store,
 
-		subscribeURL:    pdsHost + "/xrpc/com.atproto.sync.subscribeRepos",
-		workerCount:     8,
-		workItemTimeout: time.Second * 30,
+		subscribeURL:        pdsHost + "/xrpc/com.atproto.sync.subscribeRepos",
+		workerCount:         8,
+		workItemTimeout:     time.Second * 30,
+		cursorFlushInterval: time.Second * 10,
 	}
 }
 
@@ -82,17 +102,66 @@ func (fi *FirehoseIngester) Start(ctx context.Context) error {
 	// are not ready. In future, we may want to consider some reasonable
 	// buffering to account for short spikes in event rates.
 	evtChan := make(chan *atproto.SyncSubscribeRepos_Commit)
+
+	workerStates := make([]*workerState, fi.workerCount)
+	flushCommitCursor := func(ctx context.Context) error {
+		// Determine the lowest last processed seq of all the workers. We want
+		// to persist the lowest last processed seq to ensure we never miss
+		// data, but this may cause some reprocessing.
+		var lowestLastSeq int64 = -1
+		for _, w := range workerStates {
+			w.mu.Lock()
+			lastSeq := w.lastProcessedSeq
+			w.mu.Unlock()
+			// Worker hasn't processed it's first commit yet, so we ignore it.
+			if lastSeq == -1 {
+				continue
+			}
+			if lowestLastSeq == -1 || lastSeq < lowestLastSeq {
+				lowestLastSeq = lastSeq
+			}
+		}
+
+		if lowestLastSeq == -1 {
+			return fmt.Errorf("no workers reported work, cannot persist cursor")
+		}
+
+		if err := fi.store.SetFirehoseCommitCursor(ctx, lowestLastSeq); err != nil {
+			return fmt.Errorf("saving cursor: %w", err)
+		}
+		fi.log.Info("successfully flushed cursor", zap.Int64("cursor", lowestLastSeq))
+		flushedWorkerCursor.Set(float64(lowestLastSeq))
+		return nil
+	}
+	defer func() {
+		// Flush the commit cursor one final time on shutdown.
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		defer cancel()
+		if err := flushCommitCursor(ctx); err != nil {
+			fi.log.Error(
+				"failed to flush final firehose commit cursor",
+				zap.Error(err),
+			)
+		}
+	}()
+
 	eg.Go(func() error {
 		workerWg := sync.WaitGroup{}
-		for n := 1; n < fi.workerCount; n++ {
-			n := n
+
+		for i := 0; i < fi.workerCount; i++ {
+			i := i
+			state := &workerState{
+				lastProcessedSeq: -1,
+			}
+			workerStates[i] = state
+
 			workerWg.Add(1)
 			go func() {
 				defer workerWg.Done()
 				for {
 					select {
 					case <-ctx.Done():
-						fi.log.Warn("worker exiting", zap.Int("worker", n))
+						fi.log.Warn("worker exiting", zap.Int("worker", i))
 						return
 					case evt := <-evtChan:
 						// record start time so we can collect
@@ -108,6 +177,19 @@ func (fi *FirehoseIngester) Start(ctx context.Context) error {
 								zap.Error(err),
 							)
 						}
+
+						state.mu.Lock()
+						if evt.Seq <= state.lastProcessedSeq {
+							fi.log.Error(
+								"cursor went backwards or was repeated",
+								zap.Int64("seq", evt.Seq),
+								zap.Int64("cursor", state.lastProcessedSeq),
+							)
+						}
+						state.lastProcessedSeq = evt.Seq
+						state.mu.Unlock()
+
+						workerCursors.WithLabelValues(strconv.Itoa(i)).Set(float64(evt.Seq))
 						workItemsProcessed.
 							WithLabelValues("repo_commit").
 							Observe(time.Since(start).Seconds())
@@ -124,24 +206,44 @@ func (fi *FirehoseIngester) Start(ctx context.Context) error {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
+		for {
+			select {
+			case <-ctx.Done():
+				fi.log.Warn("cursor flushing worker exiting")
+				return nil
+			case <-time.After(fi.cursorFlushInterval):
+			}
+
+			if err := flushCommitCursor(ctx); err != nil {
+				fi.log.Error(
+					"failed to flush firehose commit cursor",
+					zap.Error(err),
+				)
+			}
+		}
+	})
+
+	eg.Go(func() error {
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		cursor, err := fi.store.GetFirehoseCommitCursor(ctx)
+		if err != nil {
+			return fmt.Errorf("get commit cursor: %w", err)
+		}
+		fi.log.Info("starting ingestion", zap.Int64("cursor", cursor))
+
+		subscribeURL := fi.subscribeURL
+		if cursor != -1 {
+			subscribeURL += "?cursor=" + strconv.FormatInt(cursor, 10)
+		}
+
 		con, _, err := websocket.DefaultDialer.DialContext(
-			ctx, fi.subscribeURL, http.Header{},
+			ctx, subscribeURL, http.Header{},
 		)
 		if err != nil {
 			return fmt.Errorf("dialing websocket: %w", err)
 		}
-
-		go func() {
-			<-ctx.Done()
-			fi.log.Warn("closing websocket subscription")
-			if err := con.Close(); err != nil {
-				fi.log.Error(
-					"error occurred closing websocket",
-					zap.Error(err),
-				)
-			}
-			fi.log.Warn("closed websocket subscription")
-		}()
 
 		// TODO: Indigo now offers a native parallel consumer pool, we should
 		// consider switching to it - but only if we can
