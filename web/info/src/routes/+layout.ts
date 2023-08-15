@@ -63,10 +63,15 @@ const mockFeedData = [
 ] satisfies FeedInfo[];
 
 export const load = (async ({ url }) => {
-  const feeds = mockFeedData;
+  const feeds = mockFeedData
+      // Exclude negative priorities
+      ?.filter((feed) => feed.priority >= 0)
+      // Sort by priority (descending)
+      ?.sort((a, b) => b.priority - a.priority),
+    featuredFeeds = feeds?.filter((feed) => feed.priority >= 100) ?? [];
 
   if (!browser) {
-    return { url, feeds };
+    return { url, feeds, featuredFeeds };
   }
 
   if (!get(agent)) {
@@ -94,5 +99,5 @@ export const load = (async ({ url }) => {
     }
   }
 
-  return { url, feeds };
+  return { url, feeds, featuredFeeds };
 }) satisfies LayoutLoad;

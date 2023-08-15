@@ -1,5 +1,5 @@
 <script lang="ts">
-  import FeedCard from '$components/feeds/card.svelte';
+  import FeedsList from '$components/feeds/list.svelte';
   import StaticPage from '$components/layouts/static-page.svelte';
   import Heading from '$components/text/heading.svelte';
 
@@ -15,11 +15,7 @@
     client. We'd love it if you also gave the feed a like!
   </p>
 
-  <div class="my-5 flex flex-col flex-wrap gap-4 md:flex-row">
-    {#each data.feeds as feed}
-      <FeedCard {feed} />
-    {/each}
-  </div>
+  <FeedsList feeds={data.feeds} />
 </StaticPage>
 
 <style lang="scss">

@@ -1,6 +1,5 @@
 <script lang="ts">
-  import FeedCard from '$components/feeds/card.svelte';
-  import ViewMoreFeeds from '$components/feeds/view-more.svelte';
+  import FeaturedFeedsList from '$components/feeds/featured-list.svelte';
   import StaticPage from '$components/layouts/static-page.svelte';
   import Heading from '$components/text/heading.svelte';
   import Link from '$components/text/link.svelte';
@@ -24,14 +23,7 @@
   <Heading level={3}>Our Feeds</Heading>
   <p>Click any of the following links to open the feed in your client:</p>
 
-  <div class="my-5 flex flex-col flex-wrap gap-4 md:flex-row">
-    {#each data.featuredFeeds as feed}
-      <FeedCard {feed} />
-    {/each}
-    {#if data.featuredFeeds.length < data.feeds.length}
-      <ViewMoreFeeds />
-    {/if}
-  </div>
+  <FeaturedFeedsList feeds={data.feeds} featured={data.featuredFeeds} />
 
   <p>
     After opening the feed, you'll be able to pin it in your client. We'd love it if you

@@ -13,6 +13,10 @@ export const ATP_SESSION_COOKIE = 'bff-atp-session';
 
 export const NAV_OPTIONS = [
   {
+    href: '/welcome',
+    text: 'Welcome'
+  },
+  {
     href: '/feeds',
     text: 'Feeds'
   },

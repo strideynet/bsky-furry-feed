@@ -1,7 +1,10 @@
 <script lang="ts">
+  import FeaturedFeedsList from '$components/feeds/featured-list.svelte';
   import StaticPage from '$components/layouts/static-page.svelte';
   import Heading from '$components/text/heading.svelte';
   import Link from '$components/text/link.svelte';
+
+  export let data;
 </script>
 
 <StaticPage>
@@ -46,50 +49,12 @@
   </p>
 
   <p>
-    Below is a list of our feeds. To join a feed, just follow the link and click the
-    little "pin" at the top of the page (We'd also really appreciate it if you'd hit the
-    like button too 😉).
+    Below are some of our feeds. To join a feed, just follow the link and click the little
+    "pin" at the top of the page (We'd also really appreciate it if you'd hit the like
+    button too 😉).
   </p>
 
-  <ul>
-    <li>
-      <Link
-        href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-new"
-        >🐾 New</Link
-      > - Posts by all furries on furryli.st, sorted chronologically.
-    </li>
-    <li>
-      <Link
-        href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-nsfw"
-        >🐾 New 🌙</Link
-      > - All posts by furries on furryli.st that have the #nsfw hashtag, sorted chronologically.
-    </li>
-    <li>
-      <Link
-        href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-hot"
-        >🐾 Hot</Link
-      > - Posts by all furries on furryli.st, sorted by "hotness".
-    </li>
-    <li>
-      <Link
-        href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-fursuit"
-        >🐾 Fursuits</Link
-      > - All posts by furries on furryli.st that have the #fursuit hashtag, sorted chronologically.
-    </li>
-    <li>
-      <Link
-        href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-art"
-        >🐾 Art</Link
-      > - All posts by furries on furryli.st that have the #art or #furryart hashtag, sorted
-      chronologically.
-    </li>
-    <li>
-      <Link
-        href="https://bsky.app/profile/did:plc:jdkvwye2lf4mingzk7qdebzc/feed/furry-comms"
-        >🐾 #commsopen</Link
-      > - All posts by furries on furryli.st that have the #commsopen hashtag, sorted chronologically.
-    </li>
-  </ul>
+  <FeaturedFeedsList feeds={data.feeds} featured={data.featuredFeeds} />
 
   <Heading level={4}>Joining The Furryli.st Feeds</Heading>
 
@@ -160,14 +125,6 @@
 <style lang="scss">
   p {
     @apply my-3;
-  }
-
-  ol {
-    @apply my-3 ml-4 list-disc;
-
-    li {
-      @apply my-0.5 list-item list-inside;
-    }
   }
 
   ul {
