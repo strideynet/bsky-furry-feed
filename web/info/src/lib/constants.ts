@@ -32,3 +32,17 @@ export const NAV_OPTIONS = [
     text: 'Discord'
   }
 ];
+
+export const VALID_DOC_ROUTES = ['welcome', 'community-guidelines', 'feeds'];
+
+export const DOC_ROUTES_NAMES = {
+  welcome: 'welcome',
+  'community-guidelines': 'communityGuidelines',
+  feeds: 'feeds'
+} as const;
+
+export const SANITY_PROJECT_ID = '0ildj6pc' as const;
+
+export const SANITY_DATASET = 'production';
+
+export const SANITY_API_VERSION = '2022-11-29';
