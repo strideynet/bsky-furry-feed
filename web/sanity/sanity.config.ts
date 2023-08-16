@@ -18,6 +18,40 @@ export default defineConfig({
       defaultApiVersion: 'v2022-11-29'
     })
   ],
+  document: {
+    productionUrl: async (prev, context) => {
+      const { getClient, document } = context;
+
+      const client = getClient({
+        apiVersion: 'v2022-11-29'
+      });
+
+      if (document._type !== 'page') {
+        return prev;
+      }
+
+      const baseUrl = 'https://furryli.st';
+
+      const params = new URLSearchParams();
+      params.set('preview', 'true');
+      params.set('token', client.config()?.token || '');
+
+      const id = document._id.replace(/^drafts\./, '');
+
+      switch (id) {
+        case 'home':
+          return `${baseUrl}/?${params.toString()}`;
+        case 'welcome':
+          return `${baseUrl}/welcome?${params.toString()}`;
+        case 'feeds':
+          return `${baseUrl}/feeds?${params.toString()}`;
+        case 'communityGuidelines':
+          return `${baseUrl}/community-guidelines?${params.toString()}`;
+        default:
+          return prev;
+      }
+    }
+  },
   schema: {
     types: schemaTypes
   },

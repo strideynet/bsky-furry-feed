@@ -5,7 +5,10 @@ import { getPageDocument } from '$lib/sanity';
 
 import type { PageLoad } from './$types';
 
-export const load = (async ({ parent, params }) => {
+export const load = (async ({ parent, params, url }) => {
+  const preview = url.searchParams.get('preview') === 'true',
+    token = url.searchParams.get('token') ?? undefined;
+
   // @ts-expect-error This is fine in this ctx
   const pageName = DOC_ROUTES_NAMES[params.page] as keyof typeof DOC_ROUTES_NAMES;
 
@@ -15,7 +18,7 @@ export const load = (async ({ parent, params }) => {
 
   const { feeds, featuredFeeds } = await parent();
 
-  const content = getPageDocument(pageName);
+  const content = getPageDocument(pageName, preview, token);
 
   return { content, feeds: { feeds, featured: featuredFeeds } };
 }) satisfies PageLoad;
