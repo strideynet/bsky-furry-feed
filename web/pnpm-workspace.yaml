@@ -1,4 +1,5 @@
 packages:
   - 'admin'
   - 'info'
+  - 'sanity'
   - 'proto'
