@@ -2,6 +2,7 @@
   import CodeSerializer from '$components/portable-text/serializers/code.svelte';
   import FeedsSerializer from '$components/portable-text/serializers/feeds.svelte';
   import HeadingSerializer from '$components/portable-text/serializers/heading.svelte';
+  import ImageSerializer from '$components/portable-text/serializers/image.svelte';
   import LinkSerializer from '$components/portable-text/serializers/link.svelte';
   import OlSerializer from '$components/portable-text/serializers/ordered-list.svelte';
   import OlItemSerializer from '$components/portable-text/serializers/ordered-list-item.svelte';
@@ -22,7 +23,8 @@
   value={content}
   components={{
     types: {
-      feeds: FeedsSerializer
+      feeds: FeedsSerializer,
+      image: ImageSerializer
     },
     marks: {
       link: LinkSerializer,

@@ -80,12 +80,18 @@ importers:
       '@portabletext/svelte':
         specifier: ^2.0.0
         version: 2.0.0(svelte@4.0.0)
+      '@portabletext/types':
+        specifier: ^2.0.5
+        version: 2.0.5
       '@rgossiaux/svelte-headlessui':
         specifier: ^2.0.0
         version: 2.0.0(svelte@4.0.0)
       '@sanity/client':
         specifier: ^6.4.6
         version: 6.4.6
+      '@sanity/image-url':
+        specifier: ^1.0.2
+        version: 1.0.2
       '@sveltejs/adapter-auto':
         specifier: ^2.0.0
         version: 2.0.0(@sveltejs/kit@1.20.4)
@@ -3146,7 +3152,6 @@ packages:
   /@sanity/image-url@1.0.2:
     resolution: {integrity: sha512-C4+jb2ny3ZbMgEkLd7Z3C75DsxcTEoE+axXQJsQ75ou0AKWGdVsP351hqK6mJUUxn5HCSlu3vznoh7Yljye4cQ==}
     engines: {node: '>=10.0.0'}
-    dev: false
 
   /@sanity/import@3.15.1:
     resolution: {integrity: sha512-1QJFLExOv0yUzExctpsd8mxLOdheByEiCYoLhSlTq2ksytzHBsfvGI+pPRUCe21uQ5Af6bUAjVXvXslSPJdu6Q==}

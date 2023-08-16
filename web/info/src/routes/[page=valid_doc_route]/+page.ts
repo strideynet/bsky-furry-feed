@@ -10,7 +10,7 @@ export const load = (async ({ parent, params }) => {
   const pageName = DOC_ROUTES_NAMES[params.page] as keyof typeof DOC_ROUTES_NAMES;
 
   if (!pageName) {
-    throw error(404, 'Page not found');
+    throw error(404, 'Not Found');
   }
 
   const { feeds, featuredFeeds } = await parent();
