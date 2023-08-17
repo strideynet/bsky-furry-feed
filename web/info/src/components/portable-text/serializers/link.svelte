@@ -17,5 +17,5 @@
   rel={newtab ? 'noopener noreferrer' : undefined}
   tabindex="0"
 >
-  {plainTextContent}
+  <slot />
 </a>
