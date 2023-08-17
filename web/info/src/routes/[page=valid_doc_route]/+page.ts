@@ -10,7 +10,9 @@ export const load = (async ({ parent, params, url }) => {
     token = url.searchParams.get('token') ?? undefined;
 
   // @ts-expect-error This is fine in this ctx
-  const pageName = DOC_ROUTES_NAMES[params.page] as keyof typeof DOC_ROUTES_NAMES;
+  const pageName = DOC_ROUTES_NAMES[
+    params.page
+  ] as typeof DOC_ROUTES_NAMES[keyof typeof DOC_ROUTES_NAMES];
 
   if (!pageName) {
     throw error(404, 'Not Found');

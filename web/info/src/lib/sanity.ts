@@ -16,7 +16,11 @@ const client = createClient({
   apiVersion: SANITY_API_VERSION
 });
 
-export const getPageDocument = async <T extends string>(
+const queryCache = {} as {
+  [query: string]: DocumentRegistry[keyof DocumentRegistry] | undefined;
+};
+
+export const getPageDocument = async <T extends keyof DocumentRegistry>(
   id: T,
   preview = false,
   token?: string
@@ -25,11 +29,17 @@ export const getPageDocument = async <T extends string>(
   const query = `*[_type == "page" && id == "${id}"${
     preview ? '' : ' && !(_id in path("drafts.**"))'
   }][0]`;
-  const document = await localClient
-    .fetch<T extends keyof DocumentRegistry ? DocumentRegistry[T] : never>(query)
+
+  let document = Reflect.get(queryCache, query) as DocumentRegistry[T] | undefined;
+
+  document ||= await localClient
+    .fetch<DocumentRegistry[T]>(query)
     .then((response) => {
-      const document = response;
-      return document;
+      if (response._id) {
+        Reflect.set(queryCache, query, response);
+        return response;
+      }
+      return undefined;
     })
     .catch((err) => {
       console.error(err);
