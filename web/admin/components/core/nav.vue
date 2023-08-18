@@ -18,7 +18,7 @@ async function doSearch() {
   <nav
     class="flex items-center gap-2 border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 mb-5"
   >
-    <nuxt-link href="/" class="mr-1">
+    <nuxt-link href="/" class="mr-1" aria-label="Home">
       <img
         class="rounded-lg"
         src="/icon-32.webp"
@@ -27,7 +27,11 @@ async function doSearch() {
         alt=""
       />
     </nuxt-link>
-    <h1 class="text-xl font-bold">Admin</h1>
+
+    <nuxt-link class="nav-link" href="/"> Queue </nuxt-link>
+
+    <nuxt-link class="nav-link" href="/audit-log"> Audit log </nuxt-link>
+
     <div class="ml-auto flex items-center gap-2">
       <shared-search @toggle-search="showSearch = !showSearch" />
       <img
@@ -64,3 +68,14 @@ async function doSearch() {
     </button>
   </div>
 </template>
+
+<style scoped>
+.nav-link {
+  @apply px-2 py-1 text-sm rounded-lg;
+}
+
+.nav-link.router-link-active,
+.nav-link:hover {
+  @apply bg-slate-600 bg-opacity-50;
+}
+</style>
