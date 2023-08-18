@@ -86,14 +86,6 @@ await loadProfile();
         </div>
         <div v-if="variant === 'profile'" class="meta">
           <span class="meta-item inline-flex items-center">
-            <icon-check
-              v-if="status === ActorStatus.APPROVED"
-              class="text-green-500"
-            />
-            <icon-cross v-else class="text-red-500" />
-            <span class="text-gray-600 dark:text-gray-400">In list</span>
-          </span>
-          <span class="meta-item inline-flex items-center">
             <icon-check v-if="isArtist" class="text-green-500" />
             <icon-cross v-else class="text-red-500" />
             <span class="text-gray-600 dark:text-gray-400">Artist</span>
