@@ -1,19 +1,37 @@
-import type { Handle } from '@sveltejs/kit';
+import { APP_THEME_COOKIE_NAME, APP_THEMES } from '$lib/constants';
+
+import type { Handle, ResolveOptions } from '@sveltejs/kit';
 
 export const handle = (async ({ event, resolve }) => {
-  const response = await resolve(event, {
-    // As per https://kit.svelte.dev/docs/hooks#server-hooks-handle, we need
-    // to specify headers to be included in serialized responses when a `load` function
-    // loads a resource server-side with a `RouteFetch`
-    filterSerializedResponseHeaders: (name: string, _value: string) => {
-      switch (name) {
-        case 'content-type':
-          return true;
-        default:
-          return false;
-      }
-    }
-  });
+  const resolveOptions: ResolveOptions = {};
 
-  return response;
+  resolveOptions.filterSerializedResponseHeaders = (name: string, _value: string) => {
+    switch (name) {
+      case 'content-type':
+        return true;
+      default:
+        return false;
+    }
+  };
+
+  const theme = event.cookies.get(APP_THEME_COOKIE_NAME);
+
+  if (theme && APP_THEMES.includes(theme)) {
+    resolveOptions.transformPageChunk = ({ html }) => {
+      const match = html.match(/(<html.*?)(>)/);
+
+      if (!match) {
+        return html;
+      }
+
+      const startHtml = match[1],
+        endTag = match[2],
+        classes = startHtml.includes('class="') ? ' ' : ' class="',
+        newHtml = `${startHtml}${classes}${theme}"${endTag}`;
+
+      return html.replace(match[0], newHtml);
+    };
+  }
+
+  return await resolve(event, resolveOptions);
 }) satisfies Handle;

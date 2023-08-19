@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { get } from 'svelte/store';
   import { slide } from 'svelte/transition';
 
   import { NAV_OPTIONS } from '$lib/constants';
+  import { theme } from '$stores/theme';
 
   import NavLink from '$components/nav/link.svelte';
   import MenuButton from '$components/nav/menu-button.svelte';
@@ -26,15 +28,25 @@
         on:click={() => (navExpanded = false)}
         on:keydown={(e) => e.key === 'Enter' && (navExpanded = false)}>🐕 furryli.st</a
       >
-      <button
-        class="-m-3 block p-3 md:hidden"
-        on:click={() => (navExpanded = !navExpanded)}
-        on:keydown={(e) => e.key === 'Enter' && (navExpanded = !navExpanded)}
-        aria-label="Toggle navigation"
-        aria-expanded={navExpanded}
-      >
-        <MenuButton icon={navExpanded ? 'close' : 'menu'} />
-      </button>
+      <div>
+        <button
+          class="-m-3 block p-3 md:hidden"
+          on:click={() => {
+            get(theme) === 'light' ? theme.set('dark') : theme.set('light');
+          }}
+        >
+          toggle theme
+        </button>
+        <button
+          class="-m-3 block p-3 md:hidden"
+          on:click={() => (navExpanded = !navExpanded)}
+          on:keydown={(e) => e.key === 'Enter' && (navExpanded = !navExpanded)}
+          aria-label="Toggle navigation"
+          aria-expanded={navExpanded}
+        >
+          <MenuButton icon={navExpanded ? 'close' : 'menu'} />
+        </button>
+      </div>
     </div>
     {#if navExpanded}
       <div

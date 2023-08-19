@@ -2,7 +2,6 @@
   import '../styles/app.scss';
 
   import { onMount } from 'svelte';
-  import { classList } from 'svelte-body';
 
   import { browser } from '$app/environment';
   import { agent, session } from '$lib/atp';
@@ -20,7 +19,9 @@
   const checkScroll = (_e?: Event) =>
     (isAtTop = pageContainer?.getBoundingClientRect().top >= 0);
 
-  onMount(() => checkScroll());
+  onMount(() => {
+    checkScroll();
+  });
 
   $: hasSession = !!($session !== null && $agent?.hasSession);
   $: ({ pathname } = data.url ?? { pathname: '' });
@@ -28,8 +29,6 @@
 </script>
 
 <svelte:window on:scroll={checkScroll} on:wheel={checkScroll} />
-
-<svelte:body use:classList={'light bg-gray-100'} />
 
 <svelte:head>
   <title>furryli.st</title>
