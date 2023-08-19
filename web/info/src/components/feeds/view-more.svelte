@@ -1,5 +1,5 @@
 <a
-  class="flex w-full flex-1 cursor-pointer flex-col items-center justify-center rounded-md border-4 border-transparent px-4 py-3 outline-2 outline-offset-4 outline-sky-400 transition-[background-color,box-shadow] duration-75 hover:bg-gray-100 focus-visible:bg-gray-100 md:w-auto md:max-w-[320px] xl:max-w-[260px]"
+  class="flex w-full flex-1 cursor-pointer flex-col items-center justify-center rounded-md border-4 border-transparent px-4 py-3 outline-2 outline-offset-4 outline-sky-400 transition-[background-color,box-shadow] duration-75 hover:bg-gray-100 focus-visible:bg-gray-100 dark:hover:bg-gray-700 dark:focus-visible:bg-gray-700 md:w-auto md:max-w-[320px] xl:max-w-[260px]"
   href="/feeds"
   tabindex="0"
 >

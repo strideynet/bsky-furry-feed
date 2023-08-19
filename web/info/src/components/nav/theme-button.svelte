@@ -23,7 +23,7 @@
         viewBox="0 0 24 24"
         stroke-width="1.5"
         stroke="currentColor"
-        class="h-6 w-6"
+        class="h-8 w-8 rounded-full border border-gray-500"
       >
         <path
           stroke-linecap="round"
@@ -38,7 +38,7 @@
         viewBox="0 0 24 24"
         stroke-width="1.5"
         stroke="currentColor"
-        class="h-6 w-6"
+        class="h-8 w-8 rounded-full border border-gray-500 dark:border-gray-400"
       >
         <path
           stroke-linecap="round"

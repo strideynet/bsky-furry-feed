@@ -20,7 +20,7 @@
     <img
       src={profileAvatarSrc}
       alt="Avatar"
-      class="h-8 w-8 rounded-full border border-gray-500"
+      class="h-8 w-8 rounded-full border border-gray-500 dark:border-gray-400"
     />
   </MenuButton>
   <Transition
