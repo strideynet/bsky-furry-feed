@@ -6,12 +6,12 @@ import { APP_THEME_COOKIE_NAME, APP_THEMES } from '$lib/constants';
 
 const initialValue = browser
   ? (document.cookie
-      .split('; ')
-      .find((row) => row.startsWith(APP_THEME_COOKIE_NAME))
-      ?.split('=')[1] as typeof APP_THEMES[number])
+      ?.split('; ')
+      ?.find((row) => row.startsWith(APP_THEME_COOKIE_NAME))
+      ?.split('=')[1] as typeof APP_THEMES[number]) ?? APP_THEMES[0]
   : APP_THEMES[0];
 
-const theme = writable<typeof APP_THEMES[number]>(initialValue);
+const theme = writable<typeof APP_THEMES[0 | 1]>(initialValue);
 
 const prefersDark = useMediaQuery('(prefers-color-scheme: dark)'),
   prefersLight = useMediaQuery('(prefers-color-scheme: light)');

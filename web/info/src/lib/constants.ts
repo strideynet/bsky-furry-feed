@@ -1,6 +1,6 @@
-export const APP_THEMES = ['light', 'dark'];
+export const APP_THEMES = ['light', 'dark'] as const;
 
-export const APP_THEME_COOKIE_NAME = 'bff-theme';
+export const APP_THEME_COOKIE_NAME = 'bff-theme' as const;
 
 export const BASE_TRANSITION_DURATION = 150;
 
