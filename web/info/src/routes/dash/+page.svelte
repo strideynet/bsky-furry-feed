@@ -14,6 +14,6 @@
 
 <style lang="scss">
   code {
-    @apply rounded-md bg-gray-200/50 px-1 py-0.5 text-sm;
+    @apply rounded-md bg-gray-200/50 dark:bg-gray-700/50 px-1 py-0.5 text-sm;
   }
 </style>

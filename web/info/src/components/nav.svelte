@@ -5,6 +5,7 @@
 
   import NavLink from '$components/nav/link.svelte';
   import MenuButton from '$components/nav/menu-button.svelte';
+  import ThemeButton from '$components/nav/theme-button.svelte';
   import NavProfileDropdown from '$components/nav/profile-dropdown.svelte';
 
   export let hasSession: boolean,
@@ -42,6 +43,7 @@
         in:slide={{ duration: 200 }}
         out:slide={{ duration: 200 }}
       >
+        <ThemeButton />
         <NavProfileDropdown {hasSession} />
         {#each NAV_OPTIONS as link}
           <NavLink
@@ -65,7 +67,10 @@
           <NavLink {...link} />
         {/each}
       </div>
-      <NavProfileDropdown {hasSession} />
+      <div class="flex flex-row gap-4">
+        <ThemeButton />
+        <NavProfileDropdown {hasSession} />
+      </div>
     </div>
   </div>
 </div>
@@ -75,10 +80,10 @@
     overscroll-behavior: none;
 
     &:not(.isAtTop) {
-      @apply border-gray-300/50 bg-gray-100;
+      @apply border-gray-300/50 bg-gray-100 dark:border-gray-700 dark:bg-gray-800;
     }
     &.isAtTop {
-      @apply border-transparent bg-gray-100;
+      @apply border-transparent bg-gray-100 dark:bg-gray-800;
     }
   }
 </style>

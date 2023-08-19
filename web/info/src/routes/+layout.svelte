@@ -29,7 +29,7 @@
 
 <svelte:window on:scroll={checkScroll} on:wheel={checkScroll} />
 
-<svelte:body use:classList={'light bg-gray-100'} />
+<svelte:body use:classList={'light bg-gray-100 dark:text-white dark:bg-gray-800'} />
 
 <svelte:head>
   <title>furryli.st</title>

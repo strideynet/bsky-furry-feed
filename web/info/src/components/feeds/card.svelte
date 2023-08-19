@@ -11,7 +11,7 @@
 </script>
 
 <a
-  class="flex w-full flex-auto cursor-pointer flex-col gap-y-1 rounded-md border-4 border-transparent px-4 pb-3 pt-1 outline-2 outline-offset-4 outline-sky-400 transition-[background-color,box-shadow] duration-75 hover:bg-gray-100 focus-visible:bg-gray-100 md:w-auto md:max-w-[320px] xl:max-w-[260px]"
+  class="flex w-full flex-auto cursor-pointer flex-col gap-y-1 rounded-md border-4 border-transparent px-4 pb-3 pt-1 outline-2 outline-offset-4 outline-sky-400 transition-[background-color,box-shadow] duration-75 hover:bg-gray-100 focus-visible:bg-gray-100 dark:hover:bg-gray-700 dark:focus-visible:bg-gray-700 md:w-auto md:max-w-[320px] xl:max-w-[260px]"
   href={feed.link}
   target="_blank"
   tabindex="0"

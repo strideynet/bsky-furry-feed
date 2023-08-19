@@ -22,7 +22,7 @@
   h3,
   h4,
   h5 {
-    @apply font-bold text-gray-950;
+    @apply font-bold text-gray-950 dark:text-gray-300;
   }
 
   h1 {

@@ -28,12 +28,12 @@
 
 <style lang="scss">
   a {
-    @apply block h-fit whitespace-nowrap text-gray-800 underline-offset-2;
+    @apply block h-fit whitespace-nowrap text-gray-800 dark:text-gray-200 underline-offset-2;
 
     &:hover,
     &:focus-visible,
     &.isActive {
-      @apply text-gray-900 underline;
+      @apply text-gray-900 dark:text-gray-100 underline;
     }
   }
 </style>
