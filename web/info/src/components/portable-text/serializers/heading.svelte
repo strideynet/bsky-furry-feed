@@ -10,21 +10,16 @@
   $: plainText = toPlainText(value);
 </script>
 
-<svelte:element this={style}>
+<svelte:element
+  this={style}
+  class="font-bold text-gray-950 transition-[color] duration-75 dark:text-gray-50"
+>
   <a id={value._key} href={`#${value._key}`}>
     {plainText}
   </a>
 </svelte:element>
 
 <style lang="scss">
-  h1,
-  h2,
-  h3,
-  h4,
-  h5 {
-    @apply font-bold text-gray-950;
-  }
-
   h1 {
     @apply mb-6 mt-8 text-4xl;
   }

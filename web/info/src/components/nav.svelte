@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { get } from 'svelte/store';
   import { slide } from 'svelte/transition';
 
   import { NAV_OPTIONS } from '$lib/constants';
-  import { theme } from '$stores/theme';
 
   import NavLink from '$components/nav/link.svelte';
   import MenuButton from '$components/nav/menu-button.svelte';
   import NavProfileDropdown from '$components/nav/profile-dropdown.svelte';
+
+  import ThemeButton from './nav/theme-button.svelte';
 
   export let hasSession: boolean,
     isAtTop = false;
@@ -16,7 +16,7 @@
 </script>
 
 <div
-  class="sticky left-0 top-0 w-screen border-b-4 transition-colors duration-75"
+  class="sticky left-0 top-0 w-screen border-b-4 bg-gray-100 transition-colors duration-75 dark:bg-gray-900"
   class:isAtTop
 >
   <!-- Mobile nav -->
@@ -28,15 +28,8 @@
         on:click={() => (navExpanded = false)}
         on:keydown={(e) => e.key === 'Enter' && (navExpanded = false)}>🐕 furryli.st</a
       >
-      <div>
-        <button
-          class="-m-3 block p-3 md:hidden"
-          on:click={() => {
-            get(theme) === 'light' ? theme.set('dark') : theme.set('light');
-          }}
-        >
-          toggle theme
-        </button>
+      <div class="flex flex-row gap-4">
+        <ThemeButton />
         <button
           class="-m-3 block p-3 md:hidden"
           on:click={() => (navExpanded = !navExpanded)}
@@ -77,7 +70,10 @@
           <NavLink {...link} />
         {/each}
       </div>
-      <NavProfileDropdown {hasSession} />
+      <div class="flex flex-row gap-4">
+        <ThemeButton />
+        <NavProfileDropdown {hasSession} />
+      </div>
     </div>
   </div>
 </div>
@@ -87,10 +83,18 @@
     overscroll-behavior: none;
 
     &:not(.isAtTop) {
-      @apply border-gray-300/50 bg-gray-100;
+      @apply border-gray-300/50;
     }
     &.isAtTop {
-      @apply border-transparent bg-gray-100;
+      @apply border-transparent;
+    }
+  }
+
+  :global(.dark) {
+    div.sticky {
+      &:not(.isAtTop) {
+        @apply border-gray-500/50;
+      }
     }
   }
 </style>
