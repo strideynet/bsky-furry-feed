@@ -2,10 +2,11 @@
   import { get } from 'svelte/store';
 
   import { APP_THEMES } from '$lib/constants';
-  import { theme } from '$stores/theme';
+  import { persistTheme, theme } from '$stores/theme';
 
   const toggle = () => {
     get(theme) === APP_THEMES[0] ? theme.set(APP_THEMES[1]) : theme.set(APP_THEMES[0]);
+    persistTheme(get(theme));
   };
 </script>
 

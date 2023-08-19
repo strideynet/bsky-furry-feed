@@ -16,20 +16,21 @@ export const handle = (async ({ event, resolve }) => {
 
   const theme = event.cookies.get(APP_THEME_COOKIE_NAME);
 
+  // @ts-expect-error theme may not be 'light'|'dark'
   if (theme && APP_THEMES.includes(theme)) {
     resolveOptions.transformPageChunk = ({ html }) => {
-      const match = html.match(/(<html.*?)(>)/);
+      const classAttrRegexp = /<html([^>]*?)class="([^"]*?)"/i,
+        htmlTagRegexp = /<html([^>]*?)>/i;
 
-      if (!match) {
-        return html;
+      if (classAttrRegexp.test(html)) {
+        // if class attribute exists, append the theme to it
+        return html.replace(classAttrRegexp, `<html$1class="$2 ${theme}"`);
+      } else if (htmlTagRegexp.test(html)) {
+        // if <html> tag exists but no class attribute, add class with the theme
+        return html.replace(htmlTagRegexp, `<html$1 class="${theme}">`);
       }
 
-      const startHtml = match[1],
-        endTag = match[2],
-        classes = startHtml.includes('class="') ? ' ' : ' class="',
-        newHtml = `${startHtml}${classes}${theme}"${endTag}`;
-
-      return html.replace(match[0], newHtml);
+      return html;
     };
   }
 

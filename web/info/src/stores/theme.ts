@@ -13,29 +13,28 @@ const initialValue = browser
 
 const theme = writable<typeof APP_THEMES[0 | 1]>(initialValue);
 
+const persistTheme = (t: typeof APP_THEMES[0 | 1]) =>
+  (document.cookie = `${APP_THEME_COOKIE_NAME}=${t};path=/;max-age=${60 * 60 * 24}`);
+
 const prefersDark = useMediaQuery('(prefers-color-scheme: dark)'),
   prefersLight = useMediaQuery('(prefers-color-scheme: light)');
 
 if (browser) {
-  // Only set theme automatically if no cookie is set
-  prefersDark.subscribe((dark) => {
-    if (dark && !document.cookie.includes(APP_THEME_COOKIE_NAME)) {
-      theme.set('dark');
-    }
-  });
-  prefersLight.subscribe((light) => {
-    if (light && !document.cookie.includes(APP_THEME_COOKIE_NAME)) {
-      theme.set('light');
-    }
+  prefersDark.subscribe(
+    (dark) =>
+      dark && !document.cookie.includes(APP_THEME_COOKIE_NAME) && theme.set(APP_THEMES[1])
+  );
+  prefersLight.subscribe(
+    (light) =>
+      light &&
+      !document.cookie.includes(APP_THEME_COOKIE_NAME) &&
+      theme.set(APP_THEMES[0])
+  );
+
+  theme.subscribe((t) => {
+    document.documentElement.classList.remove(...APP_THEMES);
+    document.documentElement.classList.add(t);
   });
 }
 
-theme.subscribe((t) => {
-  if (browser) {
-    document.cookie = `${APP_THEME_COOKIE_NAME}=${t};path=/;max-age=${60 * 60 * 24}`;
-    document.documentElement.classList.remove(...APP_THEMES);
-    document.documentElement.classList.add(t);
-  }
-});
-
-export { theme };
+export { persistTheme, theme };
