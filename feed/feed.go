@@ -161,7 +161,7 @@ func scoreBasedGenerator(gravity float64, postAgeOffset time.Duration) GenerateF
 		}
 
 		rows, err := pgxStore.ListPostsWithLikes(ctx, store.ListPostsWithLikesOpts{
-			Limit:      2000,
+			Limit:      3000,
 			CursorTime: cursorTime,
 		})
 		if err != nil {
