@@ -34,6 +34,21 @@
 <svelte:head>
   <title>furryli.st</title>
   <meta name="description" content="The purremier furry feed for Bluesky" />
+
+  <script>
+    // Prevent FOUC
+    if (
+      localStorage.theme === 'dark' ||
+      (!('theme' in localStorage) &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches)
+    ) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    } else {
+      document.documentElement.classList.add('light');
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
 </svelte:head>
 
 <div class="relative flex flex-col" bind:this={pageContainer}>

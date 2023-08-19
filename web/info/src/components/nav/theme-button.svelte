@@ -1,22 +1,16 @@
 <script lang="ts">
   import { Menu, MenuButton } from '@rgossiaux/svelte-headlessui';
   import { APP_THEMES } from '$lib/constants';
-  import themeWritable from '$stores/theme';
-
-  let theme: number = APP_THEMES.light;
-
-  themeWritable.subscribe((value) => {
-    theme = value;
-  });
+  import theme from '$stores/theme';
 
   const toggleTheme = () => {
-    themeWritable.set(theme == APP_THEMES.dark ? APP_THEMES.light : APP_THEMES.dark);
+    theme.set($theme == APP_THEMES.dark ? APP_THEMES.light : APP_THEMES.dark);
   };
 </script>
 
 <Menu class="relative">
   <MenuButton on:click={toggleTheme} aria-label="Toggle website theme">
-    {#if theme == APP_THEMES.light}
+    {#if $theme == APP_THEMES.light}
       <svg
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
