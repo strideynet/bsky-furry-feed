@@ -28,18 +28,15 @@
         on:click={() => (navExpanded = false)}
         on:keydown={(e) => e.key === 'Enter' && (navExpanded = false)}>🐕 furryli.st</a
       >
-      <div class="flex flex-row gap-4">
-        <ThemeButton />
-        <button
-          class="-m-3 block p-3 md:hidden"
-          on:click={() => (navExpanded = !navExpanded)}
-          on:keydown={(e) => e.key === 'Enter' && (navExpanded = !navExpanded)}
-          aria-label="Toggle navigation"
-          aria-expanded={navExpanded}
-        >
-          <MenuButton icon={navExpanded ? 'close' : 'menu'} />
-        </button>
-      </div>
+      <button
+        class="-m-3 block p-3 md:hidden"
+        on:click={() => (navExpanded = !navExpanded)}
+        on:keydown={(e) => e.key === 'Enter' && (navExpanded = !navExpanded)}
+        aria-label="Toggle navigation"
+        aria-expanded={navExpanded}
+      >
+        <MenuButton icon={navExpanded ? 'close' : 'menu'} />
+      </button>
     </div>
     {#if navExpanded}
       <div
@@ -47,7 +44,10 @@
         in:slide={{ duration: 200 }}
         out:slide={{ duration: 200 }}
       >
-        <NavProfileDropdown {hasSession} />
+        <div class="flex flex-row items-center gap-4">
+          <ThemeButton />
+          <NavProfileDropdown {hasSession} />
+        </div>
         {#each NAV_OPTIONS as link}
           <NavLink
             {...link}
@@ -70,7 +70,7 @@
           <NavLink {...link} />
         {/each}
       </div>
-      <div class="flex flex-row gap-4">
+      <div class="flex flex-row items-center gap-5">
         <ThemeButton />
         <NavProfileDropdown {hasSession} />
       </div>

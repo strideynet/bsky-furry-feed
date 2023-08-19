@@ -38,7 +38,7 @@
 <div class="relative flex flex-col" bind:this={pageContainer}>
   <Nav {hasSession} {isAtTop} />
   <PageTransitionWrapper key={pathname}>
-    <div class="w-full px-6 py-4">
+    <div class="w-full px-6 pb-4">
       <slot />
     </div>
   </PageTransitionWrapper>
