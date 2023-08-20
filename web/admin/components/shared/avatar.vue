@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-defineProps<{ url?: string }>();
+defineProps<{ url?: string; size: number }>();
 </script>
 
 <template>
@@ -7,14 +7,14 @@ defineProps<{ url?: string }>();
     v-if="url"
     class="rounded-full"
     :src="url"
-    height="72"
-    width="72"
+    :height="size"
+    :width="size"
     alt=""
   />
   <svg
     v-else
-    width="72"
-    height="72"
+    :width="size"
+    :height="size"
     viewBox="0 0 24 24"
     fill="none"
     stroke="none"
