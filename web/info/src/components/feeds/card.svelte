@@ -11,7 +11,7 @@
 </script>
 
 <a
-  class="flex w-full flex-auto cursor-pointer flex-col gap-y-1 rounded-md border-4 border-transparent px-4 pb-3 pt-1 outline-2 outline-offset-4 outline-sky-400 transition-[background-color,box-shadow] duration-75 hover:bg-gray-100 focus-visible:bg-gray-100 md:w-auto md:max-w-[320px] xl:max-w-[260px]"
+  class="flex w-full flex-auto cursor-pointer flex-col gap-y-1 rounded-md border-4 border-transparent px-4 pb-3 pt-1 outline-2 outline-offset-4 outline-sky-400 transition-[background-color,box-shadow] duration-75 hover:bg-gray-200/50 focus-visible:bg-gray-200/50 dark:hover:bg-gray-800/50 dark:focus-visible:bg-gray-800/50 md:w-auto md:max-w-[320px] xl:max-w-[260px]"
   href={feed.link}
   target="_blank"
   tabindex="0"
@@ -28,11 +28,24 @@
 
 <style lang="scss">
   a {
-    box-shadow: 0 0 0 2px rgb(209 213 219 / 0.5);
+    @apply from-gray-300/50;
+    box-shadow: 0 0 0 2px var(--tw-gradient-from);
 
     &:hover,
     &:focus-visible {
-      box-shadow: 0 0 0 4px rgb(209 213 219 / 0.5);
+      box-shadow: 0 0 0 4px var(--tw-gradient-from);
+    }
+  }
+
+  :global(.dark) {
+    a {
+      @apply from-gray-500/50;
+      box-shadow: 0 0 0 2px var(--tw-gradient-from);
+
+      &:hover,
+      &:focus-visible {
+        box-shadow: 0 0 0 4px var(--tw-gradient-from);
+      }
     }
   }
 </style>

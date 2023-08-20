@@ -11,7 +11,7 @@
 </script>
 
 <a
-  class="text-sky-600 underline-offset-1 focus-within:text-sky-700 focus-within:underline hover:text-sky-700 hover:underline"
+  class="text-sky-600 underline-offset-1 transition-[color] duration-75 hover:text-sky-700 hover:underline focus-visible:text-sky-700 focus-visible:underline dark:text-sky-500 dark:hover:text-sky-300 dark:focus-visible:text-sky-300"
   {href}
   target={newtab ? '_blank' : undefined}
   rel={newtab ? 'noopener noreferrer' : undefined}

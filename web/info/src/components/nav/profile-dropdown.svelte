@@ -32,15 +32,15 @@
     leaveTo="transform scale-95 opacity-0"
   >
     <MenuItems
-      class="absolute right-0 mt-2 flex min-w-[150px] origin-top-right flex-col rounded-md bg-gray-50 px-2 py-1 shadow-[0_0_0_3px_--var(tw-shadow-color)] shadow-gray-300/50 outline-none"
+      class="absolute right-0 mt-2 flex min-w-[150px] origin-top-right flex-col rounded-md bg-gray-50 px-2 py-1 shadow-[0_0_0_3px_--var(tw-shadow-color)] shadow-gray-300/50 outline-none dark:bg-gray-800 dark:shadow-gray-500/50"
     >
       {#if hasSession}
         <MenuItem disabled>
           <span class="my-1 block w-full cursor-default p-2 text-left">
-            <span class="text-gray-600">@{$profile?.handle}</span>
+            <span class="text-gray-600 dark:text-gray-300">@{$profile?.handle}</span>
           </span>
         </MenuItem>
-        <span class="block h-[1px] bg-gray-300/50" />
+        <span class="block h-[1px] bg-gray-300/50 dark:bg-gray-700/50" />
         <MenuItem let:active class="mb-0.5 mt-1.5">
           <a class:active href="/dash"> Dashboard </a>
         </MenuItem>

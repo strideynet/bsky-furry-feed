@@ -18,6 +18,24 @@
       onClick();
     }
   }}
-  class="mb-4 w-full rounded-md border-2 border-gray-400/50 bg-gray-50 px-4 py-2 transition-colors duration-75 focus-within:border-gray-500 focus-within:bg-gray-200 focus-within:outline-none hover:border-gray-500 hover:bg-gray-200"
+  class="mb-4 mt-1 w-full rounded-md bg-gray-50 px-4 py-2 transition-[background-color,box-shadow] duration-75 hover:bg-gray-200/50 focus-visible:bg-gray-200/50 focus-visible:outline-none dark:bg-gray-800/20 dark:hover:bg-gray-800/50 dark:focus-visible:bg-gray-800/50"
   ><slot /></button
 >
+
+<style lang="scss">
+  button {
+    @apply from-gray-300/50;
+    box-shadow: 0 0 0 2px var(--tw-gradient-from);
+
+    &:hover,
+    &:focus-visible {
+      box-shadow: 0 0 0 4px var(--tw-gradient-from);
+    }
+  }
+
+  :global(.dark) {
+    button {
+      @apply from-gray-500/50;
+    }
+  }
+</style>

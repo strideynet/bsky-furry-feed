@@ -7,6 +7,8 @@
   import MenuButton from '$components/nav/menu-button.svelte';
   import NavProfileDropdown from '$components/nav/profile-dropdown.svelte';
 
+  import ThemeButton from './nav/theme-button.svelte';
+
   export let hasSession: boolean,
     isAtTop = false;
 
@@ -14,7 +16,7 @@
 </script>
 
 <div
-  class="sticky left-0 top-0 w-screen border-b-4 transition-colors duration-75"
+  class="sticky left-0 top-0 w-screen border-b-4 bg-gray-100 transition-colors duration-75 dark:bg-gray-900"
   class:isAtTop
 >
   <!-- Mobile nav -->
@@ -42,7 +44,10 @@
         in:slide={{ duration: 200 }}
         out:slide={{ duration: 200 }}
       >
-        <NavProfileDropdown {hasSession} />
+        <div class="flex flex-row items-center gap-4">
+          <ThemeButton />
+          <NavProfileDropdown {hasSession} />
+        </div>
         {#each NAV_OPTIONS as link}
           <NavLink
             {...link}
@@ -65,7 +70,10 @@
           <NavLink {...link} />
         {/each}
       </div>
-      <NavProfileDropdown {hasSession} />
+      <div class="flex flex-row items-center gap-5">
+        <ThemeButton />
+        <NavProfileDropdown {hasSession} />
+      </div>
     </div>
   </div>
 </div>
@@ -75,10 +83,18 @@
     overscroll-behavior: none;
 
     &:not(.isAtTop) {
-      @apply border-gray-300/50 bg-gray-100;
+      @apply border-gray-300/50;
     }
     &.isAtTop {
-      @apply border-transparent bg-gray-100;
+      @apply border-transparent;
+    }
+  }
+
+  :global(.dark) {
+    div.sticky {
+      &:not(.isAtTop) {
+        @apply border-gray-500/50;
+      }
     }
   }
 </style>
