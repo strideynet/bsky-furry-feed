@@ -87,7 +87,8 @@ const comment = computed(() => {
   } else if (
     data instanceof UnapproveActorAuditPayload ||
     data instanceof BanActorAuditPayload ||
-    data instanceof CreateActorAuditPayload
+    data instanceof CreateActorAuditPayload ||
+    data instanceof ForceApproveActorAuditPayload
   ) {
     return data.reason;
   }
