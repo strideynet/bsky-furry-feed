@@ -96,12 +96,12 @@ func TestChronologicalGenerator(t *testing.T) {
 
 	for _, test := range []struct {
 		name          string
-		opts          chronologicalGeneratorOpts
+		opts          generatorOpts
 		expectedPosts []string
 	}{
 		{
 			name: "all",
-			opts: chronologicalGeneratorOpts{
+			opts: generatorOpts{
 				Hashtags: []string{},
 				IsNSFW:   tristate.Maybe,
 				HasMedia: tristate.Maybe,
@@ -117,7 +117,7 @@ func TestChronologicalGenerator(t *testing.T) {
 		},
 		{
 			name: "all fursuits",
-			opts: chronologicalGeneratorOpts{
+			opts: generatorOpts{
 				Hashtags: []string{"fursuit"},
 				IsNSFW:   tristate.Maybe,
 				HasMedia: tristate.True,
@@ -126,7 +126,7 @@ func TestChronologicalGenerator(t *testing.T) {
 		},
 		{
 			name: "sfw only fursuits",
-			opts: chronologicalGeneratorOpts{
+			opts: generatorOpts{
 				Hashtags: []string{"fursuit"},
 				IsNSFW:   tristate.False,
 				HasMedia: tristate.True,
@@ -135,7 +135,7 @@ func TestChronologicalGenerator(t *testing.T) {
 		},
 		{
 			name: "nsfw only art",
-			opts: chronologicalGeneratorOpts{
+			opts: generatorOpts{
 				Hashtags: []string{"art", "furryart"},
 				IsNSFW:   tristate.True,
 				HasMedia: tristate.True,

@@ -583,6 +583,61 @@ func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNew
 	return posts, nil
 }
 
+func (s *PGXStore) GetLatestScoreGeneration(ctx context.Context, alg string) (out int64, err error) {
+	ctx, span := tracer.Start(ctx, "pgx_store.get_latest_score_generation")
+	defer func() {
+		endSpan(span, err)
+	}()
+	seq, err := s.queries.GetLatestScoreGeneration(ctx, alg)
+	if err != nil {
+		return 0, err
+	}
+	return seq, nil
+}
+
+type ListPostsForHotFeedCursor struct {
+	GenerationSeq int64
+	AfterScore    float32
+	AfterURI      string
+}
+
+type ListPostsForHotFeedOpts struct {
+	Alg      string
+	Cursor   ListPostsForHotFeedCursor
+	Hashtags []string
+	IsNSFW   tristate.Tristate
+	HasMedia tristate.Tristate
+	Limit    int
+}
+
+func (s *PGXStore) ListScoredPosts(ctx context.Context, opts ListPostsForHotFeedOpts) (out []gen.ListScoredPostsRow, err error) {
+	// TODO: Don't leak gen.CandidatePost implementation
+	ctx, span := tracer.Start(ctx, "pgx_store.list_scored_posts")
+	defer func() {
+		endSpan(span, err)
+	}()
+
+	queryParams := gen.ListScoredPostsParams{
+		Alg:           opts.Alg,
+		Hashtags:      opts.Hashtags,
+		HasMedia:      tristateToPgtypeBool(opts.HasMedia),
+		IsNSFW:        tristateToPgtypeBool(opts.IsNSFW),
+		GenerationSeq: opts.Cursor.GenerationSeq,
+		AfterScore:    opts.Cursor.AfterScore,
+		AfterURI:      opts.Cursor.AfterURI,
+	}
+	if opts.Limit != 0 {
+		queryParams.Limit = int32(opts.Limit)
+	}
+
+	posts, err := s.queries.ListScoredPosts(ctx, queryParams)
+	if err != nil {
+		return nil, fmt.Errorf("executing ListScoredPosts query: %w", err)
+	}
+
+	return posts, nil
+}
+
 type ListPostsWithLikesOpts struct {
 	CursorTime time.Time
 	Limit      int
@@ -752,4 +807,12 @@ func (s *PGXStore) GetLatestActorProfile(ctx context.Context, did string) (out g
 func (s *PGXStore) GetActorProfileHistory(ctx context.Context, did string) (out []gen.ActorProfile, err error) {
 	// TODO: Return a proto type rather than exposing gen.ActorProfile
 	return s.queries.GetActorProfileHistory(ctx, did)
+}
+
+func (s *PGXStore) MaterializeClassicPostScores(ctx context.Context, lookbackPeriod time.Duration) (int64, error) {
+	return s.queries.MaterializePostScores(ctx, pgtype.Interval{Valid: true, Microseconds: lookbackPeriod.Microseconds()})
+}
+
+func (s *PGXStore) DeleteOldPostScores(ctx context.Context, retentionPeriod time.Duration) (int64, error) {
+	return s.queries.DeleteOldPostScores(ctx, pgtype.Interval{Valid: true, Microseconds: retentionPeriod.Microseconds()})
 }
