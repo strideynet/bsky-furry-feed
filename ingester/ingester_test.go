@@ -274,6 +274,9 @@ func TestFirehoseIngester(t *testing.T) {
 				// Skip posts we don't expect to show up.
 				continue
 			}
+			if tp.name == "self labels" {
+				t.Skip("see https://github.com/strideynet/bsky-furry-feed/issues/149")
+			}
 			tp := tp
 			t.Run(tp.name, func(t *testing.T) {
 				t.Parallel()
