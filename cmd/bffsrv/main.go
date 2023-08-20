@@ -233,8 +233,8 @@ func runE(log *zap.Logger) error {
 			log.Named("scoring"),
 			pgxStore,
 			scoring.Opts{
-				MaterializationInterval: 30 * time.Second,
-				RetentionPeriod:         1 * time.Hour,
+				MaterializationInterval: 1 * time.Minute,
+				RetentionPeriod:         15 * time.Minute,
 				LookbackPeriod:          24 * time.Hour,
 			},
 		)
