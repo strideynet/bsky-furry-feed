@@ -193,14 +193,20 @@ SELECT did, created_at, is_artist, comment, status, roles, current_profile_commi
 FROM
     candidate_actors ca
 WHERE
-    ($1::actor_status IS NULL OR
-     ca.status = $1)
+    ($2::actor_status IS NULL OR
+     ca.status = $2)
 ORDER BY
     did
+LIMIT $1
 `
 
-func (q *Queries) ListCandidateActors(ctx context.Context, status NullActorStatus) ([]CandidateActor, error) {
-	rows, err := q.db.Query(ctx, listCandidateActors, status)
+type ListCandidateActorsParams struct {
+	Limit  int32
+	Status NullActorStatus
+}
+
+func (q *Queries) ListCandidateActors(ctx context.Context, arg ListCandidateActorsParams) ([]CandidateActor, error) {
+	rows, err := q.db.Query(ctx, listCandidateActors, arg.Limit, arg.Status)
 	if err != nil {
 		return nil, err
 	}

@@ -6,7 +6,11 @@ const pending = ref(0);
 const actor = ref<Actor>();
 
 const nextActor = async () => {
-  const queue = await api.listActors({ filterStatus: ActorStatus.PENDING });
+  const queue = await api.listActors({
+    filterStatus: ActorStatus.PENDING,
+    limit: 102,
+  });
+
   pending.value = queue.actors.length - 1;
   actor.value = queue.actors[0];
 };

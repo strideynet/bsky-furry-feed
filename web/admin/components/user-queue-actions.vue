@@ -35,7 +35,7 @@ async function process(did: string, action: ApprovalQueueAction) {
     >
     <span class="md:ml-auto max-md:w-full flex items-baseline">
       <span v-if="pending" class="text-xs text-gray-700 mx-1">
-        ({{ pending }} more...)
+        ({{ pending > 100 ? "100+" : pending }} more...)
       </span>
       <button
         class="py-0.5 px-2 max-md:ml-auto mr-1 text-white bg-blue-500 dark:bg-blue-600 rounded-lg hover:bg-blue-600 dark:hover:bg-blue-700 disabled:bg-blue-300 disabled:dark:bg-blue-500 disabled:cursor-not-allowed"
