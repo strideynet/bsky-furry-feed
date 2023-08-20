@@ -277,6 +277,7 @@ func (m *ModerationServiceHandler) ListActors(ctx context.Context, req *connect.
 
 	actors, err := m.store.ListActors(ctx, store.ListActorsOpts{
 		FilterStatus: req.Msg.FilterStatus,
+		Limit:        req.Msg.Limit,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("listing actors: %w", err)

@@ -6,7 +6,8 @@ WHERE
     (sqlc.narg(status)::actor_status IS NULL OR
      ca.status = @status)
 ORDER BY
-    did;
+    did
+LIMIT $1;
 
 -- name: CreateCandidateActor :one
 INSERT INTO

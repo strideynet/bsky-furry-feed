@@ -160,6 +160,7 @@ func (s *PGXStore) TX(ctx context.Context) (*PGXTX, error) {
 
 type ListActorsOpts struct {
 	FilterStatus v1.ActorStatus
+	Limit        int32
 }
 
 func (s *PGXStore) ListActors(ctx context.Context, opts ListActorsOpts) (out []*v1.Actor, err error) {
@@ -178,7 +179,10 @@ func (s *PGXStore) ListActors(ctx context.Context, opts ListActorsOpts) (out []*
 		statusFilter.ActorStatus = status
 	}
 
-	actors, err := s.queries.ListCandidateActors(ctx, statusFilter)
+	actors, err := s.queries.ListCandidateActors(ctx, gen.ListCandidateActorsParams{
+		Status: statusFilter,
+		Limit:  opts.Limit,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("executing ListCandidateActors query: %w", err)
 	}
