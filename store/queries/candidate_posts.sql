@@ -42,33 +42,6 @@ ORDER BY
     cp.indexed_at DESC
 LIMIT sqlc.arg(_limit);
 
--- name: GetPostsWithLikes :many
-SELECT
-    cp.*,
-    (
-        SELECT COUNT(*)
-        FROM
-            candidate_likes AS cl
-        WHERE
-            cl.subject_uri = cp.uri
-            AND (cl.indexed_at < sqlc.arg(cursor_timestamp))
-            AND cl.deleted_at IS NULL
-    ) AS likes
-FROM
-    candidate_posts AS cp
-INNER JOIN candidate_actors AS ca ON cp.actor_did = ca.did
-WHERE
-    cp.is_hidden = false
-    AND ca.status = 'approved'
-    AND (
-        sqlc.arg(cursor_timestamp)::TIMESTAMPTZ IS NULL
-        OR cp.indexed_at < sqlc.arg(cursor_timestamp)
-    )
-    AND cp.deleted_at IS NULL
-ORDER BY
-    cp.indexed_at DESC
-LIMIT sqlc.arg(_limit);
-
 -- name: GetPostByURI :one
 SELECT *
 FROM

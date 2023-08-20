@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -13,7 +12,6 @@ import (
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"github.com/strideynet/bsky-furry-feed/tristate"
-	"golang.org/x/exp/slices"
 )
 
 var feedRequestMetric = promauto.NewSummaryVec(prometheus.SummaryOpts{
@@ -203,99 +201,6 @@ func preScoredGenerator(alg string, opts generatorOpts) GenerateFunc {
 	}
 }
 
-func scoreBasedGenerator(gravity float64, postAgeOffset time.Duration) GenerateFunc {
-	return func(ctx context.Context, pgxStore *store.PGXStore, cursor string, limit int) ([]Post, error) {
-		cursorTime := time.Now().UTC()
-		if cursor != "" {
-			parts := strings.Split(cursor, "|")
-			if len(parts) != 2 {
-				return nil, fmt.Errorf("unexpected number of parts in cursor: %d", len(parts))
-			}
-			parsedTime, err := bluesky.ParseTime(parts[0])
-			if err != nil {
-				return nil, fmt.Errorf("parsing cursor time: %w", err)
-			}
-			cursorTime = parsedTime
-		}
-
-		rows, err := pgxStore.ListPostsWithLikes(ctx, store.ListPostsWithLikesOpts{
-			Limit:      3000,
-			CursorTime: cursorTime,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("executing sql: %w", err)
-		}
-
-		type scoredPost struct {
-			Post
-			Score float64
-			Likes int64
-			Age   time.Duration
-		}
-
-		cursorTimeString := bluesky.FormatTime(cursorTime)
-		makeCursor := func(uri string) string {
-			return fmt.Sprintf("%s|%s", cursorTimeString, uri)
-		}
-
-		scorePost := func(likes int64, age time.Duration) float64 {
-			return float64(likes) / math.Pow(age.Hours()+postAgeOffset.Hours(), gravity)
-		}
-
-		scoredPosts := make([]scoredPost, 0, len(rows))
-		for _, p := range rows {
-			age := time.Since(p.IndexedAt.Time)
-			scoredPosts = append(scoredPosts, scoredPost{
-				Post: Post{
-					URI:    p.URI,
-					Cursor: makeCursor(p.URI),
-				},
-				Likes: p.Likes,
-				Age:   age,
-				Score: scorePost(p.Likes, age),
-			})
-		}
-
-		slices.SortStableFunc(scoredPosts, func(a, b scoredPost) bool {
-			return a.Score > b.Score
-		})
-
-		// Strip points info so we can return this in the expected type.
-		posts := make([]Post, 0, len(rows))
-		for _, p := range scoredPosts {
-			// Debugs the post scoring for top ten - we need to add an endpoint
-			// for this.
-			posts = append(posts, p.Post)
-		}
-
-		if cursor != "" {
-			// This pagination is extremely rough - we search through the list
-			// for the current post in the cursor and then start from there.
-			foundIndex := -1
-			for i, p := range posts {
-				if p.Cursor == cursor {
-					foundIndex = i
-					break
-				}
-			}
-			if foundIndex == -1 {
-				// cant find post, indicate to client to start again
-				return nil, fmt.Errorf("could not find cursor post")
-			}
-			if foundIndex+1 == len(posts) {
-				// the cursor is pointing at the last post, indicate end
-				// reached by returning empty
-				return nil, nil
-			}
-			posts = posts[foundIndex+1:]
-		}
-
-		posts = posts[:limit]
-
-		return posts, nil
-	}
-}
-
 // ServiceWithDefaultFeeds instantiates a registry with all the standard
 // bksy-furry-feed feeds.
 // TODO: This really doesn't belong here, ideally, these feeds would be defined
@@ -311,7 +216,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		DisplayName: "🐾 Hot",
 		Description: "Hottest posts by furries across Bluesky. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
 		Priority:    100,
-	}, scoreBasedGenerator(1.85, time.Hour*2))
+	}, preScoredGenerator("classic", generatorOpts{}))
 
 	// Reverse chronological based feeds
 	r.Register(Meta{

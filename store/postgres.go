@@ -643,32 +643,6 @@ type ListPostsWithLikesOpts struct {
 	Limit      int
 }
 
-func (s *PGXStore) ListPostsWithLikes(ctx context.Context, opts ListPostsWithLikesOpts) (out []gen.GetPostsWithLikesRow, err error) {
-	// TODO: Don't leak gen.GetPostsWithLikesRow implementation
-	ctx, span := tracer.Start(ctx, "pgx_store.list_posts_with_likes")
-	defer func() {
-		endSpan(span, err)
-	}()
-
-	queryParams := gen.GetPostsWithLikesParams{
-		CursorTimestamp: pgtype.Timestamptz{
-			Valid: true,
-			Time:  opts.CursorTime,
-		},
-	}
-
-	if opts.Limit != 0 {
-		queryParams.Limit = int32(opts.Limit)
-	}
-
-	posts, err := s.queries.GetPostsWithLikes(ctx, queryParams)
-	if err != nil {
-		return nil, fmt.Errorf("executing GetFurryNewFeed query: %w", err)
-	}
-
-	return posts, nil
-}
-
 func auditEventToProto(in gen.AuditEvent) (*v1.AuditEvent, error) {
 	ae := &v1.AuditEvent{
 		Id:               in.ID,
