@@ -5,18 +5,13 @@ const error = ref<{
   rawMessage: string;
 }>(null);
 
-const { auditEvents } = await api.listAuditEvents({})
-  .then((res) => {
-    error.value = null;
-    return res;
-  })
-  .catch((err) => {
-    error.value = { rawMessage: err.rawMessage };
+const { auditEvents } = await api.listAuditEvents({}).catch((err) => {
+  error.value = { rawMessage: err.rawMessage };
 
-    return {
-      auditEvents: [],
-    }
-  });
+  return {
+    auditEvents: [],
+  }
+});
 </script>
 
 <template>

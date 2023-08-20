@@ -21,34 +21,31 @@ async function loadProfile() {
 const auditEvents: Ref<AuditEvent[]> = ref([]);
 
 async function loadEvents() {
+  error.value = null;
+
   const response = await api.listAuditEvents({
     filterSubjectDid: subject.value.did,
-  })
-    .then((res) => {
-      error.value = null;
-      return res;
-    })
-    .catch((err) => {
-      error.value = { rawMessage: err.rawMessage };
-      return {
-        auditEvents: [],
-      };
-    });
+  }).catch((err) => {
+    error.value = { rawMessage: err.rawMessage };
+    return {
+      auditEvents: [],
+    };
+  });
   auditEvents.value = response.auditEvents;
 }
 
 async function comment(comment: string) {
+  error.value = null;
+
   await api.createCommentAuditEvent({
     subjectDid: subject.value.did,
     comment,
-  })
-    .then(() => {
-      error.value = null;
-    })
-    .catch((err) => {
-      error.value = { rawMessage: err.rawMessage };
-    });
-  await loadEvents();
+  }).catch((err) => {
+    error.value = { rawMessage: err.rawMessage };
+  });
+
+  if (!error.value)
+    await loadEvents();
 }
 
 async function refresh() {

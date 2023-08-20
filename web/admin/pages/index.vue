@@ -9,18 +9,15 @@ const error = ref<{
 }>(null);
 
 const nextActor = async () => {
-  const queue = await api.listActors({ filterStatus: ActorStatus.PENDING })
-    .then((res) => {
-      error.value = null;
-      return res;
-    })
-    .catch((err) => {
-      error.value = { rawMessage: err.rawMessage }
+  error.value = null;
 
-      return {
-        actors: [],
-      }
-    });
+  const queue = await api.listActors({ filterStatus: ActorStatus.PENDING }).catch((err) => {
+    error.value = { rawMessage: err.rawMessage }
+
+    return {
+      actors: [],
+    }
+  });
 
   pending.value = queue.actors.length - 1;
   actor.value = queue.actors[0];
