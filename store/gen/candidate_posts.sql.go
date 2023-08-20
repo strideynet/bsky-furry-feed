@@ -120,124 +120,6 @@ func (q *Queries) GetFurryNewFeed(ctx context.Context, arg GetFurryNewFeedParams
 	return items, nil
 }
 
-const getHotPosts = `-- name: GetHotPosts :many
-SELECT
-    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_hidden, cp.deleted_at, cp.raw, cp.hashtags, cp.has_media, cp.self_labels,
-    ph.score
-FROM
-    candidate_posts AS cp
-INNER JOIN candidate_actors AS ca ON cp.actor_did = ca.did
-INNER JOIN post_hotness AS ph
-    ON
-        ph.post_uri = cp.uri AND ph.alg = $1
-        AND ph.generation_seq = $2
-WHERE
-    cp.is_hidden = false
-    AND ca.status = 'approved'
-    AND (
-        COALESCE($3::TEXT [], '{}') = '{}'
-        OR $3::TEXT [] && cp.hashtags
-    )
-    AND (
-        $4::BOOLEAN IS NULL
-        OR COALESCE(cp.has_media, false) = $4
-    )
-    AND (
-        $5::BOOLEAN IS NULL
-        OR (ARRAY['nsfw', 'mursuit', 'murrsuit'] && cp.hashtags)
-        = $5
-    )
-    AND cp.deleted_at IS NULL
-    AND (
-        (ph.score, ph.uri)
-        < ($6::REAL, $7::TEXT)
-    )
-ORDER BY
-    ph.score DESC, ph.uri DESC
-LIMIT $8
-`
-
-type GetHotPostsParams struct {
-	Alg           string
-	GenerationSeq int64
-	Hashtags      []string
-	HasMedia      pgtype.Bool
-	IsNSFW        pgtype.Bool
-	AfterScore    float32
-	AfterURI      string
-	Limit         int32
-}
-
-type GetHotPostsRow struct {
-	URI        string
-	ActorDID   string
-	CreatedAt  pgtype.Timestamptz
-	IndexedAt  pgtype.Timestamptz
-	IsHidden   bool
-	DeletedAt  pgtype.Timestamptz
-	Raw        *bsky.FeedPost
-	Hashtags   []string
-	HasMedia   pgtype.Bool
-	SelfLabels []string
-	Score      float32
-}
-
-func (q *Queries) GetHotPosts(ctx context.Context, arg GetHotPostsParams) ([]GetHotPostsRow, error) {
-	rows, err := q.db.Query(ctx, getHotPosts,
-		arg.Alg,
-		arg.GenerationSeq,
-		arg.Hashtags,
-		arg.HasMedia,
-		arg.IsNSFW,
-		arg.AfterScore,
-		arg.AfterURI,
-		arg.Limit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetHotPostsRow
-	for rows.Next() {
-		var i GetHotPostsRow
-		if err := rows.Scan(
-			&i.URI,
-			&i.ActorDID,
-			&i.CreatedAt,
-			&i.IndexedAt,
-			&i.IsHidden,
-			&i.DeletedAt,
-			&i.Raw,
-			&i.Hashtags,
-			&i.HasMedia,
-			&i.SelfLabels,
-			&i.Score,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getLatestHotPostGeneration = `-- name: GetLatestHotPostGeneration :one
-SELECT ph.generation_seq
-FROM post_hotness AS ph
-WHERE ph.alg = $1
-ORDER BY ph.generation_seq DESC
-LIMIT 1
-`
-
-func (q *Queries) GetLatestHotPostGeneration(ctx context.Context, alg string) (int64, error) {
-	row := q.db.QueryRow(ctx, getLatestHotPostGeneration, alg)
-	var generation_seq int64
-	err := row.Scan(&generation_seq)
-	return generation_seq, err
-}
-
 const getPostByURI = `-- name: GetPostByURI :one
 SELECT uri, actor_did, created_at, indexed_at, is_hidden, deleted_at, raw, hashtags, has_media, self_labels
 FROM
@@ -333,6 +215,109 @@ func (q *Queries) GetPostsWithLikes(ctx context.Context, arg GetPostsWithLikesPa
 			&i.HasMedia,
 			&i.SelfLabels,
 			&i.Likes,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listScoredPosts = `-- name: ListScoredPosts :many
+SELECT
+    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_hidden, cp.deleted_at, cp.raw, cp.hashtags, cp.has_media, cp.self_labels,
+    ph.score
+FROM
+    candidate_posts AS cp
+INNER JOIN candidate_actors AS ca ON cp.actor_did = ca.did
+INNER JOIN post_scores AS ph
+    ON
+        ph.uri = cp.uri AND ph.alg = $1
+        AND ph.generation_seq = $2
+WHERE
+    cp.is_hidden = false
+    AND ca.status = 'approved'
+    AND (
+        COALESCE($3::TEXT [], '{}') = '{}'
+        OR $3::TEXT [] && cp.hashtags
+    )
+    AND (
+        $4::BOOLEAN IS NULL
+        OR COALESCE(cp.has_media, false) = $4
+    )
+    AND (
+        $5::BOOLEAN IS NULL
+        OR (ARRAY['nsfw', 'mursuit', 'murrsuit'] && cp.hashtags)
+        = $5
+    )
+    AND cp.deleted_at IS NULL
+    AND (
+        (ph.score, ph.uri)
+        < ($6::REAL, $7::TEXT)
+    )
+ORDER BY
+    ph.score DESC, ph.uri DESC
+LIMIT $8
+`
+
+type ListScoredPostsParams struct {
+	Alg           string
+	GenerationSeq int64
+	Hashtags      []string
+	HasMedia      pgtype.Bool
+	IsNSFW        pgtype.Bool
+	AfterScore    float32
+	AfterURI      string
+	Limit         int32
+}
+
+type ListScoredPostsRow struct {
+	URI        string
+	ActorDID   string
+	CreatedAt  pgtype.Timestamptz
+	IndexedAt  pgtype.Timestamptz
+	IsHidden   bool
+	DeletedAt  pgtype.Timestamptz
+	Raw        *bsky.FeedPost
+	Hashtags   []string
+	HasMedia   pgtype.Bool
+	SelfLabels []string
+	Score      float32
+}
+
+func (q *Queries) ListScoredPosts(ctx context.Context, arg ListScoredPostsParams) ([]ListScoredPostsRow, error) {
+	rows, err := q.db.Query(ctx, listScoredPosts,
+		arg.Alg,
+		arg.GenerationSeq,
+		arg.Hashtags,
+		arg.HasMedia,
+		arg.IsNSFW,
+		arg.AfterScore,
+		arg.AfterURI,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListScoredPostsRow
+	for rows.Next() {
+		var i ListScoredPostsRow
+		if err := rows.Scan(
+			&i.URI,
+			&i.ActorDID,
+			&i.CreatedAt,
+			&i.IndexedAt,
+			&i.IsHidden,
+			&i.DeletedAt,
+			&i.Raw,
+			&i.Hashtags,
+			&i.HasMedia,
+			&i.SelfLabels,
+			&i.Score,
 		); err != nil {
 			return nil, err
 		}

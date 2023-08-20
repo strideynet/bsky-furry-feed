@@ -143,12 +143,12 @@ func chronologicalGenerator(opts generatorOpts) GenerateFunc {
 	}
 }
 
-func hotnessGenerator(alg string, opts generatorOpts) GenerateFunc {
+func preScoredGenerator(alg string, opts generatorOpts) GenerateFunc {
 	return func(ctx context.Context, pgxStore *store.PGXStore, cursor string, limit int) ([]Post, error) {
-		type hotnessCursor struct {
-			GenerationSeq int64   `json:"a"`
-			AfterScore    float32 `json:"b"`
-			AfterURI      string  `json:"c"`
+		type cursorValues struct {
+			GenerationSeq int64   `json:"generation_seq"`
+			AfterScore    float32 `json:"after_score"`
+			AfterURI      string  `json:"after_uri"`
 		}
 		params := store.ListPostsForHotFeedOpts{
 			Limit:    limit,
@@ -158,9 +158,9 @@ func hotnessGenerator(alg string, opts generatorOpts) GenerateFunc {
 			Alg:      alg,
 		}
 		if cursor == "" {
-			seq, err := pgxStore.GetLatestHotPostGeneration(ctx, alg)
+			seq, err := pgxStore.GetLatestScoreGeneration(ctx, alg)
 			if err != nil {
-				return nil, fmt.Errorf("executing GetLatestHotPostGeneration: %w", err)
+				return nil, fmt.Errorf("executing GetLatestScoreGeneration: %w", err)
 			}
 			params.Cursor = store.ListPostsForHotFeedCursor{
 				GenerationSeq: seq,
@@ -168,7 +168,7 @@ func hotnessGenerator(alg string, opts generatorOpts) GenerateFunc {
 				AfterURI:      "",
 			}
 		} else {
-			var p hotnessCursor
+			var p cursorValues
 			if err := json.Unmarshal([]byte(cursor), &p); err != nil {
 				return nil, fmt.Errorf("unmarshaling cursor: %w", err)
 			}
@@ -178,14 +178,14 @@ func hotnessGenerator(alg string, opts generatorOpts) GenerateFunc {
 				AfterURI:      p.AfterURI,
 			}
 		}
-		storePosts, err := pgxStore.ListPostsForHotFeed(ctx, params)
+		storePosts, err := pgxStore.ListScoredPosts(ctx, params)
 		if err != nil {
 			return nil, fmt.Errorf("executing ListPostsForHotFeed: %w", err)
 		}
 
 		posts := make([]Post, 0, len(storePosts))
 		for _, p := range storePosts {
-			postCursor, err := json.Marshal(hotnessCursor{
+			postCursor, err := json.Marshal(cursorValues{
 				GenerationSeq: params.Cursor.GenerationSeq,
 				AfterScore:    p.Score,
 				AfterURI:      p.URI,
@@ -412,7 +412,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		DisplayName: "🐾 Test 🚨🛠️",
 		Description: "Experimental version of the '🐾 Hot' feed.\ntest\ntest\n\ndouble break",
 		Priority:    -1,
-	}, hotnessGenerator("classic", generatorOpts{}))
+	}, preScoredGenerator("classic", generatorOpts{}))
 
 	return r
 }

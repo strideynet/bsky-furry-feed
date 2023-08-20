@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/strideynet/bsky-furry-feed/scoring"
 	"os"
 	"os/signal"
 	"time"
@@ -12,7 +13,6 @@ import (
 	"github.com/strideynet/bsky-furry-feed/api"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/feed"
-	"github.com/strideynet/bsky-furry-feed/hotness"
 	"github.com/strideynet/bsky-furry-feed/ingester"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.opentelemetry.io/contrib/detectors/gcp"
@@ -114,7 +114,7 @@ func runE(log *zap.Logger) error {
 
 	ingesterEnabled := os.Getenv("BFF_INGESTER_ENABLED") == "1"
 	apiEnabled := os.Getenv("BFF_API_ENABLED") == "1"
-	hotnessMaterializerEnabled := os.Getenv("BFF_HOTNESS_MATERIALIZER_ENABLED") == "1"
+	scoreMaterializerEnabled := os.Getenv("BFF_SCORE_MATERIALIZER_ENABLED") == "1"
 
 	log.Info("starting", zap.String("mode", string(mode)))
 
@@ -228,14 +228,18 @@ func runE(log *zap.Logger) error {
 		})
 	}
 
-	if hotnessMaterializerEnabled {
-		hm := hotness.NewMaterializer(log.Named("hotness"), pgxStore, hotness.Opts{
-			MaterializationPeriod: 30 * time.Second,
-			RetentionPeriod:       1 * time.Hour,
-			LookbackPeriod:        24 * time.Hour,
-		})
+	if scoreMaterializerEnabled {
+		hm := scoring.NewMaterializer(
+			log.Named("scoring"),
+			pgxStore,
+			scoring.Opts{
+				MaterializationInterval: 30 * time.Second,
+				RetentionPeriod:         1 * time.Hour,
+				LookbackPeriod:          24 * time.Hour,
+			},
+		)
 		eg.Go(func() error {
-			log.Info("hotness materializer started")
+			log.Info("scoring materializer started")
 			return hm.Run(ctx)
 		})
 	}

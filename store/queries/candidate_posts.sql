@@ -77,23 +77,16 @@ WHERE
     cp.uri = sqlc.arg(uri)
 LIMIT 1;
 
--- name: GetLatestHotPostGeneration :one
-SELECT ph.generation_seq
-FROM post_hotness AS ph
-WHERE ph.alg = sqlc.arg(alg)
-ORDER BY ph.generation_seq DESC
-LIMIT 1;
-
--- name: GetHotPosts :many
+-- name: ListScoredPosts :many
 SELECT
     cp.*,
     ph.score
 FROM
     candidate_posts AS cp
 INNER JOIN candidate_actors AS ca ON cp.actor_did = ca.did
-INNER JOIN post_hotness AS ph
+INNER JOIN post_scores AS ph
     ON
-        ph.post_uri = cp.uri AND ph.alg = sqlc.arg(alg)
+        ph.uri = cp.uri AND ph.alg = sqlc.arg(alg)
         AND ph.generation_seq = sqlc.arg(generation_seq)
 WHERE
     cp.is_hidden = false

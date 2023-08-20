@@ -583,12 +583,12 @@ func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNew
 	return posts, nil
 }
 
-func (s *PGXStore) GetLatestHotPostGeneration(ctx context.Context, alg string) (out int64, err error) {
-	ctx, span := tracer.Start(ctx, "pgx_store.get_latest_hot_post_generation")
+func (s *PGXStore) GetLatestScoreGeneration(ctx context.Context, alg string) (out int64, err error) {
+	ctx, span := tracer.Start(ctx, "pgx_store.get_latest_score_generation")
 	defer func() {
 		endSpan(span, err)
 	}()
-	seq, err := s.queries.GetLatestHotPostGeneration(ctx, alg)
+	seq, err := s.queries.GetLatestScoreGeneration(ctx, alg)
 	if err != nil {
 		return 0, err
 	}
@@ -610,14 +610,14 @@ type ListPostsForHotFeedOpts struct {
 	Limit    int
 }
 
-func (s *PGXStore) ListPostsForHotFeed(ctx context.Context, opts ListPostsForHotFeedOpts) (out []gen.GetHotPostsRow, err error) {
+func (s *PGXStore) ListScoredPosts(ctx context.Context, opts ListPostsForHotFeedOpts) (out []gen.ListScoredPostsRow, err error) {
 	// TODO: Don't leak gen.CandidatePost implementation
-	ctx, span := tracer.Start(ctx, "pgx_store.list_posts_for_hot_feed")
+	ctx, span := tracer.Start(ctx, "pgx_store.list_scored_posts")
 	defer func() {
 		endSpan(span, err)
 	}()
 
-	queryParams := gen.GetHotPostsParams{
+	queryParams := gen.ListScoredPostsParams{
 		Alg:           opts.Alg,
 		Hashtags:      opts.Hashtags,
 		HasMedia:      tristateToPgtypeBool(opts.HasMedia),
@@ -630,9 +630,9 @@ func (s *PGXStore) ListPostsForHotFeed(ctx context.Context, opts ListPostsForHot
 		queryParams.Limit = int32(opts.Limit)
 	}
 
-	posts, err := s.queries.GetHotPosts(ctx, queryParams)
+	posts, err := s.queries.ListScoredPosts(ctx, queryParams)
 	if err != nil {
-		return nil, fmt.Errorf("executing GetHotPosts query: %w", err)
+		return nil, fmt.Errorf("executing ListScoredPosts query: %w", err)
 	}
 
 	return posts, nil
@@ -809,10 +809,10 @@ func (s *PGXStore) GetActorProfileHistory(ctx context.Context, did string) (out 
 	return s.queries.GetActorProfileHistory(ctx, did)
 }
 
-func (s *PGXStore) MaterializeClassicPostHotness(ctx context.Context, lookbackPeriod time.Duration) (int64, error) {
-	return s.queries.MaterializeClassicPostHotness(ctx, pgtype.Interval{Valid: true, Microseconds: lookbackPeriod.Microseconds()})
+func (s *PGXStore) MaterializeClassicPostScores(ctx context.Context, lookbackPeriod time.Duration) (int64, error) {
+	return s.queries.MaterializePostScores(ctx, pgtype.Interval{Valid: true, Microseconds: lookbackPeriod.Microseconds()})
 }
 
-func (s *PGXStore) DeleteOldPostHotness(ctx context.Context, retentionPeriod time.Duration) (int64, error) {
-	return s.queries.DeleteOldPostHotness(ctx, pgtype.Interval{Valid: true, Microseconds: retentionPeriod.Microseconds()})
+func (s *PGXStore) DeleteOldPostScores(ctx context.Context, retentionPeriod time.Duration) (int64, error) {
+	return s.queries.DeleteOldPostScores(ctx, pgtype.Interval{Valid: true, Microseconds: retentionPeriod.Microseconds()})
 }

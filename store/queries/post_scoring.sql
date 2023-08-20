@@ -1,11 +1,11 @@
--- name: DeleteOldPostHotness :execrows
-DELETE FROM post_hotness
+-- name: DeleteOldPostScores :execrows
+DELETE FROM post_scores
 WHERE generated_at < NOW() - sqlc.arg(retention_period)::INTERVAL;
 
--- name: MaterializeClassicPostHotness :one
-WITH seq AS (SELECT NEXTVAL('post_hotness_generation_seq') AS seq)
+-- name: MaterializePostScores :one
+WITH seq AS (SELECT NEXTVAL('post_scores_generation_seq') AS seq)
 
-INSERT INTO post_hotness (uri, alg, score, generation_seq)
+INSERT INTO post_scores (uri, alg, score, generation_seq)
 SELECT
     cp.uri AS uri,
     'classic' AS alg,
@@ -22,3 +22,10 @@ WHERE
     cp.deleted_at IS NULL
     AND cp.created_at >= NOW() - sqlc.arg(lookback_period)::INTERVAL
 RETURNING (SELECT seq FROM seq);
+
+-- name: GetLatestScoreGeneration :one
+SELECT ph.generation_seq
+FROM post_scores AS ph
+WHERE ph.alg = sqlc.arg(alg)
+ORDER BY ph.generation_seq DESC
+LIMIT 1;

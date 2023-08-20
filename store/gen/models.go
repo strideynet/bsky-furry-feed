@@ -120,7 +120,7 @@ type FirehoseCommitCursor struct {
 	Cursor int64
 }
 
-type PostHotness struct {
+type PostScore struct {
 	URI           string
 	Alg           string
 	GenerationSeq int64
