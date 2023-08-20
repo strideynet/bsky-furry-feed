@@ -1,0 +1,10 @@
+{
+  "name": "proto",
+  "version": "1.0.0",
+  "description": "",
+  "keywords": [],
+  "author": "",
+  "dependencies": {
+    "@bufbuild/protobuf": "~1.2.0"
+  }
+}

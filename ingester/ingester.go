@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/bluesky-social/indigo/events/schedulers/sequential"
 	"strconv"
 
 	"github.com/bluesky-social/indigo/util"
@@ -259,9 +260,8 @@ func (fi *FirehoseIngester) Start(ctx context.Context) error {
 				return nil
 			},
 		}
-		return events.HandleRepoStream(ctx, con, &events.SequentialScheduler{
-			Do: callbacks.EventHandler,
-		})
+		scheduler := sequential.NewScheduler("main", callbacks.EventHandler)
+		return events.HandleRepoStream(ctx, con, scheduler)
 		// TODO: sometimes stream exits of own accord, we should attempt to
 		// reconnect and enter an "error state".
 	})
@@ -282,7 +282,6 @@ func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncS
 	if err != nil {
 		return fmt.Errorf("parsing timestamp: %w", err)
 	}
-
 	rr, err := repo.ReadRepoFromCar(ctx, bytes.NewReader(evt.Blocks))
 	if err != nil {
 		return fmt.Errorf("reading repo from car: %w", err)

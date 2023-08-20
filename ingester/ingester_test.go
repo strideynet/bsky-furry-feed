@@ -115,6 +115,7 @@ func TestFirehoseIngester(t *testing.T) {
 					Bool:  false,
 					Valid: true,
 				},
+				SelfLabels: []string{},
 			},
 		},
 		{
@@ -153,6 +154,7 @@ func TestFirehoseIngester(t *testing.T) {
 					Bool:  true,
 					Valid: true,
 				},
+				SelfLabels: []string{},
 			},
 		},
 		{
@@ -177,6 +179,7 @@ func TestFirehoseIngester(t *testing.T) {
 					Bool:  false,
 					Valid: true,
 				},
+				SelfLabels: []string{},
 			},
 		},
 		{
@@ -215,6 +218,38 @@ func TestFirehoseIngester(t *testing.T) {
 					Bool:  true,
 					Valid: true,
 				},
+				SelfLabels: []string{},
+			},
+		},
+		{
+			name: "self labels",
+			user: approvedFurry,
+			post: &bsky.FeedPost{
+				LexiconTypeID: "app.bsky.feed.post",
+				CreatedAt:     now.Format(time.RFC3339Nano),
+				Text:          "paws paws paws",
+				Labels: &bsky.FeedPost_Labels{
+					LabelDefs_SelfLabels: &atproto.LabelDefs_SelfLabels{
+						Values: []*atproto.LabelDefs_SelfLabel{
+							{
+								Val: "adult",
+							},
+						},
+					},
+				},
+			},
+			wantPost: &gen.CandidatePost{
+				ActorDID: approvedFurry.DID(),
+				CreatedAt: pgtype.Timestamptz{
+					Time:  now,
+					Valid: true,
+				},
+				Hashtags: []string{},
+				HasMedia: pgtype.Bool{
+					Bool:  false,
+					Valid: true,
+				},
+				SelfLabels: []string{},
 			},
 		},
 	}
@@ -238,6 +273,9 @@ func TestFirehoseIngester(t *testing.T) {
 			if tp.wantPost == nil {
 				// Skip posts we don't expect to show up.
 				continue
+			}
+			if tp.name == "self labels" {
+				t.Skip("see https://github.com/strideynet/bsky-furry-feed/issues/149")
 			}
 			tp := tp
 			t.Run(tp.name, func(t *testing.T) {

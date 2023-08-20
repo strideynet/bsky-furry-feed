@@ -11,13 +11,7 @@ const { data } = await getProfile(props.did);
     class="flex items-center underline hover:no-underline"
     :href="`/users/${data.did}`"
   >
-    <img
-      class="rounded-full mr-1"
-      :src="data.avatar"
-      height="20"
-      width="20"
-      alt=""
-    />
+    <shared-avatar class="mr-1" :url="data.avatar" :size="20" />
     {{ data.handle }}
   </nuxt-link>
 </template>

@@ -48,6 +48,18 @@ async function createActor() {
   await api.createActor({ actorDid: props.did, reason });
   $emit("update");
 }
+
+async function forceApprove() {
+  const reason = prompt("Enter the reason for force-approving the user.");
+
+  if (!reason) {
+    alert("A reason is required to force-approve the user.");
+    return;
+  }
+
+  await api.forceApproveActor({ actorDid: props.did, reason });
+  $emit("update");
+}
 </script>
 
 <template>
@@ -62,6 +74,16 @@ async function createActor() {
         @click="createActor"
       >
         Track user
+      </button>
+    </span>
+    <span
+      v-if="props.status !== undefined && props.status === ActorStatus.NONE"
+    >
+      <button
+        class="rounded-lg py-1 px-2 text-white bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 disabled:bg-blue-300 disabled:dark:bg-blue-500"
+        @click="forceApprove"
+      >
+        Force-approve
       </button>
     </span>
     <span

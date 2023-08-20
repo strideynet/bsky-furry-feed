@@ -3,7 +3,7 @@
 </script>
 
 <svg
-  class="h-8 w-8 text-gray-700 transition-colors duration-75"
+  class="h-8 w-8 text-gray-700 transition-[color] duration-75 dark:text-gray-300"
   fill="currentColor"
   viewBox="0 0 20 20"
 >

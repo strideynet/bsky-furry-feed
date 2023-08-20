@@ -51,21 +51,27 @@ func (q *Queries) CreateCandidateActor(ctx context.Context, arg CreateCandidateA
 }
 
 const createLatestActorProfile = `-- name: CreateLatestActorProfile :exec
-WITH ap as (
-    INSERT INTO actor_profiles
-        (actor_did, commit_cid, created_at, indexed_at, display_name, description)
-    VALUES
-        ($1, $2, $3, $4, $5, $6)
-    ON CONFLICT (actor_did, commit_cid) DO
-    UPDATE SET
-        created_at = EXCLUDED.created_at,
-        indexed_at = EXCLUDED.indexed_at,
-        display_name = EXCLUDED.display_name,
-        description = EXCLUDED.description
-    RETURNING actor_did, commit_cid
-)
+WITH
+    ap as (
+        INSERT INTO actor_profiles
+            (actor_did, commit_cid, created_at, indexed_at, display_name,
+             description, self_labels)
+            VALUES
+                ($1, $2,
+                 $3, $4,
+                 $5, $6,
+                 $7)
+            ON CONFLICT (actor_did, commit_cid) DO
+                UPDATE SET
+                    created_at = EXCLUDED.created_at,
+                    indexed_at = EXCLUDED.indexed_at,
+                    display_name = EXCLUDED.display_name,
+                    description = EXCLUDED.description,
+                    self_labels = EXCLUDED.self_labels
+            RETURNING actor_did, commit_cid)
 UPDATE candidate_actors ca
-SET current_profile_commit_cid = (SELECT commit_cid FROM ap)
+SET
+    current_profile_commit_cid = (SELECT commit_cid FROM ap)
 WHERE
     did = (SELECT actor_did FROM ap)
 `
@@ -77,6 +83,7 @@ type CreateLatestActorProfileParams struct {
 	IndexedAt   pgtype.Timestamptz
 	DisplayName pgtype.Text
 	Description pgtype.Text
+	SelfLabels  []string
 }
 
 func (q *Queries) CreateLatestActorProfile(ctx context.Context, arg CreateLatestActorProfileParams) error {
@@ -87,17 +94,20 @@ func (q *Queries) CreateLatestActorProfile(ctx context.Context, arg CreateLatest
 		arg.IndexedAt,
 		arg.DisplayName,
 		arg.Description,
+		arg.SelfLabels,
 	)
 	return err
 }
 
 const getActorProfileHistory = `-- name: GetActorProfileHistory :many
-SELECT ap.actor_did, ap.commit_cid, ap.created_at, ap.indexed_at, ap.display_name, ap.description
+SELECT
+    ap.actor_did, ap.commit_cid, ap.created_at, ap.indexed_at, ap.display_name, ap.description, ap.self_labels
 FROM
     actor_profiles ap
 WHERE
     ap.actor_did = $1
-ORDER BY created_at DESC
+ORDER BY
+    created_at DESC
 `
 
 func (q *Queries) GetActorProfileHistory(ctx context.Context, actorDid string) ([]ActorProfile, error) {
@@ -116,6 +126,7 @@ func (q *Queries) GetActorProfileHistory(ctx context.Context, actorDid string) (
 			&i.IndexedAt,
 			&i.DisplayName,
 			&i.Description,
+			&i.SelfLabels,
 		); err != nil {
 			return nil, err
 		}
@@ -151,10 +162,13 @@ func (q *Queries) GetCandidateActorByDID(ctx context.Context, did string) (Candi
 }
 
 const getLatestActorProfile = `-- name: GetLatestActorProfile :one
-SELECT ap.actor_did, ap.commit_cid, ap.created_at, ap.indexed_at, ap.display_name, ap.description
+SELECT
+    ap.actor_did, ap.commit_cid, ap.created_at, ap.indexed_at, ap.display_name, ap.description, ap.self_labels
 FROM
     candidate_actors ca
-INNER JOIN actor_profiles ap ON ap.actor_did = ca.did AND ap.commit_cid = ca.current_profile_commit_cid
+        INNER JOIN actor_profiles ap ON ap.actor_did = ca.did AND
+                                        ap.commit_cid =
+                                        ca.current_profile_commit_cid
 WHERE
     ca.did = $1
 `
@@ -169,6 +183,7 @@ func (q *Queries) GetLatestActorProfile(ctx context.Context, did string) (ActorP
 		&i.IndexedAt,
 		&i.DisplayName,
 		&i.Description,
+		&i.SelfLabels,
 	)
 	return i, err
 }
@@ -217,8 +232,8 @@ SELECT did, created_at, is_artist, comment, status, roles, current_profile_commi
 FROM
     candidate_actors ca
 WHERE
-    ca.status = 'approved' AND
-    ca.current_profile_commit_cid IS NULL
+      ca.status = 'approved'
+  AND ca.current_profile_commit_cid IS NULL
 ORDER BY
     did
 `

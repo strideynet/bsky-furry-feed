@@ -32,6 +32,7 @@ func TestChronologicalGenerator(t *testing.T) {
 	artPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "art")
 	nsfwArtPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "nsfwArt")
 	poastPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "poast")
+	nsfwLabelledPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "nsfw-labelled")
 
 	for _, opts := range []store.CreatePostOpts{
 		{
@@ -79,6 +80,16 @@ func TestChronologicalGenerator(t *testing.T) {
 			HasMedia:  true,
 			Raw:       &bsky.FeedPost{},
 		},
+		{
+			URI:        nsfwLabelledPost,
+			ActorDID:   furry.DID(),
+			CreatedAt:  time.Time{},
+			IndexedAt:  time.Time{},
+			Hashtags:   []string{"art"},
+			HasMedia:   true,
+			Raw:        &bsky.FeedPost{},
+			SelfLabels: []string{"sexual"},
+		},
 	} {
 		require.NoError(t, harness.Store.CreatePost(ctx, opts))
 	}
@@ -95,7 +106,14 @@ func TestChronologicalGenerator(t *testing.T) {
 				IsNSFW:   tristate.Maybe,
 				HasMedia: tristate.Maybe,
 			},
-			expectedPosts: []string{fursuitPost, murrsuitPost, artPost, nsfwArtPost, poastPost},
+			expectedPosts: []string{
+				fursuitPost,
+				murrsuitPost,
+				artPost,
+				nsfwArtPost,
+				poastPost,
+				nsfwLabelledPost,
+			},
 		},
 		{
 			name: "all fursuits",
@@ -122,7 +140,7 @@ func TestChronologicalGenerator(t *testing.T) {
 				IsNSFW:   tristate.True,
 				HasMedia: tristate.True,
 			},
-			expectedPosts: []string{nsfwArtPost},
+			expectedPosts: []string{nsfwArtPost, nsfwLabelledPost},
 		},
 	} {
 		test := test

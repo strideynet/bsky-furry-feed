@@ -1,7 +1,8 @@
 <script lang="ts">
   export let href: string,
-    rel = 'noopener noreferrer',
-    target = '_blank';
+    internal = false,
+    rel = internal ? undefined : 'noopener noreferrer',
+    target = internal ? undefined : '_blank';
 </script>
 
 <a

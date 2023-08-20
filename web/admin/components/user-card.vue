@@ -59,7 +59,7 @@ await loadProfile();
     />
 
     <div class="flex gap-3 items-center mb-5">
-      <shared-avatar :url="data.avatar" />
+      <shared-avatar :url="data.avatar" :size="72" />
       <div class="flex flex-col">
         <div class="text-lg">{{ data.displayName || data.handle }}</div>
         <div class="meta">
@@ -85,14 +85,6 @@ await loadProfile();
           </span>
         </div>
         <div v-if="variant === 'profile'" class="meta">
-          <span class="meta-item inline-flex items-center">
-            <icon-check
-              v-if="status === ActorStatus.APPROVED"
-              class="text-green-500"
-            />
-            <icon-cross v-else class="text-red-500" />
-            <span class="text-gray-600 dark:text-gray-400">In list</span>
-          </span>
           <span class="meta-item inline-flex items-center">
             <icon-check v-if="isArtist" class="text-green-500" />
             <icon-cross v-else class="text-red-500" />
