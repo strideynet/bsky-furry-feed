@@ -59,7 +59,7 @@ await loadProfile();
     />
 
     <div class="flex gap-3 items-center mb-5">
-      <shared-avatar :url="data.avatar" />
+      <shared-avatar :url="data.avatar" :size="72" />
       <div class="flex flex-col">
         <div class="text-lg">{{ data.displayName || data.handle }}</div>
         <div class="meta">
