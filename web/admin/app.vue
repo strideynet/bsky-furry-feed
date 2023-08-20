@@ -29,10 +29,11 @@ async function login() {
     .login(identifier.value, password.value)
     .catch((error) => ({ error }));
 
-  if (isSignedIn.error)
+  if (isSignedIn.error) {
     error.value = {
-      message: isSignedIn.error
+      message: isSignedIn.error,
     };
+  }
 }
 </script>
 
@@ -43,20 +44,28 @@ async function login() {
   </div>
   <div v-else class="flex items-center justify-center fixed w-full h-full">
     <div
-      class="mx-auto bg-gray-50 border border-gray-400 dark:border-gray-700 dark:bg-gray-800 py-4 px-5 rounded-lg w-[400px] max-w-[80vw]">
+      class="mx-auto bg-gray-50 border border-gray-400 dark:border-gray-700 dark:bg-gray-800 py-4 px-5 rounded-lg w-[400px] max-w-[80vw]"
+    >
       <h1 class="text-3xl font-bold mb-4">Login</h1>
 
       <div class="flex flex-col mb-4">
         <label class="font-bold mb-1" for="name">Handle</label>
-        <input id="name" v-model="identifier"
-          class="bg-white dark:bg-gray-900 rounded border border-gray-400 dark:border-gray-700 px-2 py-1" type="text" />
+        <input
+          id="name"
+          v-model="identifier"
+          class="bg-white dark:bg-gray-900 rounded border border-gray-400 dark:border-gray-700 px-2 py-1"
+          type="text"
+        />
       </div>
 
       <div class="flex flex-col mb-4">
         <label class="font-bold mb-1" for="password">App password</label>
-        <input id="password" v-model="password"
+        <input
+          id="password"
+          v-model="password"
           class="bg-white dark:bg-gray-900 rounded border border-gray-400 dark:border-gray-700 px-2 py-1"
-          type="password" />
+          type="password"
+        />
       </div>
 
       <div class="flex">

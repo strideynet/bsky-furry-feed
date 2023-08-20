@@ -4,20 +4,20 @@ import { Actor, ActorStatus } from "../../proto/bff/v1/moderation_service_pb";
 const api = await useAPI();
 const pending = ref(0);
 const actor = ref<Actor>();
-const error = ref<{
-  rawMessage: string;
-}>(null);
+const error = ref<string>(null);
 
 const nextActor = async () => {
   error.value = null;
 
-  const queue = await api.listActors({ filterStatus: ActorStatus.PENDING }).catch((err) => {
-    error.value = { rawMessage: err.rawMessage }
+  const queue = await api
+    .listActors({ filterStatus: ActorStatus.PENDING })
+    .catch((err) => {
+      error.value = err.rawMessage;
 
-    return {
-      actors: [],
-    }
-  });
+      return {
+        actors: [],
+      };
+    });
 
   pending.value = queue.actors.length - 1;
   actor.value = queue.actors[0];
@@ -27,7 +27,13 @@ await nextActor();
 </script>
 
 <template>
-  <shared-card v-if="error">{{ error.rawMessage }}</shared-card>
-  <user-card v-else-if="actor" :did="actor.did" :pending="pending" variant="queue" @next="nextActor" />
+  <shared-card v-if="error">{{ error }}</shared-card>
+  <user-card
+    v-else-if="actor"
+    :did="actor.did"
+    :pending="pending"
+    variant="queue"
+    @next="nextActor"
+  />
   <shared-card v-else> No user is in the queue. </shared-card>
 </template>

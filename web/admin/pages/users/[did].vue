@@ -5,9 +5,7 @@ import { ProfileViewDetailed } from "@atproto/api/dist/client/types/app/bsky/act
 
 const api = await useAPI();
 
-const error = ref<{
-  rawMessage: string;
-}>(null);
+const error = ref<string>(null);
 
 const subject = ref() as Ref<ProfileViewDetailed>;
 const agent = newAgent();
@@ -23,29 +21,32 @@ const auditEvents: Ref<AuditEvent[]> = ref([]);
 async function loadEvents() {
   error.value = null;
 
-  const response = await api.listAuditEvents({
-    filterSubjectDid: subject.value.did,
-  }).catch((err) => {
-    error.value = { rawMessage: err.rawMessage };
-    return {
-      auditEvents: [],
-    };
-  });
+  const response = await api
+    .listAuditEvents({
+      filterSubjectDid: subject.value.did,
+    })
+    .catch((err) => {
+      error.value = err.rawMessage;
+      return {
+        auditEvents: [],
+      };
+    });
   auditEvents.value = response.auditEvents;
 }
 
 async function comment(comment: string) {
   error.value = null;
 
-  await api.createCommentAuditEvent({
-    subjectDid: subject.value.did,
-    comment,
-  }).catch((err) => {
-    error.value = { rawMessage: err.rawMessage };
-  });
+  await api
+    .createCommentAuditEvent({
+      subjectDid: subject.value.did,
+      comment,
+    })
+    .catch((err) => {
+      error.value = { rawMessage: err.rawMessage };
+    });
 
-  if (!error.value)
-    await loadEvents();
+  if (!error.value) await loadEvents();
 }
 
 async function refresh() {
@@ -58,15 +59,24 @@ await refresh();
 
 <template>
   <div>
-    <shared-card v-if="error">{{ error.rawMessage }}</shared-card>
+    <shared-card v-if="error">{{ error }}</shared-card>
     <div v-else>
-      <user-card class="mb-5" :did="subject.did" variant="profile" @next="refresh" />
+      <user-card
+        class="mb-5"
+        :did="subject.did"
+        variant="profile"
+        @next="refresh"
+      />
       <h2 class="font-bold mb-3">Comments</h2>
-      <action v-for="action in auditEvents.sort(
-        (a, b) =>
-          (a.createdAt?.toDate().getTime() || 0) -
-          (b.createdAt?.toDate().getTime() || 0)
-      )" :key="action.id" :action="action" />
+      <action
+        v-for="action in auditEvents.sort(
+          (a, b) =>
+            (a.createdAt?.toDate().getTime() || 0) -
+            (b.createdAt?.toDate().getTime() || 0)
+        )"
+        :key="action.id"
+        :action="action"
+      />
       <shared-comment-box @comment="comment" />
     </div>
   </div>
