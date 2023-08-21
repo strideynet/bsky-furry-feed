@@ -4,6 +4,7 @@
 // @ts-nocheck
 
 import { proto3 } from "@bufbuild/protobuf";
+import { Actor } from "./types_pb.js";
 
 /**
  * @generated from message bff.v1.GetMeRequest
@@ -18,7 +19,9 @@ export const GetMeRequest = proto3.makeMessageType(
  */
 export const GetMeResponse = proto3.makeMessageType(
   "bff.v1.GetMeResponse",
-  [],
+  () => [
+    { no: 1, name: "Actor", kind: "message", T: Actor },
+  ],
 );
 
 /**

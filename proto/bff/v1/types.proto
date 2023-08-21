@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+package bff.v1;
+
+option go_package = "github.com/strideynet/bsky-furry-feed/proto/bff/v1;bffv1pb";
+
+enum ActorStatus {
+  ACTOR_STATUS_UNSPECIFIED = 0;
+  ACTOR_STATUS_PENDING = 1;
+  ACTOR_STATUS_APPROVED = 2;
+  ACTOR_STATUS_BANNED = 3;
+  ACTOR_STATUS_NONE = 4;
+}
+
+message Actor {
+  // did is the decentralized identity of the actor. This is also the UID used
+  // for fetching and mutating actors.
+  string did = 1;
+  // is_hidden is a deprecated flag that used to hide accounts. This no longer
+  // has any effect.
+  // Deprecated: Use status.
+  reserved 2;
+  // is_artist is a flag indicating this account is primarily an artist. It
+  // does not currently control any feed placement.
+  bool is_artist = 3;
+  // comment is a short string that is applied to an account when it is added
+  // to the system. This will eventually be replaced by a more powerful system.
+  string comment = 4;
+  // status indicates the actor's current status.
+  ActorStatus status = 5;
+  // created_at indicates the time that the actor was first added to the bff
+  // system - this does not necessarily indicate when they joined bluesky.
+  google.protobuf.Timestamp created_at = 6;
+  // roles is an array of roles this actor holds in relation to actions on the
+  // moderation API.
+  repeated string roles = 7;
+}

@@ -5,6 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3 } from "@bufbuild/protobuf";
+import type { Actor } from "./types_pb.js";
 
 /**
  * @generated from message bff.v1.GetMeRequest
@@ -29,6 +30,11 @@ export declare class GetMeRequest extends Message<GetMeRequest> {
  * @generated from message bff.v1.GetMeResponse
  */
 export declare class GetMeResponse extends Message<GetMeResponse> {
+  /**
+   * @generated from field: bff.v1.Actor Actor = 1;
+   */
+  Actor?: Actor;
+
   constructor(data?: PartialMessage<GetMeResponse>);
 
   static readonly runtime: typeof proto3;
