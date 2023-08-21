@@ -5,9 +5,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/jackc/pgx/v5"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
+	"github.com/strideynet/bsky-furry-feed/store"
 	"go.uber.org/zap"
 	"strings"
 )
@@ -104,7 +104,7 @@ func (a *AuthEngine) auth(ctx context.Context, req connect.AnyRequest) (*authCon
 	// Find the actor in the database so we know their roles and status to
 	// be able to evaluate authz.
 	actor, err := a.ActorGetter.GetActorByDID(ctx, did)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil && !errors.Is(err, store.ErrNotFound) {
 		return nil, fmt.Errorf("fetching actor for token: %w", err)
 	}
 

@@ -8,6 +8,11 @@ import (
 	"net"
 )
 
+var (
+	// ErrNotFound indicates that no resource was found during a store call.
+	ErrNotFound = fmt.Errorf("not found")
+)
+
 type DirectConnector struct {
 	URI string
 }

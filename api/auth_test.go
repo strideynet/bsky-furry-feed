@@ -3,9 +3,9 @@ package api
 import (
 	"connectrpc.com/connect"
 	"context"
-	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
+	"github.com/strideynet/bsky-furry-feed/store"
 	"go.uber.org/zap/zaptest"
 	"google.golang.org/protobuf/proto"
 	"reflect"
@@ -18,8 +18,7 @@ type memoryActorGetter map[string]*v1.Actor
 func (mag memoryActorGetter) GetActorByDID(_ context.Context, did string) (*v1.Actor, error) {
 	v, ok := mag[did]
 	if !ok {
-		// TODO: We really ought to have a store.NotFound
-		return nil, pgx.ErrNoRows
+		return nil, store.ErrNotFound
 	}
 	return proto.Clone(v).(*v1.Actor), nil
 }
