@@ -27,7 +27,7 @@ await nextActor();
 </script>
 
 <template>
-  <shared-card v-if="error">{{ error }}</shared-card>
+  <shared-card v-if="error" variant="error">{{ error }}</shared-card>
   <user-card
     v-else-if="actor"
     :did="actor.did"

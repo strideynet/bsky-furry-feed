@@ -59,7 +59,7 @@ await refresh();
 
 <template>
   <div>
-    <shared-card v-if="error">{{ error }}</shared-card>
+    <shared-card v-if="error" variant="error">{{ error }}</shared-card>
     <div v-else>
       <user-card
         class="mb-5"
