@@ -3,8 +3,10 @@ package testenv
 import (
 	"context"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
+	"time"
 	"unsafe"
 
 	"github.com/bluesky-social/indigo/xrpc"
@@ -69,8 +71,15 @@ func StartDatabase(ctx context.Context, t *testing.T) (url string) {
 	require.NoError(t, err, "getting postgres host")
 
 	url = fmt.Sprintf("postgres://bff:bff@%s:%d/bff?sslmode=disable", host, port.Int())
-	migrator, err := migrate.New("file://../store/migrations", url)
-	require.NoError(t, err, "initializing migration runner")
+
+	// Use EventuallyWithT as it can take a few additional seconds for the db
+	// to become stably healthy.
+	var migrator *migrate.Migrate
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		migrator, err = migrate.New("file://../store/migrations", url)
+		assert.NoError(t, err, "initializing migration runner")
+	}, time.Second*5, time.Millisecond*250)
+
 	require.NoError(t, migrator.Up(), "applying migrations")
 
 	return url
