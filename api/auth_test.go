@@ -3,11 +3,13 @@ package api
 import (
 	"connectrpc.com/connect"
 	"context"
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.uber.org/zap/zaptest"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/testing/protocmp"
 	"reflect"
 	"testing"
 	"unsafe"
@@ -55,6 +57,10 @@ func TestAuthEngine(t *testing.T) {
 			},
 			want: &authContext{
 				DID: "exists",
+				Actor: &v1.Actor{
+					Did:   "exists",
+					Roles: []string{"admin"},
+				},
 			},
 		},
 		{
@@ -116,7 +122,7 @@ func TestAuthEngine(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			require.Equal(t, tt.want, got)
+			require.Empty(t, cmp.Diff(tt.want, got, protocmp.Transform()))
 		})
 	}
 }
