@@ -64,35 +64,33 @@ func TestAuthEngine(t *testing.T) {
 			},
 		},
 		{
+			name:          "success: non-existent user",
+			headerKey:     "Authorization",
+			headerValue:   "Bearer non-existent",
+			procedureName: "/bff.v1.ModerationService/Ping",
+			want: &authContext{
+				DID:   "non-existent",
+				Actor: nil,
+			},
+		},
+		{
 			name:          "no header",
 			procedureName: "/bff.v1.ModerationService/CreateActor",
-			actor: &v1.Actor{
-				Did:   "exists",
-				Roles: []string{"admin"},
-			},
-			wantErr: "unauthenticated: no token provided",
+			wantErr:       "unauthenticated: no token provided",
 		},
 		{
 			name:          "malformed header",
 			headerKey:     "Authorization",
 			headerValue:   "rewgwegnmwerogkmowergiopwergiopwergop",
 			procedureName: "/bff.v1.ModerationService/CreateActor",
-			actor: &v1.Actor{
-				Did:   "exists",
-				Roles: []string{"admin"},
-			},
-			wantErr: "unauthenticated: malformed header",
+			wantErr:       "unauthenticated: malformed header",
 		},
 		{
 			name:          "unsupported auth type",
 			headerKey:     "Authorization",
 			headerValue:   "OtherType foo",
 			procedureName: "/bff.v1.ModerationService/CreateActor",
-			actor: &v1.Actor{
-				Did:   "exists",
-				Roles: []string{"admin"},
-			},
-			wantErr: "unauthenticated: only Bearer auth supported",
+			wantErr:       "unauthenticated: only Bearer auth supported",
 		},
 	}
 

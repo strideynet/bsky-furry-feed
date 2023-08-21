@@ -101,26 +101,25 @@ func (a *AuthEngine) auth(ctx context.Context, req connect.AnyRequest) (*authCon
 		return nil, fmt.Errorf("validating token: %w", err)
 	}
 
-	// Find the actor in the database so we know their roles and status to
-	// be able to evaluate authz.
+	// Try to fetch the actor to find any roles they have associated with them.
+	// If they don't exist - we continue - so act with caution, actor may be
+	// nil.
 	actor, err := a.ActorGetter.GetActorByDID(ctx, did)
 	if err != nil && !errors.Is(err, store.ErrNotFound) {
 		return nil, fmt.Errorf("fetching actor for token: %w", err)
 	}
 
-	actorRoles := []string{}
+	// Default to no roles if the actor does not exist.
+	var actorRoles []string
 	if actor != nil {
 		actorRoles = actor.Roles
 	}
 
-	// Use a map of string to bool as a quasi set.
+	// Convert the actors roles to a quasi-set of permitted RPCs
 	permissions := map[string]bool{}
-	// We know the user is authenticated so we grant them the authenticated
-	// user role.
 	for _, permission := range authenticatedUserPermissions {
 		permissions[permission] = true
 	}
-	// Now we grant them all the permissions from their roles
 	for _, role := range actorRoles {
 		rolePerms, ok := roleToPermissions[role]
 		if !ok {
@@ -128,7 +127,7 @@ func (a *AuthEngine) auth(ctx context.Context, req connect.AnyRequest) (*authCon
 			a.Log.Warn(
 				"unrecognized role",
 				zap.String("role", role),
-				zap.String("actor_did", actor.Did),
+				zap.String("actor_did", did),
 			)
 			continue
 		}
@@ -142,12 +141,12 @@ func (a *AuthEngine) auth(ctx context.Context, req connect.AnyRequest) (*authCon
 	if !permissions[procedureName] {
 		return nil, connect.NewError(
 			connect.CodePermissionDenied,
-			fmt.Errorf("user (%s) does not have permissions for %q", actor.Did, procedureName),
+			fmt.Errorf("user (%s) does not have permissions for %q", did, procedureName),
 		)
 	}
 
 	return &authContext{
-		DID:   actor.Did,
+		DID:   did,
 		Actor: actor,
 	}, nil
 }
