@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Actor, ActorStatus } from "../../proto/bff/v1/moderation_service_pb";
+import { Actor, ActorStatus } from "../../proto/bff/v1/types_pb";
 
 const api = await useAPI();
 const pending = ref(0);

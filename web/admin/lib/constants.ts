@@ -1,4 +1,4 @@
-import { ActorStatus } from "../../proto/bff/v1/moderation_service_pb";
+import { ActorStatus } from "../../proto/bff/v1/types_pb";
 
 export const ACTOR_STATUS_LABELS = {
   [ActorStatus.UNSPECIFIED]: "Unspecified",
