@@ -16,6 +16,13 @@ func (u *UserServiceHandler) GetMe(ctx context.Context, req *connect.Request[v1.
 	if err != nil {
 		return nil, fmt.Errorf("authenticating: %w", err)
 	}
+	// no error is thrown by auth if the user doesn't exist, so we need to check
+	// and throw the error here instead.
+	if ac.Actor == nil {
+		return nil, connect.NewError(
+			connect.CodeNotFound, fmt.Errorf("not found"),
+		)
+	}
 	return connect.NewResponse(&v1.GetMeResponse{
 		Actor: ac.Actor,
 	}), nil
