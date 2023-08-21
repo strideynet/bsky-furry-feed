@@ -5,7 +5,7 @@ import { ProfileViewDetailed } from "@atproto/api/dist/client/types/app/bsky/act
 
 const api = await useAPI();
 
-const error = ref<string>(null);
+const error = ref<string>();
 
 const subject = ref() as Ref<ProfileViewDetailed>;
 const agent = newAgent();
@@ -19,7 +19,7 @@ async function loadProfile() {
 const auditEvents: Ref<AuditEvent[]> = ref([]);
 
 async function loadEvents() {
-  error.value = null;
+  error.value = "";
 
   const response = await api
     .listAuditEvents({
@@ -35,7 +35,7 @@ async function loadEvents() {
 }
 
 async function comment(comment: string) {
-  error.value = null;
+  error.value = "";
 
   await api
     .createCommentAuditEvent({
@@ -43,7 +43,7 @@ async function comment(comment: string) {
       comment,
     })
     .catch((err) => {
-      error.value = { rawMessage: err.rawMessage };
+      error.value = err.rawMessage;
     });
 
   if (!error.value) await loadEvents();

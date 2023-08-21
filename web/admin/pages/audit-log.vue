@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const api = await useAPI();
 
-const error = ref<string>(null);
+const error = ref<string>();
 
 const { auditEvents } = await api.listAuditEvents({}).catch((err) => {
   error.value = err.rawMessage;

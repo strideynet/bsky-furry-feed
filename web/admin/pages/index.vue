@@ -4,10 +4,10 @@ import { Actor, ActorStatus } from "../../proto/bff/v1/moderation_service_pb";
 const api = await useAPI();
 const pending = ref(0);
 const actor = ref<Actor>();
-const error = ref<string>(null);
+const error = ref<string>();
 
 const nextActor = async () => {
-  error.value = null;
+  error.value = "";
 
   const queue = await api
     .listActors({ filterStatus: ActorStatus.PENDING })
