@@ -24,11 +24,16 @@ const user = await useUser();
 
 async function login() {
   error.value = null;
+
   const isSignedIn = await auth
     .login(identifier.value, password.value)
     .catch((error) => ({ error }));
 
-  error.value = !isSignedIn;
+  if (isSignedIn.error) {
+    error.value = {
+      message: isSignedIn.error,
+    };
+  }
 }
 </script>
 
@@ -64,6 +69,9 @@ async function login() {
       </div>
 
       <div class="flex">
+        <label v-if="error" class="mr-auto px-1 py-2 text-red-600">
+          {{ error.message }}
+        </label>
         <button class="ml-auto px-3 py-2 rounded-lg bg-blue-600" @click="login">
           Login
         </button>
