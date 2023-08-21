@@ -3,6 +3,8 @@ package testenv
 import (
 	"context"
 	"fmt"
+	"github.com/docker/go-connections/nat"
+	"github.com/testcontainers/testcontainers-go/wait"
 	"reflect"
 	"testing"
 	"unsafe"
@@ -20,7 +22,6 @@ import (
 	ipfsLog "github.com/ipfs/go-log"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func init() {
@@ -51,11 +52,14 @@ func ExtractClientFromTestUser(user *indigoTest.TestUser) *xrpc.Client {
 func StartDatabase(ctx context.Context, t *testing.T) (url string) {
 	t.Helper()
 
+	waitStrategy := wait.ForSQL("5432/tcp", "postgres", func(host string, port nat.Port) string {
+		return fmt.Sprintf("postgres://bff:bff@%s:%d/bff?sslmode=disable", host, port.Int())
+	})
 	container, err := postgres.RunContainer(ctx,
 		postgres.WithDatabase("bff"),
 		postgres.WithUsername("bff"),
 		postgres.WithPassword("bff"),
-		testcontainers.WithWaitStrategy(wait.ForLog("database system is ready to accept connections")),
+		testcontainers.WithWaitStrategy(waitStrategy),
 	)
 	require.NoError(t, err, "starting postgres container")
 	t.Cleanup(func() {
