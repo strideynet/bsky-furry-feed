@@ -3,10 +3,8 @@ package testenv
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
-	"time"
 	"unsafe"
 
 	"github.com/bluesky-social/indigo/xrpc"
@@ -57,7 +55,7 @@ func StartDatabase(ctx context.Context, t *testing.T) (url string) {
 		postgres.WithDatabase("bff"),
 		postgres.WithUsername("bff"),
 		postgres.WithPassword("bff"),
-		testcontainers.WithWaitStrategy(wait.ForListeningPort("5432/tcp")),
+		testcontainers.WithWaitStrategy(wait.ForLog("database system is ready to accept connections")),
 	)
 	require.NoError(t, err, "starting postgres container")
 	t.Cleanup(func() {
@@ -72,14 +70,8 @@ func StartDatabase(ctx context.Context, t *testing.T) (url string) {
 
 	url = fmt.Sprintf("postgres://bff:bff@%s:%d/bff?sslmode=disable", host, port.Int())
 
-	// Use EventuallyWithT as it can take a few additional seconds for the db
-	// to become stably healthy.
-	var migrator *migrate.Migrate
-	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		migrator, err = migrate.New("file://../store/migrations", url)
-		assert.NoError(t, err, "initializing migration runner")
-	}, time.Second*5, time.Millisecond*250)
-
+	migrator, err := migrate.New("file://../store/migrations", url)
+	require.NoError(t, err, "initializing migration runner")
 	require.NoError(t, migrator.Up(), "applying migrations")
 
 	return url
