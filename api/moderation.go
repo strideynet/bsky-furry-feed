@@ -3,12 +3,13 @@ package api
 import (
 	"context"
 	"fmt"
-	"github.com/strideynet/bsky-furry-feed/bluesky"
-	"golang.org/x/exp/slices"
 	"time"
 
+	"github.com/bluesky-social/indigo/api/bsky"
+	"github.com/strideynet/bsky-furry-feed/bluesky"
+	"golang.org/x/exp/slices"
+
 	"connectrpc.com/connect"
-	"github.com/rs/xid"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.uber.org/zap"
@@ -39,7 +40,13 @@ func (m *ModerationServiceHandler) BanActor(ctx context.Context, req *connect.Re
 		return nil, fmt.Errorf("getting bsky client: %w", err)
 	}
 
-	actor, err := m.store.UpdateActor(ctx, store.UpdateActorOpts{
+	tx, err := m.store.TX(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("starting transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	actor, err := tx.UpdateActor(ctx, store.UpdateActorOpts{
 		DID:          req.Msg.ActorDid,
 		UpdateStatus: v1.ActorStatus_ACTOR_STATUS_BANNED,
 	})
@@ -47,18 +54,24 @@ func (m *ModerationServiceHandler) BanActor(ctx context.Context, req *connect.Re
 		return nil, fmt.Errorf("updating actor: %w", err)
 	}
 
-	go m.emitAudit(store.CreateAuditEventOpts{
+	_, err = tx.CreateAuditEvent(ctx, store.CreateAuditEventOpts{
 		Payload: &v1.BanActorAuditPayload{
 			Reason: req.Msg.Reason,
 		},
 		ActorDID:   authCtx.DID,
 		SubjectDID: req.Msg.ActorDid,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("creating audit event: %w", err)
+	}
 
 	if err := c.Unfollow(ctx, req.Msg.ActorDid); err != nil {
 		return nil, fmt.Errorf("unfollowing actor: %w", err)
 	}
 
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("committing transaction: %w", err)
+	}
 	return connect.NewResponse(&v1.BanActorResponse{
 		Actor: actor,
 	}), nil
@@ -82,32 +95,46 @@ func (m *ModerationServiceHandler) UnapproveActor(ctx context.Context, req *conn
 		return nil, fmt.Errorf("getting bsky client: %w", err)
 	}
 
-	actor, err := m.store.UpdateActor(ctx, store.UpdateActorOpts{
-		DID: req.Msg.ActorDid,
-		Predicate: func(actor *v1.Actor) error {
-			if actor.Status != v1.ActorStatus_ACTOR_STATUS_APPROVED {
-				return fmt.Errorf("candidate actor status was %q not %q", actor.Status, v1.ActorStatus_ACTOR_STATUS_APPROVED)
-			}
-			return nil
-		},
+	tx, err := m.store.TX(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("starting transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	actor, err := tx.GetActorByDID(ctx, req.Msg.ActorDid)
+	if err != nil {
+		return nil, fmt.Errorf("fetching actor: %w", err)
+	}
+	if actor.Status != v1.ActorStatus_ACTOR_STATUS_APPROVED {
+		return nil, fmt.Errorf("candidate actor status was %q not %q", actor.Status, v1.ActorStatus_ACTOR_STATUS_APPROVED)
+	}
+
+	actor, err = tx.UpdateActor(ctx, store.UpdateActorOpts{
+		DID:          req.Msg.ActorDid,
 		UpdateStatus: v1.ActorStatus_ACTOR_STATUS_NONE,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("updating actor: %w", err)
 	}
 
-	go m.emitAudit(store.CreateAuditEventOpts{
+	_, err = tx.CreateAuditEvent(ctx, store.CreateAuditEventOpts{
 		Payload: &v1.UnapproveActorAuditPayload{
 			Reason: req.Msg.Reason,
 		},
 		ActorDID:   authCtx.DID,
 		SubjectDID: req.Msg.ActorDid,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("creating audit event: %w", err)
+	}
 
 	if err := c.Unfollow(ctx, req.Msg.ActorDid); err != nil {
 		return nil, fmt.Errorf("unfollowing actor: %w", err)
 	}
 
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("committing transaction: %w", err)
+	}
 	return connect.NewResponse(&v1.UnapproveActorResponse{
 		Actor: actor,
 	}), nil
@@ -126,7 +153,13 @@ func (m *ModerationServiceHandler) CreateActor(ctx context.Context, req *connect
 		return nil, fmt.Errorf("reason is required")
 	}
 
-	actor, err := m.store.CreateActor(ctx, store.CreateActorOpts{
+	tx, err := m.store.TX(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("starting transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	actor, err := tx.CreateActor(ctx, store.CreateActorOpts{
 		Status:  v1.ActorStatus_ACTOR_STATUS_NONE,
 		DID:     req.Msg.ActorDid,
 		Comment: "",
@@ -135,14 +168,20 @@ func (m *ModerationServiceHandler) CreateActor(ctx context.Context, req *connect
 		return nil, fmt.Errorf("creating actor: %w", err)
 	}
 
-	go m.emitAudit(store.CreateAuditEventOpts{
+	_, err = tx.CreateAuditEvent(ctx, store.CreateAuditEventOpts{
 		Payload: &v1.CreateActorAuditPayload{
 			Reason: req.Msg.Reason,
 		},
 		ActorDID:   authCtx.DID,
 		SubjectDID: req.Msg.ActorDid,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("creating audit event: %w", err)
+	}
 
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("committing transaction: %w", err)
+	}
 	return connect.NewResponse(&v1.CreateActorResponse{
 		Actor: actor,
 	}), nil
@@ -293,14 +332,22 @@ func (m *ModerationServiceHandler) ProcessApprovalQueue(ctx context.Context, req
 		return nil, fmt.Errorf("getting bsky client: %w", err)
 	}
 
-	_, err = m.store.UpdateActor(ctx, store.UpdateActorOpts{
-		DID: actorDID,
-		Predicate: func(actor *v1.Actor) error {
-			if actor.Status != v1.ActorStatus_ACTOR_STATUS_PENDING {
-				return fmt.Errorf("candidate actor status was %q not %q", actor.Status, v1.ActorStatus_ACTOR_STATUS_PENDING)
-			}
-			return nil
-		},
+	tx, err := m.store.TX(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("starting transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	actor, err := tx.GetActorByDID(ctx, actorDID)
+	if err != nil {
+		return nil, fmt.Errorf("fetching actor: %w", err)
+	}
+	if actor.Status != v1.ActorStatus_ACTOR_STATUS_PENDING {
+		return nil, fmt.Errorf("candidate actor status was %q not %q", actor.Status, v1.ActorStatus_ACTOR_STATUS_PENDING)
+	}
+
+	_, err = tx.UpdateActor(ctx, store.UpdateActorOpts{
+		DID:            actorDID,
 		UpdateStatus:   statusToSet,
 		UpdateIsArtist: isArtist,
 	})
@@ -309,12 +356,12 @@ func (m *ModerationServiceHandler) ProcessApprovalQueue(ctx context.Context, req
 	}
 
 	if statusToSet == v1.ActorStatus_ACTOR_STATUS_APPROVED {
-		if err := m.updateProfileAndFollow(ctx, actorDID, c); err != nil {
+		if err := m.updateProfileAndFollow(ctx, actorDID, c, tx); err != nil {
 			return nil, fmt.Errorf("updating profile and following actor: %w", err)
 		}
 	}
 
-	go m.emitAudit(store.CreateAuditEventOpts{
+	_, err = tx.CreateAuditEvent(ctx, store.CreateAuditEventOpts{
 		Payload: &v1.ProcessApprovalQueueAuditPayload{
 			Action: req.Msg.Action,
 			Reason: req.Msg.Reason,
@@ -322,7 +369,13 @@ func (m *ModerationServiceHandler) ProcessApprovalQueue(ctx context.Context, req
 		ActorDID:   authCtx.DID,
 		SubjectDID: actorDID,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("creating audit event: %w", err)
+	}
 
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("committing transaction: %w", err)
+	}
 	return connect.NewResponse(&v1.ProcessApprovalQueueResponse{}), nil
 }
 
@@ -344,39 +397,66 @@ func (m *ModerationServiceHandler) ForceApproveActor(ctx context.Context, req *c
 		return nil, fmt.Errorf("getting bsky client: %w", err)
 	}
 
-	_, err = m.store.UpdateActor(ctx, store.UpdateActorOpts{
-		DID: req.Msg.ActorDid,
-		Predicate: func(actor *v1.Actor) error {
-			if !slices.Contains([]v1.ActorStatus{v1.ActorStatus_ACTOR_STATUS_PENDING, v1.ActorStatus_ACTOR_STATUS_NONE}, actor.Status) {
-				return fmt.Errorf("candidate actor status was %q not pending or none", actor.Status)
-			}
-			return nil
-		},
+	tx, err := m.store.TX(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("starting transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	actor, err := tx.GetActorByDID(ctx, req.Msg.ActorDid)
+	if err != nil {
+		return nil, fmt.Errorf("fetching actor: %w", err)
+	}
+	if !slices.Contains([]v1.ActorStatus{v1.ActorStatus_ACTOR_STATUS_PENDING, v1.ActorStatus_ACTOR_STATUS_NONE}, actor.Status) {
+		return nil, fmt.Errorf("candidate actor status was %q not pending or none", actor.Status)
+	}
+
+	_, err = tx.UpdateActor(ctx, store.UpdateActorOpts{
+		DID:          req.Msg.ActorDid,
 		UpdateStatus: v1.ActorStatus_ACTOR_STATUS_APPROVED,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("updating actor: %w", err)
 	}
 
-	if err := m.updateProfileAndFollow(ctx, req.Msg.ActorDid, c); err != nil {
+	if err := m.updateProfileAndFollow(ctx, req.Msg.ActorDid, c, tx); err != nil {
 		return nil, fmt.Errorf("updating profile and following actor: %w", err)
 	}
 
-	go m.emitAudit(store.CreateAuditEventOpts{
+	_, err = tx.CreateAuditEvent(ctx, store.CreateAuditEventOpts{
 		Payload: &v1.ForceApproveActorAuditPayload{
 			Reason: req.Msg.Reason,
 		},
 		ActorDID:   authCtx.DID,
 		SubjectDID: req.Msg.ActorDid,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("creating audit event: %w", err)
+	}
 
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("committing transaction: %w", err)
+	}
 	return connect.NewResponse(&v1.ForceApproveActorResponse{}), nil
 }
 
-func (m *ModerationServiceHandler) updateProfileAndFollow(ctx context.Context, actorDID string, c *bluesky.Client) error {
-	profile, err := c.GetProfile(ctx, actorDID)
+func (m *ModerationServiceHandler) updateProfileAndFollow(ctx context.Context, actorDID string, c *bluesky.Client, tx *store.PGXTX) error {
+	head, err := c.GetHead(ctx, actorDID)
+	if err != nil {
+		return fmt.Errorf("getting head: %w", err)
+	}
+
+	record, err := c.GetRecord(ctx, "app.bsky.actor.profile", head, actorDID, "self")
 	if err != nil {
 		return fmt.Errorf("getting profile: %w", err)
+	}
+
+	var profile *bsky.ActorProfile
+	switch record := record.(type) {
+	case *bsky.ActorProfile:
+		profile = record
+	default:
+		return fmt.Errorf("expected *bsky.ActorProfile, got %T", record)
 	}
 
 	displayName := ""
@@ -389,9 +469,9 @@ func (m *ModerationServiceHandler) updateProfileAndFollow(ctx context.Context, a
 		description = *profile.Description
 	}
 
-	if err := m.store.CreateLatestActorProfile(ctx, store.CreateLatestActorProfileOpts{
-		DID:         actorDID,
-		ID:          xid.New().String(),
+	if err := tx.CreateLatestActorProfile(ctx, store.CreateLatestActorProfileOpts{
+		ActorDID:    actorDID,
+		CommitCID:   head.String(),
 		CreatedAt:   time.Now(), // NOTE: The Firehose reader uses the server time but we use the local time here. This may cause staleness if the firehose gives us an older timestamp but a newer update.
 		IndexedAt:   time.Now(),
 		DisplayName: displayName,
@@ -405,15 +485,4 @@ func (m *ModerationServiceHandler) updateProfileAndFollow(ctx context.Context, a
 	}
 
 	return nil
-}
-
-func (m *ModerationServiceHandler) emitAudit(opts store.CreateAuditEventOpts) {
-	// TODO: Consider pulling this out of a goroutine and making it part
-	// of the transaction in the database?
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-	_, err := m.store.CreateAuditEvent(ctx, opts)
-	if err != nil {
-		m.log.Error("failed to emit audit event", zap.Error(err))
-	}
 }

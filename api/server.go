@@ -63,6 +63,8 @@ func New(
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{
 			"https://admin.furryli.st",
+			"https://*.vercel.app",
+			"https://furryli.st",
 			"http://localhost:*",
 			"https://buf.build",
 		},
@@ -95,6 +97,17 @@ func New(
 	mux.Handle(
 		bffv1pbconnect.NewModerationServiceHandler(
 			modSvcHandler,
+			connect.WithInterceptors(
+				unaryLoggingInterceptor(log),
+				otelconnect.NewInterceptor(),
+			),
+		),
+	)
+	mux.Handle(
+		bffv1pbconnect.NewPublicServiceHandler(
+			&PublicServiceHandler{
+				feedMetaSourcer: feedRegistry,
+			},
 			connect.WithInterceptors(
 				unaryLoggingInterceptor(log),
 				otelconnect.NewInterceptor(),

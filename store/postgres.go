@@ -13,6 +13,7 @@ import (
 	"github.com/rs/xid"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store/gen"
+	"github.com/strideynet/bsky-furry-feed/tristate"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -53,7 +54,7 @@ func ConnectPGXStore(ctx context.Context, log *zap.Logger, connector PoolConnect
 	return &PGXStore{
 		log:     log,
 		pool:    pool,
-		queries: gen.New(),
+		queries: gen.New(pool),
 	}, nil
 }
 
@@ -94,7 +95,6 @@ func actorToProto(actor gen.CandidateActor) (*v1.Actor, error) {
 	}
 	return &v1.Actor{
 		Did:       actor.DID,
-		IsHidden:  actor.IsHidden,
 		IsArtist:  actor.IsArtist,
 		Comment:   actor.Comment,
 		Status:    status,
@@ -109,6 +109,53 @@ func endSpan(span trace.Span, err error) {
 		span.SetStatus(codes.Error, err.Error())
 	}
 	span.End()
+}
+
+type PGXTX struct {
+	*PGXStore
+	tx pgx.Tx
+}
+
+// Rollback rolls back a transaction if it has not already been committed.
+// This is safe to call when the transaction has been committed, so defer this
+// when creating a transaction.
+func (s *PGXTX) Rollback() {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	err := s.tx.Rollback(ctx)
+	if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+		s.PGXStore.log.Error(
+			"failed to rollback transaction", zap.Error(err),
+		)
+	}
+}
+
+func (s *PGXTX) Commit(ctx context.Context) error {
+	// return without wrapping since it'll just result in duplication of
+	// "committing transaction".
+	return s.tx.Commit(ctx)
+}
+
+func (s *PGXTX) TX(_ context.Context) (*PGXStore, error) {
+	// TODO(noah): Evaluate if we can support nested TX.
+	return nil, fmt.Errorf("nested transactions not supported")
+}
+
+func (s *PGXStore) TX(ctx context.Context) (*PGXTX, error) {
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("starting transaction: %w", err)
+	}
+
+	return &PGXTX{
+		tx: tx,
+		PGXStore: &PGXStore{
+			log:     s.log,
+			pool:    s.pool,
+			queries: gen.New(tx),
+		},
+	}, nil
 }
 
 type ListActorsOpts struct {
@@ -131,7 +178,7 @@ func (s *PGXStore) ListActors(ctx context.Context, opts ListActorsOpts) (out []*
 		statusFilter.ActorStatus = status
 	}
 
-	actors, err := s.queries.ListCandidateActors(ctx, s.pool, statusFilter)
+	actors, err := s.queries.ListCandidateActors(ctx, statusFilter)
 	if err != nil {
 		return nil, fmt.Errorf("executing ListCandidateActors query: %w", err)
 	}
@@ -153,7 +200,7 @@ func (s *PGXStore) GetActorByDID(ctx context.Context, did string) (out *v1.Actor
 		endSpan(span, err)
 	}()
 
-	actor, err := s.queries.GetCandidateActorByDID(ctx, s.pool, did)
+	actor, err := s.queries.GetCandidateActorByDID(ctx, did)
 	if err != nil {
 		return nil, fmt.Errorf("executing GetCandidateActorByDID query: %w", err)
 	}
@@ -197,7 +244,7 @@ func (s *PGXStore) CreateActor(ctx context.Context, opts CreateActorOpts) (out *
 		},
 		Roles: opts.Roles,
 	}
-	created, err := s.queries.CreateCandidateActor(ctx, s.pool, queryParams)
+	created, err := s.queries.CreateCandidateActor(ctx, queryParams)
 	if err != nil {
 		return nil, fmt.Errorf("executing CreateCandidateActor query: %w", err)
 	}
@@ -213,10 +260,6 @@ func (s *PGXStore) CreateActor(ctx context.Context, opts CreateActorOpts) (out *
 type UpdateActorOpts struct {
 	// DID is the DID of the actor to update.
 	DID string
-	// Predicate is a function which is called on the fetched actor before
-	// updating it. This allows rules to be placed that prevent invalid state
-	// transitions.
-	Predicate func(actor *v1.Actor) error
 	// TODO: These fields should be optional
 	UpdateStatus   v1.ActorStatus
 	UpdateIsArtist bool
@@ -228,33 +271,6 @@ func (s *PGXStore) UpdateActor(ctx context.Context, opts UpdateActorOpts) (out *
 	defer func() {
 		endSpan(span, err)
 	}()
-
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("beginning transaction: %w", err)
-	}
-	defer func() {
-		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			s.log.Warn("failed to roll back transaction", zap.Error(err))
-		}
-	}()
-
-	dbActor, err := s.queries.GetCandidateActorByDID(ctx, tx, opts.DID)
-	if err != nil {
-		return nil, fmt.Errorf("fetching actor: %w", err)
-	}
-
-	actor, err := actorToProto(dbActor)
-	if err != nil {
-		return nil, fmt.Errorf("converting actor: %w", err)
-	}
-
-	if opts.Predicate != nil {
-		err = opts.Predicate(actor)
-		if err != nil {
-			return nil, fmt.Errorf("update predicate: %w", err)
-		}
-	}
 
 	status, err := actorStatusFromProto(opts.UpdateStatus)
 	if err != nil {
@@ -275,16 +291,12 @@ func (s *PGXStore) UpdateActor(ctx context.Context, opts UpdateActorOpts) (out *
 			String: opts.UpdateComment,
 		},
 	}
-	created, err := s.queries.UpdateCandidateActor(ctx, tx, queryParams)
+	created, err := s.queries.UpdateCandidateActor(ctx, queryParams)
 	if err != nil {
 		return nil, fmt.Errorf("executing UpdateCandidateActor query: %w", err)
 	}
 
-	if err = tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("committing transaction: %w", err)
-	}
-
-	actor, err = actorToProto(created)
+	actor, err := actorToProto(created)
 	if err != nil {
 		return nil, fmt.Errorf("converting actor: %w", err)
 	}
@@ -293,12 +305,13 @@ func (s *PGXStore) UpdateActor(ctx context.Context, opts UpdateActorOpts) (out *
 
 type CreateLatestActorProfileOpts struct {
 	// DID is the DID of the actor to update.
-	DID         string
-	ID          string
+	ActorDID    string
+	CommitCID   string
 	CreatedAt   time.Time
 	IndexedAt   time.Time
 	DisplayName string
 	Description string
+	SelfLabels  []string
 }
 
 func (s *PGXStore) CreateLatestActorProfile(ctx context.Context, opts CreateLatestActorProfileOpts) (err error) {
@@ -306,6 +319,10 @@ func (s *PGXStore) CreateLatestActorProfile(ctx context.Context, opts CreateLate
 	defer func() {
 		endSpan(span, err)
 	}()
+
+	if opts.SelfLabels == nil {
+		opts.SelfLabels = []string{}
+	}
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -318,8 +335,8 @@ func (s *PGXStore) CreateLatestActorProfile(ctx context.Context, opts CreateLate
 	}()
 
 	queryParams := gen.CreateLatestActorProfileParams{
-		DID: opts.DID,
-		ID:  opts.ID,
+		ActorDID:  opts.ActorDID,
+		CommitCID: opts.CommitCID,
 		CreatedAt: pgtype.Timestamptz{
 			Valid: true,
 			Time:  opts.CreatedAt,
@@ -336,8 +353,9 @@ func (s *PGXStore) CreateLatestActorProfile(ctx context.Context, opts CreateLate
 			Valid:  true,
 			String: opts.Description,
 		},
+		SelfLabels: opts.SelfLabels,
 	}
-	err = s.queries.CreateLatestActorProfile(ctx, tx, queryParams)
+	err = s.queries.CreateLatestActorProfile(ctx, queryParams)
 	if err != nil {
 		return fmt.Errorf("executing CreateLatestActorProfile query: %w", err)
 	}
@@ -376,7 +394,7 @@ func (s *PGXStore) CreateLike(ctx context.Context, opts CreateLikeOpts) (err err
 			Valid: true,
 		},
 	}
-	err = s.queries.CreateCandidateLike(ctx, s.pool, queryParams)
+	err = s.queries.CreateCandidateLike(ctx, queryParams)
 	if err != nil {
 		return fmt.Errorf("executing CreateCandidateLike query: %w", err)
 	}
@@ -394,7 +412,7 @@ func (s *PGXStore) DeleteLike(ctx context.Context, opts DeleteLikeOpts) (err err
 		endSpan(span, err)
 	}()
 
-	err = s.queries.SoftDeleteCandidateLike(ctx, s.pool, opts.URI)
+	err = s.queries.SoftDeleteCandidateLike(ctx, opts.URI)
 	if err != nil {
 		return fmt.Errorf("executing SoftDeleteCandidateLike query: %w", err)
 	}
@@ -403,14 +421,14 @@ func (s *PGXStore) DeleteLike(ctx context.Context, opts DeleteLikeOpts) (err err
 }
 
 type CreatePostOpts struct {
-	URI       string
-	ActorDID  string
-	CreatedAt time.Time
-	IndexedAt time.Time
-	Tags      []string
-	Hashtags  []string
-	HasMedia  bool
-	Raw       *bsky.FeedPost
+	URI        string
+	ActorDID   string
+	CreatedAt  time.Time
+	IndexedAt  time.Time
+	Hashtags   []string
+	HasMedia   bool
+	Raw        *bsky.FeedPost
+	SelfLabels []string
 }
 
 func (s *PGXStore) CreatePost(ctx context.Context, opts CreatePostOpts) (err error) {
@@ -418,6 +436,10 @@ func (s *PGXStore) CreatePost(ctx context.Context, opts CreatePostOpts) (err err
 	defer func() {
 		endSpan(span, err)
 	}()
+
+	if opts.SelfLabels == nil {
+		opts.SelfLabels = []string{}
+	}
 
 	queryParams := gen.CreateCandidatePostParams{
 		URI:      opts.URI,
@@ -430,15 +452,15 @@ func (s *PGXStore) CreatePost(ctx context.Context, opts CreatePostOpts) (err err
 			Time:  opts.IndexedAt,
 			Valid: true,
 		},
-		Tags:     opts.Tags,
 		Hashtags: opts.Hashtags,
 		HasMedia: pgtype.Bool{
 			Valid: true,
 			Bool:  opts.HasMedia,
 		},
-		Raw: opts.Raw,
+		Raw:        opts.Raw,
+		SelfLabels: opts.SelfLabels,
 	}
-	err = s.queries.CreateCandidatePost(ctx, s.pool, queryParams)
+	err = s.queries.CreateCandidatePost(ctx, queryParams)
 	if err != nil {
 		return fmt.Errorf("executing CreateCandidatePost query: %w", err)
 	}
@@ -456,7 +478,7 @@ func (s *PGXStore) DeletePost(ctx context.Context, opts DeletePostOpts) (err err
 		endSpan(span, err)
 	}()
 
-	err = s.queries.SoftDeleteCandidatePost(ctx, s.pool, opts.URI)
+	err = s.queries.SoftDeleteCandidatePost(ctx, opts.URI)
 	if err != nil {
 		return fmt.Errorf("executing SoftDeleteCandidatePost query: %w", err)
 	}
@@ -491,7 +513,7 @@ func (s *PGXStore) CreateFollow(ctx context.Context, opts CreateFollowOpts) (err
 			Valid: true,
 		},
 	}
-	err = s.queries.CreateCandidateFollow(ctx, s.pool, queryParams)
+	err = s.queries.CreateCandidateFollow(ctx, queryParams)
 	if err != nil {
 		return fmt.Errorf("executing CreateCandidateFollowParams query: %w", err)
 	}
@@ -509,7 +531,7 @@ func (s *PGXStore) DeleteFollow(ctx context.Context, opts DeleteFollowOpts) (err
 		endSpan(span, err)
 	}()
 
-	err = s.queries.SoftDeleteCandidateFollow(ctx, s.pool, opts.URI)
+	err = s.queries.SoftDeleteCandidateFollow(ctx, opts.URI)
 	if err != nil {
 		return fmt.Errorf("executing SoftDeleteCandidateFollow query: %w", err)
 	}
@@ -518,10 +540,19 @@ func (s *PGXStore) DeleteFollow(ctx context.Context, opts DeleteFollowOpts) (err
 }
 
 type ListPostsForNewFeedOpts struct {
-	CursorTime  time.Time
-	RequireTags []string
-	ExcludeTags []string
-	Limit       int
+	CursorTime time.Time
+	Hashtags   []string
+	IsNSFW     tristate.Tristate
+	HasMedia   tristate.Tristate
+	Limit      int
+}
+
+func tristateToPgtypeBool(t tristate.Tristate) pgtype.Bool {
+	b := (*bool)(t)
+	if b == nil {
+		return pgtype.Bool{Valid: false}
+	}
+	return pgtype.Bool{Valid: true, Bool: *b}
 }
 
 func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNewFeedOpts) (out []gen.CandidatePost, err error) {
@@ -536,16 +567,72 @@ func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNew
 			Valid: true,
 			Time:  opts.CursorTime,
 		},
-		RequireTags: opts.RequireTags,
-		ExcludeTags: opts.ExcludeTags,
+		Hashtags: opts.Hashtags,
+		HasMedia: tristateToPgtypeBool(opts.HasMedia),
+		IsNSFW:   tristateToPgtypeBool(opts.IsNSFW),
 	}
 	if opts.Limit != 0 {
 		queryParams.Limit = int32(opts.Limit)
 	}
 
-	posts, err := s.queries.GetFurryNewFeed(ctx, s.pool, queryParams)
+	posts, err := s.queries.GetFurryNewFeed(ctx, queryParams)
 	if err != nil {
 		return nil, fmt.Errorf("executing GetFurryNewFeed query: %w", err)
+	}
+
+	return posts, nil
+}
+
+func (s *PGXStore) GetLatestScoreGeneration(ctx context.Context, alg string) (out int64, err error) {
+	ctx, span := tracer.Start(ctx, "pgx_store.get_latest_score_generation")
+	defer func() {
+		endSpan(span, err)
+	}()
+	seq, err := s.queries.GetLatestScoreGeneration(ctx, alg)
+	if err != nil {
+		return 0, err
+	}
+	return seq, nil
+}
+
+type ListPostsForHotFeedCursor struct {
+	GenerationSeq int64
+	AfterScore    float32
+	AfterURI      string
+}
+
+type ListPostsForHotFeedOpts struct {
+	Alg      string
+	Cursor   ListPostsForHotFeedCursor
+	Hashtags []string
+	IsNSFW   tristate.Tristate
+	HasMedia tristate.Tristate
+	Limit    int
+}
+
+func (s *PGXStore) ListScoredPosts(ctx context.Context, opts ListPostsForHotFeedOpts) (out []gen.ListScoredPostsRow, err error) {
+	// TODO: Don't leak gen.CandidatePost implementation
+	ctx, span := tracer.Start(ctx, "pgx_store.list_scored_posts")
+	defer func() {
+		endSpan(span, err)
+	}()
+
+	queryParams := gen.ListScoredPostsParams{
+		Alg:           opts.Alg,
+		Hashtags:      opts.Hashtags,
+		HasMedia:      tristateToPgtypeBool(opts.HasMedia),
+		IsNSFW:        tristateToPgtypeBool(opts.IsNSFW),
+		GenerationSeq: opts.Cursor.GenerationSeq,
+		AfterScore:    opts.Cursor.AfterScore,
+		AfterURI:      opts.Cursor.AfterURI,
+	}
+	if opts.Limit != 0 {
+		queryParams.Limit = int32(opts.Limit)
+	}
+
+	posts, err := s.queries.ListScoredPosts(ctx, queryParams)
+	if err != nil {
+		return nil, fmt.Errorf("executing ListScoredPosts query: %w", err)
 	}
 
 	return posts, nil
@@ -554,32 +641,6 @@ func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNew
 type ListPostsWithLikesOpts struct {
 	CursorTime time.Time
 	Limit      int
-}
-
-func (s *PGXStore) ListPostsWithLikes(ctx context.Context, opts ListPostsWithLikesOpts) (out []gen.GetPostsWithLikesRow, err error) {
-	// TODO: Don't leak gen.GetPostsWithLikesRow implementation
-	ctx, span := tracer.Start(ctx, "pgx_store.list_posts_with_likes")
-	defer func() {
-		endSpan(span, err)
-	}()
-
-	queryParams := gen.GetPostsWithLikesParams{
-		CursorTimestamp: pgtype.Timestamptz{
-			Valid: true,
-			Time:  opts.CursorTime,
-		},
-	}
-
-	if opts.Limit != 0 {
-		queryParams.Limit = int32(opts.Limit)
-	}
-
-	posts, err := s.queries.GetPostsWithLikes(ctx, s.pool, queryParams)
-	if err != nil {
-		return nil, fmt.Errorf("executing GetFurryNewFeed query: %w", err)
-	}
-
-	return posts, nil
 }
 
 func auditEventToProto(in gen.AuditEvent) (*v1.AuditEvent, error) {
@@ -629,7 +690,7 @@ func (s *PGXStore) ListAuditEvents(ctx context.Context, opts ListAuditEventsOpts
 		}
 	}
 
-	data, err := s.queries.ListAuditEvents(ctx, s.pool, queryParams)
+	data, err := s.queries.ListAuditEvents(ctx, queryParams)
 	if err != nil {
 		return nil, fmt.Errorf("executing ListAuditEvents query: %w", err)
 	}
@@ -678,7 +739,7 @@ func (s *PGXStore) CreateAuditEvent(ctx context.Context, opts CreateAuditEventOp
 		SubjectRecordUri: opts.SubjectRecordURI,
 		Payload:          payloadBytes,
 	}
-	data, err := s.queries.CreateAuditEvent(ctx, s.pool, queryParams)
+	data, err := s.queries.CreateAuditEvent(ctx, queryParams)
 	if err != nil {
 		return nil, fmt.Errorf("executing CreateAuditEvent query: %w", err)
 	}
@@ -691,7 +752,41 @@ func (s *PGXStore) CreateAuditEvent(ctx context.Context, opts CreateAuditEventOp
 	return out, nil
 }
 
+func (s *PGXStore) GetFirehoseCommitCursor(ctx context.Context) (out int64, err error) {
+	out, err = s.queries.GetFirehoseCommitCursor(ctx)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Special sentinel value for no cursor persisted.
+			return -1, nil
+		}
+		return 0, err
+	}
+	return out, nil
+}
+
+func (s *PGXStore) SetFirehoseCommitCursor(ctx context.Context, cursor int64) (err error) {
+	return s.queries.SetFirehoseCommitCursor(ctx, cursor)
+}
+
 func (s *PGXStore) GetPostByURI(ctx context.Context, uri string) (out gen.CandidatePost, err error) {
 	// TODO: Return a proto type rather than exposing gen.CandidatePost
-	return s.queries.GetPostByURI(ctx, s.pool, uri)
+	return s.queries.GetPostByURI(ctx, uri)
+}
+
+func (s *PGXStore) GetLatestActorProfile(ctx context.Context, did string) (out gen.ActorProfile, err error) {
+	// TODO: Return a proto type rather than exposing gen.ActorProfile
+	return s.queries.GetLatestActorProfile(ctx, did)
+}
+
+func (s *PGXStore) GetActorProfileHistory(ctx context.Context, did string) (out []gen.ActorProfile, err error) {
+	// TODO: Return a proto type rather than exposing gen.ActorProfile
+	return s.queries.GetActorProfileHistory(ctx, did)
+}
+
+func (s *PGXStore) MaterializeClassicPostScores(ctx context.Context, lookbackPeriod time.Duration) (int64, error) {
+	return s.queries.MaterializePostScores(ctx, pgtype.Interval{Valid: true, Microseconds: lookbackPeriod.Microseconds()})
+}
+
+func (s *PGXStore) DeleteOldPostScores(ctx context.Context, retentionPeriod time.Duration) (int64, error) {
+	return s.queries.DeleteOldPostScores(ctx, pgtype.Interval{Valid: true, Microseconds: retentionPeriod.Microseconds()})
 }

@@ -14,66 +14,80 @@ import (
 
 const createCandidatePost = `-- name: CreateCandidatePost :exec
 INSERT INTO
-    candidate_posts (uri, actor_did, created_at, indexed_at, tags, hashtags,
-                     has_media, raw)
+candidate_posts (
+    uri, actor_did, created_at, indexed_at, hashtags, has_media, raw, self_labels
+)
 VALUES
-    ($1, $2, $3, $4, $5, $6, $7, $8)
+($1, $2, $3, $4, $5, $6, $7, $8)
 `
 
 type CreateCandidatePostParams struct {
-	URI       string
-	ActorDID  string
-	CreatedAt pgtype.Timestamptz
-	IndexedAt pgtype.Timestamptz
-	Tags      []string
-	Hashtags  []string
-	HasMedia  pgtype.Bool
-	Raw       *bsky.FeedPost
+	URI        string
+	ActorDID   string
+	CreatedAt  pgtype.Timestamptz
+	IndexedAt  pgtype.Timestamptz
+	Hashtags   []string
+	HasMedia   pgtype.Bool
+	Raw        *bsky.FeedPost
+	SelfLabels []string
 }
 
-func (q *Queries) CreateCandidatePost(ctx context.Context, db DBTX, arg CreateCandidatePostParams) error {
-	_, err := db.Exec(ctx, createCandidatePost,
+func (q *Queries) CreateCandidatePost(ctx context.Context, arg CreateCandidatePostParams) error {
+	_, err := q.db.Exec(ctx, createCandidatePost,
 		arg.URI,
 		arg.ActorDID,
 		arg.CreatedAt,
 		arg.IndexedAt,
-		arg.Tags,
 		arg.Hashtags,
 		arg.HasMedia,
 		arg.Raw,
+		arg.SelfLabels,
 	)
 	return err
 }
 
 const getFurryNewFeed = `-- name: GetFurryNewFeed :many
-SELECT
-    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden, cp.tags, cp.deleted_at, cp.raw, cp.hashtags, cp.has_media
+SELECT cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_hidden, cp.deleted_at, cp.raw, cp.hashtags, cp.has_media, cp.self_labels
 FROM
-    candidate_posts cp
-        INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
+    candidate_posts AS cp
+INNER JOIN candidate_actors AS ca ON cp.actor_did = ca.did
 WHERE
-      cp.is_hidden = false
-  AND ca.status = 'approved'
-  AND ($1::TEXT[] = '{}' OR $1::TEXT[] <@ cp.tags)
-  AND ($2::TEXT[] = '{}' OR NOT ($2::TEXT[] && cp.tags))
-  AND (cp.indexed_at < $3)
+      -- Only include posts by approved actors
+      ca.status = 'approved'
+      -- Remove posts hidden by our moderators
+  AND cp.is_hidden = false
+      -- Remove posts deleted by the actors
   AND cp.deleted_at IS NULL
+      -- Match at least one of the queried hashtags. If unspecified, do not filter.
+  AND (COALESCE($1::TEXT[], '{}') = '{}' OR
+       $1::TEXT[] && cp.hashtags)
+      -- Match has_media status. If unspecified, do not filter.
+  AND ($2::BOOLEAN IS NULL OR
+       COALESCE(cp.has_media, false) = $2)
+      -- Filter by NSFW status. If unspecified, do not filter.
+  AND ($3::BOOLEAN IS NULL OR
+       ((ARRAY ['nsfw', 'mursuit', 'murrsuit'] && cp.hashtags) OR
+        (ARRAY ['porn', 'nudity', 'sexual'] && cp.self_labels)) = $3)
+      -- Remove posts newer than the cursor timestamp
+  AND (cp.indexed_at < $4)
 ORDER BY
     cp.indexed_at DESC
-LIMIT $4
+LIMIT $5
 `
 
 type GetFurryNewFeedParams struct {
-	RequireTags     []string
-	ExcludeTags     []string
+	Hashtags        []string
+	HasMedia        pgtype.Bool
+	IsNSFW          pgtype.Bool
 	CursorTimestamp pgtype.Timestamptz
 	Limit           int32
 }
 
-func (q *Queries) GetFurryNewFeed(ctx context.Context, db DBTX, arg GetFurryNewFeedParams) ([]CandidatePost, error) {
-	rows, err := db.Query(ctx, getFurryNewFeed,
-		arg.RequireTags,
-		arg.ExcludeTags,
+func (q *Queries) GetFurryNewFeed(ctx context.Context, arg GetFurryNewFeedParams) ([]CandidatePost, error) {
+	rows, err := q.db.Query(ctx, getFurryNewFeed,
+		arg.Hashtags,
+		arg.HasMedia,
+		arg.IsNSFW,
 		arg.CursorTimestamp,
 		arg.Limit,
 	)
@@ -89,13 +103,12 @@ func (q *Queries) GetFurryNewFeed(ctx context.Context, db DBTX, arg GetFurryNewF
 			&i.ActorDID,
 			&i.CreatedAt,
 			&i.IndexedAt,
-			&i.IsNSFW,
 			&i.IsHidden,
-			&i.Tags,
 			&i.DeletedAt,
 			&i.Raw,
 			&i.Hashtags,
 			&i.HasMedia,
+			&i.SelfLabels,
 		); err != nil {
 			return nil, err
 		}
@@ -108,100 +121,124 @@ func (q *Queries) GetFurryNewFeed(ctx context.Context, db DBTX, arg GetFurryNewF
 }
 
 const getPostByURI = `-- name: GetPostByURI :one
-SELECT uri, actor_did, created_at, indexed_at, is_nsfw, is_hidden, tags, deleted_at, raw, hashtags, has_media
+SELECT uri, actor_did, created_at, indexed_at, is_hidden, deleted_at, raw, hashtags, has_media, self_labels
 FROM
-    candidate_posts cp
+    candidate_posts AS cp
 WHERE
     cp.uri = $1
 LIMIT 1
 `
 
-func (q *Queries) GetPostByURI(ctx context.Context, db DBTX, uri string) (CandidatePost, error) {
-	row := db.QueryRow(ctx, getPostByURI, uri)
+func (q *Queries) GetPostByURI(ctx context.Context, uri string) (CandidatePost, error) {
+	row := q.db.QueryRow(ctx, getPostByURI, uri)
 	var i CandidatePost
 	err := row.Scan(
 		&i.URI,
 		&i.ActorDID,
 		&i.CreatedAt,
 		&i.IndexedAt,
-		&i.IsNSFW,
 		&i.IsHidden,
-		&i.Tags,
 		&i.DeletedAt,
 		&i.Raw,
 		&i.Hashtags,
 		&i.HasMedia,
+		&i.SelfLabels,
 	)
 	return i, err
 }
 
-const getPostsWithLikes = `-- name: GetPostsWithLikes :many
+const listScoredPosts = `-- name: ListScoredPosts :many
 SELECT
-    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_nsfw, cp.is_hidden, cp.tags, cp.deleted_at, cp.raw, cp.hashtags, cp.has_media,
-    (SELECT
-         COUNT(*)
-     FROM
-         candidate_likes cl
-     WHERE
-           cl.subject_uri = cp.uri
-       AND (cl.indexed_at < $1)
-       AND cl.deleted_at IS NULL) AS likes
+    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_hidden, cp.deleted_at, cp.raw, cp.hashtags, cp.has_media, cp.self_labels,
+    ph.score
 FROM
-    candidate_posts cp
-        INNER JOIN candidate_actors ca ON cp.actor_did = ca.did
+    candidate_posts AS cp
+INNER JOIN candidate_actors AS ca ON cp.actor_did = ca.did
+INNER JOIN post_scores AS ph
+    ON
+        ph.uri = cp.uri AND ph.alg = $1
+        AND ph.generation_seq = $2
 WHERE
-      cp.is_hidden = false
-  AND ca.status = 'approved'
-  AND ($1::TIMESTAMPTZ IS NULL OR
-       cp.indexed_at < $1)
-  AND cp.deleted_at IS NULL
+    cp.is_hidden = false
+    AND ca.status = 'approved'
+    AND (
+        COALESCE($3::TEXT [], '{}') = '{}'
+        OR $3::TEXT [] && cp.hashtags
+    )
+    AND (
+        $4::BOOLEAN IS NULL
+        OR COALESCE(cp.has_media, false) = $4
+    )
+    AND (
+        $5::BOOLEAN IS NULL
+        OR (ARRAY['nsfw', 'mursuit', 'murrsuit'] && cp.hashtags)
+        = $5
+    )
+    AND cp.deleted_at IS NULL
+    AND (
+        (ph.score, ph.uri)
+        < ($6::REAL, $7::TEXT)
+    )
 ORDER BY
-    cp.indexed_at DESC
-LIMIT $2
+    ph.score DESC, ph.uri DESC
+LIMIT $8
 `
 
-type GetPostsWithLikesParams struct {
-	CursorTimestamp pgtype.Timestamptz
-	Limit           int32
+type ListScoredPostsParams struct {
+	Alg           string
+	GenerationSeq int64
+	Hashtags      []string
+	HasMedia      pgtype.Bool
+	IsNSFW        pgtype.Bool
+	AfterScore    float32
+	AfterURI      string
+	Limit         int32
 }
 
-type GetPostsWithLikesRow struct {
-	URI       string
-	ActorDID  string
-	CreatedAt pgtype.Timestamptz
-	IndexedAt pgtype.Timestamptz
-	IsNSFW    bool
-	IsHidden  bool
-	Tags      []string
-	DeletedAt pgtype.Timestamptz
-	Raw       *bsky.FeedPost
-	Hashtags  []string
-	HasMedia  pgtype.Bool
-	Likes     int64
+type ListScoredPostsRow struct {
+	URI        string
+	ActorDID   string
+	CreatedAt  pgtype.Timestamptz
+	IndexedAt  pgtype.Timestamptz
+	IsHidden   bool
+	DeletedAt  pgtype.Timestamptz
+	Raw        *bsky.FeedPost
+	Hashtags   []string
+	HasMedia   pgtype.Bool
+	SelfLabels []string
+	Score      float32
 }
 
-func (q *Queries) GetPostsWithLikes(ctx context.Context, db DBTX, arg GetPostsWithLikesParams) ([]GetPostsWithLikesRow, error) {
-	rows, err := db.Query(ctx, getPostsWithLikes, arg.CursorTimestamp, arg.Limit)
+func (q *Queries) ListScoredPosts(ctx context.Context, arg ListScoredPostsParams) ([]ListScoredPostsRow, error) {
+	rows, err := q.db.Query(ctx, listScoredPosts,
+		arg.Alg,
+		arg.GenerationSeq,
+		arg.Hashtags,
+		arg.HasMedia,
+		arg.IsNSFW,
+		arg.AfterScore,
+		arg.AfterURI,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetPostsWithLikesRow
+	var items []ListScoredPostsRow
 	for rows.Next() {
-		var i GetPostsWithLikesRow
+		var i ListScoredPostsRow
 		if err := rows.Scan(
 			&i.URI,
 			&i.ActorDID,
 			&i.CreatedAt,
 			&i.IndexedAt,
-			&i.IsNSFW,
 			&i.IsHidden,
-			&i.Tags,
 			&i.DeletedAt,
 			&i.Raw,
 			&i.Hashtags,
 			&i.HasMedia,
-			&i.Likes,
+			&i.SelfLabels,
+			&i.Score,
 		); err != nil {
 			return nil, err
 		}
@@ -215,14 +252,14 @@ func (q *Queries) GetPostsWithLikes(ctx context.Context, db DBTX, arg GetPostsWi
 
 const softDeleteCandidatePost = `-- name: SoftDeleteCandidatePost :exec
 UPDATE
-    candidate_posts
+candidate_posts
 SET
     deleted_at = NOW()
 WHERE
     uri = $1
 `
 
-func (q *Queries) SoftDeleteCandidatePost(ctx context.Context, db DBTX, uri string) error {
-	_, err := db.Exec(ctx, softDeleteCandidatePost, uri)
+func (q *Queries) SoftDeleteCandidatePost(ctx context.Context, uri string) error {
+	_, err := q.db.Exec(ctx, softDeleteCandidatePost, uri)
 	return err
 }

@@ -29,11 +29,13 @@ spec:
       serviceAccountName: bff-ingester
       containers:
       - name: ingester
-        image: ghcr.io/strideynet/bsky-furry-feed/bffsrv:df6fc4dc9132be5ce4811cae74c6b3beb11732e5
+        image: ghcr.io/strideynet/bsky-furry-feed/bffsrv:v0.0.28
         env:
           - name: ENV
             value: production
           - name: BFF_INGESTER_ENABLED
+            value: "1"
+          - name: BFF_SCORE_MATERIALIZER_ENABLED
             value: "1"
         envFrom:
           - secretRef:
@@ -45,7 +47,7 @@ spec:
         resources:
           requests:
             memory: 512Mi # 512Mi is minimum
-            cpu: 300m # 250m is minimum
+            cpu: 250m # 250m is minimum in 250m increments
 ---
 apiVersion: monitoring.googleapis.com/v1
 kind: PodMonitoring

@@ -14,7 +14,7 @@ import (
 const createCandidateFollow = `-- name: CreateCandidateFollow :exec
 INSERT INTO
     candidate_follows (uri, actor_did, subject_did, created_at,
-                     indexed_at)
+                       indexed_at)
 VALUES
     ($1, $2, $3, $4, $5)
 `
@@ -27,8 +27,8 @@ type CreateCandidateFollowParams struct {
 	IndexedAt  pgtype.Timestamptz
 }
 
-func (q *Queries) CreateCandidateFollow(ctx context.Context, db DBTX, arg CreateCandidateFollowParams) error {
-	_, err := db.Exec(ctx, createCandidateFollow,
+func (q *Queries) CreateCandidateFollow(ctx context.Context, arg CreateCandidateFollowParams) error {
+	_, err := q.db.Exec(ctx, createCandidateFollow,
 		arg.URI,
 		arg.ActorDID,
 		arg.SubjectDid,
@@ -47,7 +47,7 @@ WHERE
     uri = $1
 `
 
-func (q *Queries) SoftDeleteCandidateFollow(ctx context.Context, db DBTX, uri string) error {
-	_, err := db.Exec(ctx, softDeleteCandidateFollow, uri)
+func (q *Queries) SoftDeleteCandidateFollow(ctx context.Context, uri string) error {
+	_, err := q.db.Exec(ctx, softDeleteCandidateFollow, uri)
 	return err
 }

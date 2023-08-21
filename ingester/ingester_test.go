@@ -2,6 +2,9 @@ package ingester_test
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/api/bsky"
 	lexutil "github.com/bluesky-social/indigo/lex/util"
@@ -12,14 +15,11 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	bff "github.com/strideynet/bsky-furry-feed"
 	"github.com/strideynet/bsky-furry-feed/ingester"
 	bffv1pb "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"github.com/strideynet/bsky-furry-feed/store/gen"
 	"github.com/strideynet/bsky-furry-feed/testenv"
-	"testing"
-	"time"
 )
 
 // TestFirehoseIngester intends to fully integration test the ingester against
@@ -110,12 +110,12 @@ func TestFirehoseIngester(t *testing.T) {
 					Time:  now,
 					Valid: true,
 				},
-				Tags:     []string{},
 				Hashtags: []string{},
 				HasMedia: pgtype.Bool{
 					Bool:  false,
 					Valid: true,
 				},
+				SelfLabels: []string{},
 			},
 		},
 		{
@@ -142,12 +142,6 @@ func TestFirehoseIngester(t *testing.T) {
 					Time:  now,
 					Valid: true,
 				},
-				Tags: []string{
-					bff.TagFursuitMedia,
-					bff.TagArt,
-					bff.TagNSFW,
-					bff.TagCommissionsOpen,
-				},
 				Hashtags: []string{
 					"fursuit",
 					"murrsuit",
@@ -160,6 +154,7 @@ func TestFirehoseIngester(t *testing.T) {
 					Bool:  true,
 					Valid: true,
 				},
+				SelfLabels: []string{},
 			},
 		},
 		{
@@ -177,7 +172,6 @@ func TestFirehoseIngester(t *testing.T) {
 					Time:  now,
 					Valid: true,
 				},
-				Tags: []string{},
 				Hashtags: []string{
 					"seni", "ısırır", "isirır",
 				},
@@ -185,6 +179,77 @@ func TestFirehoseIngester(t *testing.T) {
 					Bool:  false,
 					Valid: true,
 				},
+				SelfLabels: []string{},
+			},
+		},
+		{
+			name: "hashtags in alt",
+			user: approvedFurry,
+			post: &bsky.FeedPost{
+				LexiconTypeID: "app.bsky.feed.post",
+				CreatedAt:     now.Format(time.RFC3339Nano),
+				Text:          "some very undescriptive text",
+				Embed: &bsky.FeedPost_Embed{
+					EmbedImages: &bsky.EmbedImages{
+						LexiconTypeID: "app.bsky.embed.images",
+						Images: []*bsky.EmbedImages_Image{
+							{
+								Alt: "#fursuit #murrsuit #furryart #commsopen #nsfw #bigBurgers",
+							},
+						},
+					},
+				},
+			},
+			wantPost: &gen.CandidatePost{
+				ActorDID: approvedFurry.DID(),
+				CreatedAt: pgtype.Timestamptz{
+					Time:  now,
+					Valid: true,
+				},
+				Hashtags: []string{
+					"fursuit",
+					"murrsuit",
+					"furryart",
+					"commsopen",
+					"nsfw",
+					"bigburgers",
+				},
+				HasMedia: pgtype.Bool{
+					Bool:  true,
+					Valid: true,
+				},
+				SelfLabels: []string{},
+			},
+		},
+		{
+			name: "self labels",
+			user: approvedFurry,
+			post: &bsky.FeedPost{
+				LexiconTypeID: "app.bsky.feed.post",
+				CreatedAt:     now.Format(time.RFC3339Nano),
+				Text:          "paws paws paws",
+				Labels: &bsky.FeedPost_Labels{
+					LabelDefs_SelfLabels: &atproto.LabelDefs_SelfLabels{
+						Values: []*atproto.LabelDefs_SelfLabel{
+							{
+								Val: "adult",
+							},
+						},
+					},
+				},
+			},
+			wantPost: &gen.CandidatePost{
+				ActorDID: approvedFurry.DID(),
+				CreatedAt: pgtype.Timestamptz{
+					Time:  now,
+					Valid: true,
+				},
+				Hashtags: []string{},
+				HasMedia: pgtype.Bool{
+					Bool:  false,
+					Valid: true,
+				},
+				SelfLabels: []string{},
 			},
 		},
 	}
@@ -208,6 +273,9 @@ func TestFirehoseIngester(t *testing.T) {
 			if tp.wantPost == nil {
 				// Skip posts we don't expect to show up.
 				continue
+			}
+			if tp.name == "self labels" {
+				t.Skip("see https://github.com/strideynet/bsky-furry-feed/issues/149")
 			}
 			tp := tp
 			t.Run(tp.name, func(t *testing.T) {

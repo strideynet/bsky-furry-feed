@@ -12,6 +12,7 @@
     "@nuxt/devtools": "latest",
     "@nuxt/eslint-config": "^0.1.1",
     "@nuxtjs/tailwindcss": "^6.8.0",
+    "@types/dompurify": "^3.0.2",
     "@types/node": "^18.16.19",
     "@typescript-eslint/eslint-plugin": "^6.1.0",
     "@typescript-eslint/parser": "^6.1.0",
@@ -24,6 +25,8 @@
     "@atproto/api": "^0.4.0",
     "@bufbuild/connect": "^0.11.0",
     "@bufbuild/connect-web": "^0.11.0",
-    "@bufbuild/protobuf": "1.2.0"
+    "@bufbuild/protobuf": "1.2.0",
+    "dompurify": "^3.0.5",
+    "marked": "^7.0.1"
   }
 }

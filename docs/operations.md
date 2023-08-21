@@ -26,3 +26,14 @@ care of the "password" element (short lived tokens are injected).
 
 Permissions may be a bit screwy at the moment. You'll need to manually grant
 access to tables to cloudsqliamserviceaccount and cloudsqliamuser.
+
+### Runbook
+
+1. Cut release on GitHub with tag
+2. Wait for docker image build to succeed
+3. If migration is necessary. If so, run it
+4. If migration created tables, assign permissions to the correct groups
+5. Update k8s manifests
+6. Apply manifests
+7. Monitor deployment
+8. Celebrate

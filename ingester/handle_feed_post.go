@@ -8,7 +8,6 @@ import (
 
 	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/srinathh/hashtag"
-	bff "github.com/strideynet/bsky-furry-feed"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"golang.org/x/exp/maps"
@@ -16,37 +15,26 @@ import (
 	"golang.org/x/text/language"
 )
 
+// postTextWithAlts appends the alt texts of images to the text itself. This
+// lets us detect hashtags within an alt text.
+func postTextWithAlts(data *bsky.FeedPost) string {
+	text := data.Text
+	if data.Embed != nil && data.Embed.EmbedImages != nil && data.Embed.EmbedImages.Images != nil {
+		for _, image := range data.Embed.EmbedImages.Images {
+			if image.Alt != "" {
+				text = text + "\n" + image.Alt
+			}
+		}
+	}
+	return text
+}
+
 func hasMedia(data *bsky.FeedPost) bool {
 	return data.Embed != nil && data.Embed.EmbedImages != nil && len(data.Embed.EmbedImages.Images) > 0
 }
 
-func hasKeyword(data *bsky.FeedPost, keywords ...string) bool {
-	text := strings.ToLower(data.Text)
-	for _, keyword := range keywords {
-		if strings.Contains(text, keyword) {
-			return true
-		}
-	}
-	return false
-}
-
-func isFursuitMedia(data *bsky.FeedPost) bool {
-	return hasMedia(data) && hasKeyword(data, "#fursuitfriday", "#fursuit", "#murrsuit", "#mursuit")
-}
-
-func isArt(data *bsky.FeedPost) bool {
-	return hasMedia(data) && hasKeyword(data, "#art", "#furryart")
-}
-
-func isNSFW(data *bsky.FeedPost) bool {
-	return hasKeyword(data, "#nsfw", "#murrsuit", "#mursuit")
-}
-
-func isCommissionsOpen(data *bsky.FeedPost) bool {
-	return hasKeyword(data, "#commsopen")
-}
-
 func extractNormalizedHashtags(post *bsky.FeedPost) []string {
+	text := postTextWithAlts(post)
 	// Casing gets kind of wacky, so we try to compute all possible hashtag casings and store them:
 	// - First, we use the default Unicode lowercasing algorithm, e.g. AEIOU -> aeiou.
 	// - Then, we lowercase for all languages marked explicitly in the post, e.g. for Turkish, AEIOU -> aeıou.
@@ -57,7 +45,7 @@ func extractNormalizedHashtags(post *bsky.FeedPost) []string {
 	}
 
 	hashtagsSet := make(map[string]bool)
-	for _, hashtag := range hashtag.ExtractHashtags(post.Text) {
+	for _, hashtag := range hashtag.ExtractHashtags(text) {
 		hashtagsSet[strings.ToLower(hashtag)] = true
 		for _, caser := range casers {
 			hashtagsSet[caser.String(hashtag)] = true
@@ -78,46 +66,40 @@ func (fi *FirehoseIngester) handleFeedPostCreate(
 		endSpan(span, err)
 	}()
 
-	if data.Reply == nil {
-		createdAt, err := bluesky.ParseTime(data.CreatedAt)
-		if err != nil {
-			return fmt.Errorf("parsing post time: %w", err)
-		}
-
-		// TODO: Break this out in a more extensible way
-		tags := []string{}
-		if isFursuitMedia(data) {
-			tags = append(tags, bff.TagFursuitMedia)
-		}
-		if isArt(data) {
-			tags = append(tags, bff.TagArt)
-		}
-		if isNSFW(data) {
-			tags = append(tags, bff.TagNSFW)
-		}
-		if isCommissionsOpen(data) {
-			tags = append(tags, bff.TagCommissionsOpen)
-		}
-
-		err = fi.store.CreatePost(
-			ctx,
-			store.CreatePostOpts{
-				URI:       recordUri,
-				ActorDID:  repoDID,
-				CreatedAt: createdAt,
-				IndexedAt: time.Now(),
-				Raw:       data,
-				Tags:      tags,
-				Hashtags:  extractNormalizedHashtags(data),
-				HasMedia:  hasMedia(data),
-			},
-		)
-		if err != nil {
-			return fmt.Errorf("creating post: %w", err)
-		}
-	} else {
+	if data.Reply != nil {
 		span.AddEvent("ignoring post as it is a reply")
+		return
 	}
+
+	createdAt, err := bluesky.ParseTime(data.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("parsing post time: %w", err)
+	}
+
+	selfLabels := []string{}
+	if data.Labels != nil && data.Labels.LabelDefs_SelfLabels != nil {
+		for _, label := range data.Labels.LabelDefs_SelfLabels.Values {
+			selfLabels = append(selfLabels, label.Val)
+		}
+	}
+
+	err = fi.store.CreatePost(
+		ctx,
+		store.CreatePostOpts{
+			URI:        recordUri,
+			ActorDID:   repoDID,
+			CreatedAt:  createdAt,
+			IndexedAt:  time.Now(),
+			Raw:        data,
+			Hashtags:   extractNormalizedHashtags(data),
+			HasMedia:   hasMedia(data),
+			SelfLabels: selfLabels,
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("creating post: %w", err)
+	}
+
 	return nil
 }
 

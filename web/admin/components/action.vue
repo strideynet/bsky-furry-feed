@@ -4,6 +4,8 @@ import {
   AuditEvent,
   BanActorAuditPayload,
   CommentAuditPayload,
+  CreateActorAuditPayload,
+  ForceApproveActorAuditPayload,
   ProcessApprovalQueueAuditPayload,
   UnapproveActorAuditPayload,
 } from "../../proto/bff/v1/moderation_service_pb";
@@ -27,6 +29,10 @@ const payload = computed(() => {
       return UnapproveActorAuditPayload.fromBinary(value);
     case "bff.v1.BanActorAuditPayload":
       return BanActorAuditPayload.fromBinary(value);
+    case "bff.v1.CreateActorAuditPayload":
+      return CreateActorAuditPayload.fromBinary(value);
+    case "bff.v1.ForceApproveActorAuditPayload":
+      return ForceApproveActorAuditPayload.fromBinary(value);
     default:
       console.warn(`Missing payload decoding: ${typeUrl}`);
   }
@@ -45,6 +51,10 @@ const type = computed(() => {
     return "unapprove";
   } else if (data instanceof BanActorAuditPayload) {
     return "ban";
+  } else if (data instanceof CreateActorAuditPayload) {
+    return "track";
+  } else if (data instanceof ForceApproveActorAuditPayload) {
+    return "force_approve";
   }
 });
 
@@ -60,6 +70,12 @@ const actionText = computed(() => {
       return props.lookupUser ? "unapproved" : "unapproved this user.";
     case "ban":
       return props.lookupUser ? "banned" : "banned this user.";
+    case "track":
+      return props.lookupUser
+        ? "started tracking"
+        : "started tracking this user.";
+    case "force_approve":
+      return props.lookupUser ? "force-approved" : "force-approved this user.";
   }
 });
 
@@ -68,9 +84,12 @@ const comment = computed(() => {
 
   if (data instanceof CommentAuditPayload) {
     return data.comment;
-  } else if (data instanceof UnapproveActorAuditPayload) {
-    return data.reason;
-  } else if (data instanceof BanActorAuditPayload) {
+  } else if (
+    data instanceof UnapproveActorAuditPayload ||
+    data instanceof BanActorAuditPayload ||
+    data instanceof CreateActorAuditPayload ||
+    data instanceof ForceApproveActorAuditPayload
+  ) {
     return data.reason;
   }
 });
@@ -79,15 +98,25 @@ const comment = computed(() => {
 <template>
   <div class="flex items-start my-4">
     <div
-      class="bg-gray-800 rounded-full flex items-center justify-center h-7 w-7 mr-3"
+      class="bg-gray-200 dark:bg-gray-800 rounded-full flex items-center justify-center h-7 w-7 mr-3 flex-shrink-0"
     >
-      <icon-user-plus v-if="type === 'queue_approval'" class="text-gray-200" />
+      <icon-user-plus
+        v-if="type === 'queue_approval' || type === 'force_approve'"
+        class="text-gray-600 dark:text-gray-200"
+      />
       <icon-user-minus
         v-else-if="type === 'queue_rejection' || type === 'unapprove'"
-        class="text-gray-200"
+        class="text-gray-600 dark:text-gray-200"
       />
       <icon-slash v-else-if="type === 'ban'" class="text-red-500" />
-      <icon-comment v-else-if="type === 'comment'" class="text-gray-200" />
+      <icon-comment
+        v-else-if="type === 'comment'"
+        class="text-gray-600 dark:text-gray-200"
+      />
+      <icon-database
+        v-else-if="type === 'track'"
+        class="text-gray-600 dark:text-gray-200"
+      />
     </div>
     <div class="flex-1">
       <div class="flex max-md:flex-wrap items-center gap-1">
@@ -105,7 +134,7 @@ const comment = computed(() => {
         }}</span>
       </div>
       <shared-card v-if="comment" no-padding class="text-sm px-3 py-2 mt-2">
-        {{ comment }}
+        <shared-markdown :markdown="comment" />
       </shared-card>
     </div>
   </div>

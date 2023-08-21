@@ -50,7 +50,7 @@ message Actor {
   // is_hidden is a deprecated flag that used to hide accounts. This no longer
   // has any effect.
   // Deprecated: Use status.
-  bool is_hidden = 2;
+  reserved 2;
   // is_artist is a flag indicating this account is primarily an artist. It
   // does not currently control any feed placement.
   bool is_artist = 3;

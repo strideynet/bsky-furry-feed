@@ -14,10 +14,13 @@
 
 <a
   class:isActive
+  class="block h-fit whitespace-nowrap text-gray-800 underline-offset-2 transition-[color] duration-75 dark:text-gray-300"
   {href}
   {target}
   on:click={(e) => dispatch('click', e)}
   on:keydown={(e) => dispatch('keydown', e)}
+  data-sveltekit-preload-data
+  data-sveltekit-preload-code
 >
   {#if $$slots.default}
     <slot />
@@ -28,12 +31,20 @@
 
 <style lang="scss">
   a {
-    @apply block h-fit whitespace-nowrap text-gray-800 underline-offset-2;
-
     &:hover,
     &:focus-visible,
     &.isActive {
       @apply text-gray-900 underline;
+    }
+  }
+
+  :global(.dark) {
+    a {
+      &:hover,
+      &:focus-visible,
+      &.isActive {
+        @apply text-gray-100 underline;
+      }
     }
   }
 </style>

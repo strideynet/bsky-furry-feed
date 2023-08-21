@@ -5,8 +5,10 @@ overrides:
        did: DID
        uri: URI
        actor_did: ActorDID
+       commit_cid: CommitCID
        subject_uri: SubjectURI
        is_nsfw: IsNSFW
+       after_uri: AfterURI
      overrides:
        - column: candidate_posts.raw
          go_type:
@@ -23,4 +25,3 @@ sql:
         package: "gen"
         out: "store/gen"
         sql_package: pgx/v5
-        emit_methods_with_db_argument: true

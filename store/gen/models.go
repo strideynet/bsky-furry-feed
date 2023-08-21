@@ -57,12 +57,13 @@ func (ns NullActorStatus) Value() (driver.Value, error) {
 }
 
 type ActorProfile struct {
-	ID          string
 	ActorDID    string
+	CommitCID   string
 	CreatedAt   pgtype.Timestamptz
 	IndexedAt   pgtype.Timestamptz
 	DisplayName pgtype.Text
 	Description pgtype.Text
+	SelfLabels  []string
 }
 
 type AuditEvent struct {
@@ -75,15 +76,13 @@ type AuditEvent struct {
 }
 
 type CandidateActor struct {
-	DID              string
-	CreatedAt        pgtype.Timestamptz
-	IsArtist         bool
-	Comment          string
-	IsNSFW           bool
-	IsHidden         bool
-	Status           ActorStatus
-	CurrentProfileID pgtype.Text
-	Roles            []string
+	DID                     string
+	CreatedAt               pgtype.Timestamptz
+	IsArtist                bool
+	Comment                 string
+	Status                  ActorStatus
+	Roles                   []string
+	CurrentProfileCommitCid pgtype.Text
 }
 
 type CandidateFollow struct {
@@ -105,15 +104,26 @@ type CandidateLike struct {
 }
 
 type CandidatePost struct {
-	URI       string
-	ActorDID  string
-	CreatedAt pgtype.Timestamptz
-	IndexedAt pgtype.Timestamptz
-	IsNSFW    bool
-	IsHidden  bool
-	Tags      []string
-	DeletedAt pgtype.Timestamptz
-	Raw       *bsky.FeedPost
-	Hashtags  []string
-	HasMedia  pgtype.Bool
+	URI        string
+	ActorDID   string
+	CreatedAt  pgtype.Timestamptz
+	IndexedAt  pgtype.Timestamptz
+	IsHidden   bool
+	DeletedAt  pgtype.Timestamptz
+	Raw        *bsky.FeedPost
+	Hashtags   []string
+	HasMedia   pgtype.Bool
+	SelfLabels []string
+}
+
+type FirehoseCommitCursor struct {
+	Cursor int64
+}
+
+type PostScore struct {
+	URI           string
+	Alg           string
+	GenerationSeq int64
+	Score         float32
+	GeneratedAt   pgtype.Timestamptz
 }

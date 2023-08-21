@@ -13,7 +13,8 @@ import (
 
 const createAuditEvent = `-- name: CreateAuditEvent :one
 INSERT INTO
-    audit_events (id, created_at, actor_did, subject_did, subject_record_uri, payload)
+    audit_events (id, created_at, actor_did, subject_did, subject_record_uri,
+                  payload)
 VALUES
     ($1, $2, $3, $4, $5, $6)
 RETURNING id, actor_did, subject_did, subject_record_uri, created_at, payload
@@ -28,8 +29,8 @@ type CreateAuditEventParams struct {
 	Payload          []byte
 }
 
-func (q *Queries) CreateAuditEvent(ctx context.Context, db DBTX, arg CreateAuditEventParams) (AuditEvent, error) {
-	row := db.QueryRow(ctx, createAuditEvent,
+func (q *Queries) CreateAuditEvent(ctx context.Context, arg CreateAuditEventParams) (AuditEvent, error) {
+	row := q.db.QueryRow(ctx, createAuditEvent,
 		arg.ID,
 		arg.CreatedAt,
 		arg.ActorDID,
@@ -54,13 +55,13 @@ SELECT id, actor_did, subject_did, subject_record_uri, created_at, payload
 FROM
     audit_events ae
 WHERE
-    ($1::text  = '' OR
-     ae.subject_did = $1) AND
-    ($2::text  = '' OR
-     ae.actor_did = $2) AND
-    ($3::text  = '' OR
-     ae.subject_record_uri = $3) AND
-    ($4::TIMESTAMPTZ IS NULL OR ae.created_at < $4)
+      ($1::text = '' OR
+       ae.subject_did = $1)
+  AND ($2::text = '' OR
+       ae.actor_did = $2)
+  AND ($3::text = '' OR
+       ae.subject_record_uri = $3)
+  AND ($4::TIMESTAMPTZ IS NULL OR ae.created_at < $4)
 ORDER BY
     ae.created_at DESC
 LIMIT $5
@@ -74,8 +75,8 @@ type ListAuditEventsParams struct {
 	Limit            int32
 }
 
-func (q *Queries) ListAuditEvents(ctx context.Context, db DBTX, arg ListAuditEventsParams) ([]AuditEvent, error) {
-	rows, err := db.Query(ctx, listAuditEvents,
+func (q *Queries) ListAuditEvents(ctx context.Context, arg ListAuditEventsParams) ([]AuditEvent, error) {
+	rows, err := q.db.Query(ctx, listAuditEvents,
 		arg.SubjectDid,
 		arg.ActorDID,
 		arg.SubjectRecordUri,

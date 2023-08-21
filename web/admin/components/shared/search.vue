@@ -22,13 +22,13 @@ async function doSearch() {
       @keydown="$event.key === 'Enter' ? doSearch() : null"
     />
     <button
-      class="text-white bg-blue-400 dark:bg-blue-500 rounded-r-lg max-md:hidden px-1 py-1"
+      class="text-white bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-700 disabled:bg-blue-300 disabled:dark:bg-blue-500 rounded-r-lg max-md:hidden px-1 py-1"
       @click="doSearch"
     >
       <icon-search />
     </button>
     <button
-      class="text-white bg-blue-400 dark:bg-blue-500 rounded-lg md:hidden px-1 py-1"
+      class="text-white bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-700 disabled:bg-blue-300 disabled:dark:bg-blue-500 rounded-lg md:hidden px-1 py-1"
       @click="$emit('toggleSearch')"
     >
       <icon-search />

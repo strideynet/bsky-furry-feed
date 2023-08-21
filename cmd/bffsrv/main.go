@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/strideynet/bsky-furry-feed/scoring"
 	"os"
 	"os/signal"
 	"time"
@@ -113,6 +114,7 @@ func runE(log *zap.Logger) error {
 
 	ingesterEnabled := os.Getenv("BFF_INGESTER_ENABLED") == "1"
 	apiEnabled := os.Getenv("BFF_API_ENABLED") == "1"
+	scoreMaterializerEnabled := os.Getenv("BFF_SCORE_MATERIALIZER_ENABLED") == "1"
 
 	log.Info("starting", zap.String("mode", string(mode)))
 
@@ -192,10 +194,9 @@ func runE(log *zap.Logger) error {
 		feedService := feed.ServiceWithDefaultFeeds(pgxStore)
 
 		// Setup the public HTTP/XRPC server
-		// TODO: Make these externally configurable
-		hostname := "dev-feed.ottr.sh"
-		if mode == productionMode {
-			hostname = "feed.furryli.st"
+		hostname := os.Getenv("BFF_HOSTNAME")
+		if hostname == "" {
+			return fmt.Errorf("BFF_HOSTNAME not set")
 		}
 		listenAddr := ":1337"
 		srv, err := api.New(
@@ -224,6 +225,22 @@ func runE(log *zap.Logger) error {
 				}
 			}()
 			return srv.ListenAndServe()
+		})
+	}
+
+	if scoreMaterializerEnabled {
+		hm := scoring.NewMaterializer(
+			log.Named("scoring"),
+			pgxStore,
+			scoring.Opts{
+				MaterializationInterval: 1 * time.Minute,
+				RetentionPeriod:         15 * time.Minute,
+				LookbackPeriod:          24 * time.Hour,
+			},
+		)
+		eg.Go(func() error {
+			log.Info("scoring materializer started")
+			return hm.Run(ctx)
 		})
 	}
 
