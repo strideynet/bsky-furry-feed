@@ -49,6 +49,7 @@ func startAPIHarness(ctx context.Context, t *testing.T) *apiHarness {
 			ActorGetter:    harness.Store,
 		},
 	)
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		srv.Close()
 	})
