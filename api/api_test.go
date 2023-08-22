@@ -4,6 +4,7 @@ import (
 	"connectrpc.com/connect"
 	"context"
 	"errors"
+	"fmt"
 	indigoTest "github.com/bluesky-social/indigo/testing"
 	"github.com/stretchr/testify/require"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
@@ -24,6 +25,18 @@ func actorAuthInterceptor(actor *indigoTest.TestUser) connect.UnaryInterceptorFu
 	}
 }
 
+type fakeFeedService struct {
+	metas []feed.Meta
+}
+
+func (m *fakeFeedService) Metas() []feed.Meta {
+	return m.metas
+}
+
+func (m *fakeFeedService) GetFeedPosts(ctx context.Context, feedKey string, cursor string, limit int) (posts []feed.Post, err error) {
+	return nil, fmt.Errorf("unimplemented")
+}
+
 type apiHarness struct {
 	*testenv.Harness
 	APIAddr string
@@ -33,12 +46,23 @@ func startAPIHarness(ctx context.Context, t *testing.T) *apiHarness {
 	harness := testenv.StartHarness(ctx, t)
 
 	// Create PDS user for the API taking actions as the feed
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
 	_ = harness.PDS.MustNewUser(t, "bff.tpds")
 	srv, err := New(
 		harness.Log,
+		"feed.test.furryli.st",
 		"",
-		"",
-		&feed.Service{},
+		&fakeFeedService{
+			metas: []feed.Meta{
+				{
+					ID:          "fake-1",
+					DisplayName: "Fake",
+					Description: "My Description",
+				},
+			},
+		},
 		harness.Store,
 		&bluesky.Credentials{
 			Identifier: "bff.tpds",
@@ -53,8 +77,6 @@ func startAPIHarness(ctx context.Context, t *testing.T) *apiHarness {
 	t.Cleanup(func() {
 		srv.Close()
 	})
-	lis, err := net.Listen("tcp", "127.0.0.1:0")
-	require.NoError(t, err)
 
 	go func() {
 		err := srv.Serve(lis)

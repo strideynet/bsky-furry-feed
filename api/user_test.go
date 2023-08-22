@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-func TestUserServiceHandler_GetMe(t *testing.T) {
+func TestAPI_UserServiceHandler_GetMe(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
 	}

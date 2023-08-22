@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"github.com/strideynet/bsky-furry-feed/feed"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
 	"net/http"
@@ -64,7 +63,7 @@ type getFeedSkeletonResponse struct {
 }
 
 func getFeedSkeletonHandler(
-	log *zap.Logger, registry *feed.Service,
+	log *zap.Logger, feedService feedService,
 ) (string, http.Handler) {
 	h := jsonHandler(log, func(r *http.Request) (any, error) {
 		ctx := r.Context()
@@ -80,7 +79,7 @@ func getFeedSkeletonHandler(
 			zap.Int("limit", params.limit),
 		)
 
-		posts, err := registry.GetFeedPosts(ctx, params.feed, params.cursor, params.limit)
+		posts, err := feedService.GetFeedPosts(ctx, params.feed, params.cursor, params.limit)
 		if err != nil {
 			return nil, fmt.Errorf("fetching feed %q: %w", params.feed, err)
 		}

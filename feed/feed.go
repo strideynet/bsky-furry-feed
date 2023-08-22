@@ -63,15 +63,6 @@ func (s *Service) Register(m Meta, generateFunc GenerateFunc) {
 	}
 }
 
-// IDs returns a slice of the IDs of feeds which are eligible for generation.
-func (s *Service) IDs() []string {
-	ids := make([]string, 0, len(s.feeds))
-	for _, f := range s.feeds {
-		ids = append(ids, f.meta.ID)
-	}
-	return ids
-}
-
 func (s *Service) Metas() []Meta {
 	metas := make([]Meta, 0, len(s.feeds))
 	for _, f := range s.feeds {
