@@ -23,7 +23,6 @@ func TestModerationServiceHandler_CreateActor(t *testing.T) {
 
 	furryActor := harness.PDS.MustNewUser(t, "furry.tpds")
 	modActor := harness.PDS.MustNewUser(t, "mod.tpds")
-	_ = harness.PDS.MustNewUser(t, "bff.tpds")
 
 	_, err := harness.Store.CreateActor(ctx, store.CreateActorOpts{
 		DID:    modActor.DID(),
