@@ -3,11 +3,13 @@ package api
 import (
 	"connectrpc.com/connect"
 	"context"
-	"github.com/jackc/pgx/v5"
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
+	"github.com/strideynet/bsky-furry-feed/store"
 	"go.uber.org/zap/zaptest"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/testing/protocmp"
 	"reflect"
 	"testing"
 	"unsafe"
@@ -18,8 +20,7 @@ type memoryActorGetter map[string]*v1.Actor
 func (mag memoryActorGetter) GetActorByDID(_ context.Context, did string) (*v1.Actor, error) {
 	v, ok := mag[did]
 	if !ok {
-		// TODO: We really ought to have a store.NotFound
-		return nil, pgx.ErrNoRows
+		return nil, store.ErrNotFound
 	}
 	return proto.Clone(v).(*v1.Actor), nil
 }
@@ -56,38 +57,40 @@ func TestAuthEngine(t *testing.T) {
 			},
 			want: &authContext{
 				DID: "exists",
+				Actor: &v1.Actor{
+					Did:   "exists",
+					Roles: []string{"admin"},
+				},
+			},
+		},
+		{
+			name:          "success: non-existent user",
+			headerKey:     "Authorization",
+			headerValue:   "Bearer non-existent",
+			procedureName: "/bff.v1.ModerationService/Ping",
+			want: &authContext{
+				DID:   "non-existent",
+				Actor: nil,
 			},
 		},
 		{
 			name:          "no header",
 			procedureName: "/bff.v1.ModerationService/CreateActor",
-			actor: &v1.Actor{
-				Did:   "exists",
-				Roles: []string{"admin"},
-			},
-			wantErr: "unauthenticated: no token provided",
+			wantErr:       "unauthenticated: no token provided",
 		},
 		{
 			name:          "malformed header",
 			headerKey:     "Authorization",
 			headerValue:   "rewgwegnmwerogkmowergiopwergiopwergop",
 			procedureName: "/bff.v1.ModerationService/CreateActor",
-			actor: &v1.Actor{
-				Did:   "exists",
-				Roles: []string{"admin"},
-			},
-			wantErr: "unauthenticated: malformed header",
+			wantErr:       "unauthenticated: malformed header",
 		},
 		{
 			name:          "unsupported auth type",
 			headerKey:     "Authorization",
 			headerValue:   "OtherType foo",
 			procedureName: "/bff.v1.ModerationService/CreateActor",
-			actor: &v1.Actor{
-				Did:   "exists",
-				Roles: []string{"admin"},
-			},
-			wantErr: "unauthenticated: only Bearer auth supported",
+			wantErr:       "unauthenticated: only Bearer auth supported",
 		},
 	}
 
@@ -117,7 +120,7 @@ func TestAuthEngine(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			require.Equal(t, tt.want, got)
+			require.Empty(t, cmp.Diff(tt.want, got, protocmp.Transform()))
 		})
 	}
 }

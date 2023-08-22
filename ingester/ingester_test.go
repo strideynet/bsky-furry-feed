@@ -11,7 +11,6 @@ import (
 	indigoTest "github.com/bluesky-social/indigo/testing"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -314,7 +313,7 @@ func TestFirehoseIngester(t *testing.T) {
 			continue
 		}
 		_, err := harness.Store.GetPostByURI(ctx, tp.uri)
-		require.ErrorIs(t, err, pgx.ErrNoRows)
+		require.ErrorIs(t, err, store.ErrNotFound)
 	}
 
 	// Ensure ingester closes properly

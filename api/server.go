@@ -93,14 +93,14 @@ func New(
 		},
 		authEngine: authEngine,
 	}
-
+	interceptors := connect.WithInterceptors(
+		unaryLoggingInterceptor(log),
+		otelconnect.NewInterceptor(),
+	)
 	mux.Handle(
 		bffv1pbconnect.NewModerationServiceHandler(
 			modSvcHandler,
-			connect.WithInterceptors(
-				unaryLoggingInterceptor(log),
-				otelconnect.NewInterceptor(),
-			),
+			interceptors,
 		),
 	)
 	mux.Handle(
@@ -108,10 +108,14 @@ func New(
 			&PublicServiceHandler{
 				feedMetaSourcer: feedRegistry,
 			},
-			connect.WithInterceptors(
-				unaryLoggingInterceptor(log),
-				otelconnect.NewInterceptor(),
-			),
+			interceptors,
+		),
+	)
+	mux.Handle(
+		bffv1pbconnect.NewUserServiceHandler(
+			&UserServiceHandler{
+				authEngine: authEngine,
+			}, interceptors,
 		),
 	)
 

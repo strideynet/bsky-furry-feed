@@ -4,20 +4,7 @@
 // @ts-nocheck
 
 import { Any, proto3, Timestamp } from "@bufbuild/protobuf";
-
-/**
- * @generated from enum bff.v1.ActorStatus
- */
-export const ActorStatus = proto3.makeEnum(
-  "bff.v1.ActorStatus",
-  [
-    {no: 0, name: "ACTOR_STATUS_UNSPECIFIED", localName: "UNSPECIFIED"},
-    {no: 1, name: "ACTOR_STATUS_PENDING", localName: "PENDING"},
-    {no: 2, name: "ACTOR_STATUS_APPROVED", localName: "APPROVED"},
-    {no: 3, name: "ACTOR_STATUS_BANNED", localName: "BANNED"},
-    {no: 4, name: "ACTOR_STATUS_NONE", localName: "NONE"},
-  ],
-);
+import { Actor, ActorStatus } from "./types_pb.js";
 
 /**
  * @generated from enum bff.v1.ApprovalQueueAction
@@ -28,21 +15,6 @@ export const ApprovalQueueAction = proto3.makeEnum(
     {no: 0, name: "APPROVAL_QUEUE_ACTION_UNSPECIFIED", localName: "UNSPECIFIED"},
     {no: 1, name: "APPROVAL_QUEUE_ACTION_APPROVE", localName: "APPROVE"},
     {no: 2, name: "APPROVAL_QUEUE_ACTION_REJECT", localName: "REJECT"},
-  ],
-);
-
-/**
- * @generated from message bff.v1.Actor
- */
-export const Actor = proto3.makeMessageType(
-  "bff.v1.Actor",
-  () => [
-    { no: 1, name: "did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "is_artist", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 4, name: "comment", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "status", kind: "enum", T: proto3.getEnumType(ActorStatus) },
-    { no: 6, name: "created_at", kind: "message", T: Timestamp },
-    { no: 7, name: "roles", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ],
 );
 

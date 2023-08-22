@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/any.proto";
+import "bff/v1/types.proto";
+
+package bff.v1;
+
+option go_package = "github.com/strideynet/bsky-furry-feed/proto/bff/v1;bffv1pb";
+
+service UserService {
+  rpc GetMe(GetMeRequest) returns (GetMeResponse) {}
+  rpc JoinApprovalQueue(JoinApprovalQueueRequest) returns (JoinApprovalQueueResponse) {}
+}
+
+message GetMeRequest {}
+message GetMeResponse {
+  bff.v1.Actor Actor = 1;
+}
+
+message JoinApprovalQueueRequest {}
+message JoinApprovalQueueResponse {}

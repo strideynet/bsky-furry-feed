@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ProfileViewDetailed } from "@atproto/api/dist/client/types/app/bsky/actor/defs";
-import { ActorStatus } from "../../proto/bff/v1/moderation_service_pb";
+import { ActorStatus } from "../../proto/bff/v1/types_pb";
 import { getProfile } from "~/lib/cached-bsky";
 
 const props = defineProps<{

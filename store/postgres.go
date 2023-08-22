@@ -36,6 +36,18 @@ func (s *PGXStore) Close() {
 	s.pool.Close()
 }
 
+func convertPGXError(err error) error {
+	if err == nil {
+		return nil
+	}
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		return ErrNotFound
+	default:
+		return err
+	}
+}
+
 type PoolConnector interface {
 	poolConfig(ctx context.Context) (*pgxpool.Config, error)
 }
@@ -180,7 +192,7 @@ func (s *PGXStore) ListActors(ctx context.Context, opts ListActorsOpts) (out []*
 
 	actors, err := s.queries.ListCandidateActors(ctx, statusFilter)
 	if err != nil {
-		return nil, fmt.Errorf("executing ListCandidateActors query: %w", err)
+		return nil, fmt.Errorf("executing ListCandidateActors query: %w", convertPGXError(err))
 	}
 
 	for _, a := range actors {
@@ -202,7 +214,7 @@ func (s *PGXStore) GetActorByDID(ctx context.Context, did string) (out *v1.Actor
 
 	actor, err := s.queries.GetCandidateActorByDID(ctx, did)
 	if err != nil {
-		return nil, fmt.Errorf("executing GetCandidateActorByDID query: %w", err)
+		return nil, fmt.Errorf("executing GetCandidateActorByDID query: %w", convertPGXError(err))
 	}
 
 	out, err = actorToProto(actor)
@@ -246,7 +258,7 @@ func (s *PGXStore) CreateActor(ctx context.Context, opts CreateActorOpts) (out *
 	}
 	created, err := s.queries.CreateCandidateActor(ctx, queryParams)
 	if err != nil {
-		return nil, fmt.Errorf("executing CreateCandidateActor query: %w", err)
+		return nil, fmt.Errorf("executing CreateCandidateActor query: %w", convertPGXError(err))
 	}
 
 	convertedActor, err := actorToProto(created)
@@ -293,7 +305,7 @@ func (s *PGXStore) UpdateActor(ctx context.Context, opts UpdateActorOpts) (out *
 	}
 	created, err := s.queries.UpdateCandidateActor(ctx, queryParams)
 	if err != nil {
-		return nil, fmt.Errorf("executing UpdateCandidateActor query: %w", err)
+		return nil, fmt.Errorf("executing UpdateCandidateActor query: %w", convertPGXError(err))
 	}
 
 	actor, err := actorToProto(created)
@@ -357,7 +369,7 @@ func (s *PGXStore) CreateLatestActorProfile(ctx context.Context, opts CreateLate
 	}
 	err = s.queries.CreateLatestActorProfile(ctx, queryParams)
 	if err != nil {
-		return fmt.Errorf("executing CreateLatestActorProfile query: %w", err)
+		return fmt.Errorf("executing CreateLatestActorProfile query: %w", convertPGXError(err))
 	}
 
 	if err = tx.Commit(ctx); err != nil {
@@ -396,7 +408,7 @@ func (s *PGXStore) CreateLike(ctx context.Context, opts CreateLikeOpts) (err err
 	}
 	err = s.queries.CreateCandidateLike(ctx, queryParams)
 	if err != nil {
-		return fmt.Errorf("executing CreateCandidateLike query: %w", err)
+		return fmt.Errorf("executing CreateCandidateLike query: %w", convertPGXError(err))
 	}
 
 	return nil
@@ -414,7 +426,7 @@ func (s *PGXStore) DeleteLike(ctx context.Context, opts DeleteLikeOpts) (err err
 
 	err = s.queries.SoftDeleteCandidateLike(ctx, opts.URI)
 	if err != nil {
-		return fmt.Errorf("executing SoftDeleteCandidateLike query: %w", err)
+		return fmt.Errorf("executing SoftDeleteCandidateLike query: %w", convertPGXError(err))
 	}
 
 	return nil
@@ -462,7 +474,7 @@ func (s *PGXStore) CreatePost(ctx context.Context, opts CreatePostOpts) (err err
 	}
 	err = s.queries.CreateCandidatePost(ctx, queryParams)
 	if err != nil {
-		return fmt.Errorf("executing CreateCandidatePost query: %w", err)
+		return fmt.Errorf("executing CreateCandidatePost query: %w", convertPGXError(err))
 	}
 
 	return nil
@@ -480,7 +492,7 @@ func (s *PGXStore) DeletePost(ctx context.Context, opts DeletePostOpts) (err err
 
 	err = s.queries.SoftDeleteCandidatePost(ctx, opts.URI)
 	if err != nil {
-		return fmt.Errorf("executing SoftDeleteCandidatePost query: %w", err)
+		return fmt.Errorf("executing SoftDeleteCandidatePost query: %w", convertPGXError(err))
 	}
 
 	return nil
@@ -515,7 +527,7 @@ func (s *PGXStore) CreateFollow(ctx context.Context, opts CreateFollowOpts) (err
 	}
 	err = s.queries.CreateCandidateFollow(ctx, queryParams)
 	if err != nil {
-		return fmt.Errorf("executing CreateCandidateFollowParams query: %w", err)
+		return fmt.Errorf("executing CreateCandidateFollowParams query: %w", convertPGXError(err))
 	}
 
 	return nil
@@ -533,7 +545,7 @@ func (s *PGXStore) DeleteFollow(ctx context.Context, opts DeleteFollowOpts) (err
 
 	err = s.queries.SoftDeleteCandidateFollow(ctx, opts.URI)
 	if err != nil {
-		return fmt.Errorf("executing SoftDeleteCandidateFollow query: %w", err)
+		return fmt.Errorf("executing SoftDeleteCandidateFollow query: %w", convertPGXError(err))
 	}
 
 	return nil
@@ -579,7 +591,7 @@ func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNew
 
 	posts, err := s.queries.GetFurryNewFeed(ctx, queryParams)
 	if err != nil {
-		return nil, fmt.Errorf("executing GetFurryNewFeed query: %w", err)
+		return nil, fmt.Errorf("executing GetFurryNewFeed query: %w", convertPGXError(err))
 	}
 
 	return posts, nil
@@ -592,7 +604,7 @@ func (s *PGXStore) GetLatestScoreGeneration(ctx context.Context, alg string) (ou
 	}()
 	seq, err := s.queries.GetLatestScoreGeneration(ctx, alg)
 	if err != nil {
-		return 0, err
+		return 0, convertPGXError(err)
 	}
 	return seq, nil
 }
@@ -634,7 +646,7 @@ func (s *PGXStore) ListScoredPosts(ctx context.Context, opts ListPostsForHotFeed
 
 	posts, err := s.queries.ListScoredPosts(ctx, queryParams)
 	if err != nil {
-		return nil, fmt.Errorf("executing ListScoredPosts query: %w", err)
+		return nil, fmt.Errorf("executing ListScoredPosts query: %w", convertPGXError(err))
 	}
 
 	return posts, nil
@@ -694,7 +706,7 @@ func (s *PGXStore) ListAuditEvents(ctx context.Context, opts ListAuditEventsOpts
 
 	data, err := s.queries.ListAuditEvents(ctx, queryParams)
 	if err != nil {
-		return nil, fmt.Errorf("executing ListAuditEvents query: %w", err)
+		return nil, fmt.Errorf("executing ListAuditEvents query: %w", convertPGXError(err))
 	}
 
 	out = make([]*v1.AuditEvent, 0, len(data))
@@ -743,7 +755,7 @@ func (s *PGXStore) CreateAuditEvent(ctx context.Context, opts CreateAuditEventOp
 	}
 	data, err := s.queries.CreateAuditEvent(ctx, queryParams)
 	if err != nil {
-		return nil, fmt.Errorf("executing CreateAuditEvent query: %w", err)
+		return nil, fmt.Errorf("executing CreateAuditEvent query: %w", convertPGXError(err))
 	}
 
 	out, err = auditEventToProto(data)
@@ -767,22 +779,25 @@ func (s *PGXStore) GetFirehoseCommitCursor(ctx context.Context) (out int64, err 
 }
 
 func (s *PGXStore) SetFirehoseCommitCursor(ctx context.Context, cursor int64) (err error) {
-	return s.queries.SetFirehoseCommitCursor(ctx, cursor)
+	return convertPGXError(s.queries.SetFirehoseCommitCursor(ctx, cursor))
 }
 
 func (s *PGXStore) GetPostByURI(ctx context.Context, uri string) (out gen.CandidatePost, err error) {
 	// TODO: Return a proto type rather than exposing gen.CandidatePost
-	return s.queries.GetPostByURI(ctx, uri)
+	out, err = s.queries.GetPostByURI(ctx, uri)
+	return out, convertPGXError(err)
 }
 
 func (s *PGXStore) GetLatestActorProfile(ctx context.Context, did string) (out gen.ActorProfile, err error) {
 	// TODO: Return a proto type rather than exposing gen.ActorProfile
-	return s.queries.GetLatestActorProfile(ctx, did)
+	out, err = s.queries.GetLatestActorProfile(ctx, did)
+	return out, convertPGXError(err)
 }
 
 func (s *PGXStore) GetActorProfileHistory(ctx context.Context, did string) (out []gen.ActorProfile, err error) {
 	// TODO: Return a proto type rather than exposing gen.ActorProfile
-	return s.queries.GetActorProfileHistory(ctx, did)
+	out, err = s.queries.GetActorProfileHistory(ctx, did)
+	return out, convertPGXError(err)
 }
 
 func (s *PGXStore) MaterializeClassicPostScores(ctx context.Context, lookbackPeriod time.Duration) (int64, error) {

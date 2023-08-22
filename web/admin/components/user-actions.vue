@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ActorStatus } from "../../proto/bff/v1/moderation_service_pb";
+import { ActorStatus } from "../../proto/bff/v1/types_pb";
 
 const props = defineProps<{ did: string; status?: ActorStatus }>();
 const $emit = defineEmits(["update"]);

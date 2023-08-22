@@ -2,6 +2,7 @@ syntax = "proto3";
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/any.proto";
+import "bff/v1/types.proto";
 
 package bff.v1;
 
@@ -35,38 +36,6 @@ service ModerationService {
   rpc CreateCommentAuditEvent(CreateCommentAuditEventRequest) returns (CreateCommentAuditEventResponse) {}
 }
 
-enum ActorStatus {
-  ACTOR_STATUS_UNSPECIFIED = 0;
-  ACTOR_STATUS_PENDING = 1;
-  ACTOR_STATUS_APPROVED = 2;
-  ACTOR_STATUS_BANNED = 3;
-  ACTOR_STATUS_NONE = 4;
-}
-
-message Actor {
-  // did is the decentralized identity of the actor. This is also the UID used
-  // for fetching and mutating actors.
-  string did = 1;
-  // is_hidden is a deprecated flag that used to hide accounts. This no longer
-  // has any effect.
-  // Deprecated: Use status.
-  reserved 2;
-  // is_artist is a flag indicating this account is primarily an artist. It
-  // does not currently control any feed placement.
-  bool is_artist = 3;
-  // comment is a short string that is applied to an account when it is added
-  // to the system. This will eventually be replaced by a more powerful system.
-  string comment = 4;
-  // status indicates the actor's current status.
-  ActorStatus status = 5;
-  // created_at indicates the time that the actor was first added to the bff
-  // system - this does not necessarily indicate when they joined bluesky.
-  google.protobuf.Timestamp created_at = 6;
-  // roles is an array of roles this actor holds in relation to actions on the
-  // moderation API.
-  repeated string roles = 7;
-}
-
 message Post {
   string uri = 1;
   google.protobuf.Timestamp created_at = 2;
@@ -77,16 +46,16 @@ message GetActorRequest {
   string did = 1;
 }
 message GetActorResponse {
-  Actor actor = 1;
+  bff.v1.Actor actor = 1;
 }
 
 message ListActorsRequest {
   string cursor = 1;
   int32  limit = 2;
-  ActorStatus filter_status = 3;
+  bff.v1.ActorStatus filter_status = 3;
 }
 message ListActorsResponse {
-  repeated Actor actors = 1;
+  repeated bff.v1.Actor actors = 1;
   string cursor = 2;
 }
 
@@ -149,7 +118,7 @@ message CreateActorRequest {
   string reason = 2;
 }
 message CreateActorResponse {
-  Actor actor = 1;
+  bff.v1.Actor actor = 1;
 }
 message CreateActorAuditPayload {
   string reason = 1;
@@ -160,7 +129,7 @@ message UnapproveActorRequest {
   string reason = 2;
 }
 message UnapproveActorResponse {
-  Actor actor = 1;
+  bff.v1.Actor actor = 1;
 }
 message UnapproveActorAuditPayload {
   string reason = 1;
@@ -171,7 +140,7 @@ message ForceApproveActorRequest {
   string reason = 2;
 }
 message ForceApproveActorResponse {
-  Actor actor = 1;
+  bff.v1.Actor actor = 1;
 }
 message ForceApproveActorAuditPayload {
   string reason = 1;
@@ -182,7 +151,7 @@ message BanActorRequest {
   string reason = 2;
 }
 message BanActorResponse {
-  Actor actor = 1;
+  bff.v1.Actor actor = 1;
 }
 message BanActorAuditPayload {
   string reason = 1;

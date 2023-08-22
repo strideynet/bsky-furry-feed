@@ -3,9 +3,11 @@ package api
 import (
 	"connectrpc.com/connect"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
+	"github.com/strideynet/bsky-furry-feed/store"
 	"go.uber.org/zap"
 	"strings"
 )
@@ -30,6 +32,8 @@ func BSkyTokenValidator(pdsHost string) func(ctx context.Context, token string) 
 // authenticatedUserPermissions are granted to any user who is authenticated.
 var authenticatedUserPermissions = []string{
 	"/bff.v1.ModerationService/Ping",
+	"/bff.v1.UserService/GetMe",
+	"/bff.v1.UserService/JoinApprovalQueue",
 }
 
 var moderatorPermissions = []string{
@@ -65,7 +69,14 @@ type AuthEngine struct {
 }
 
 type authContext struct {
+	// DID is the did extracted from the token supplied by the user.
 	DID string
+	// Actor is the actor fetched from the database during authz/authn. This
+	// should be used carefully, and if necessary the actor should be fetched
+	// again within a transaction if mutation is occurring.
+	//
+	// This will be nil if the actor does not exist.
+	Actor *v1.Actor
 }
 
 // TODO: Allow a authOpts to be passed in with a description of attempted
@@ -90,29 +101,33 @@ func (a *AuthEngine) auth(ctx context.Context, req connect.AnyRequest) (*authCon
 		return nil, fmt.Errorf("validating token: %w", err)
 	}
 
-	// Find the actor in the database so we know their roles and status to
-	// be able to evaluate authz.
+	// Try to fetch the actor to find any roles they have associated with them.
+	// If they don't exist - we continue - so act with caution, actor may be
+	// nil.
 	actor, err := a.ActorGetter.GetActorByDID(ctx, did)
-	if err != nil {
+	if err != nil && !errors.Is(err, store.ErrNotFound) {
 		return nil, fmt.Errorf("fetching actor for token: %w", err)
 	}
 
-	// Use a map of string to bool as a quasi set.
+	// Default to no roles if the actor does not exist.
+	var actorRoles []string
+	if actor != nil {
+		actorRoles = actor.Roles
+	}
+
+	// Convert the actors roles to a quasi-set of permitted RPCs
 	permissions := map[string]bool{}
-	// We know the user is authenticated so we grant them the authenticated
-	// user role.
 	for _, permission := range authenticatedUserPermissions {
 		permissions[permission] = true
 	}
-	// Now we grant them all the permissions from their roles
-	for _, role := range actor.Roles {
+	for _, role := range actorRoles {
 		rolePerms, ok := roleToPermissions[role]
 		if !ok {
 			// Gracefully handle an unrecognized role
 			a.Log.Warn(
 				"unrecognized role",
 				zap.String("role", role),
-				zap.String("actor_did", actor.Did),
+				zap.String("actor_did", did),
 			)
 			continue
 		}
@@ -126,11 +141,12 @@ func (a *AuthEngine) auth(ctx context.Context, req connect.AnyRequest) (*authCon
 	if !permissions[procedureName] {
 		return nil, connect.NewError(
 			connect.CodePermissionDenied,
-			fmt.Errorf("user (%s) does not have permissions for %q", actor.Did, procedureName),
+			fmt.Errorf("user (%s) does not have permissions for %q", did, procedureName),
 		)
 	}
 
 	return &authContext{
-		DID: actor.Did,
+		DID:   did,
+		Actor: actor,
 	}, nil
 }
