@@ -59,26 +59,34 @@ WHERE
       -- Remove posts deleted by the actors
   AND cp.deleted_at IS NULL
       -- Match at least one of the queried hashtags. If unspecified, do not filter.
-  AND (COALESCE($1::TEXT[], '{}') = '{}' OR
-       $1::TEXT[] && cp.hashtags)
-      -- Match has_media status. If unspecified, do not filter.
-  AND ($2::BOOLEAN IS NULL OR
-       COALESCE(cp.has_media, false) = $2)
-      -- Filter by NSFW status. If unspecified, do not filter.
-  AND ($3::BOOLEAN IS NULL OR
-       ((ARRAY ['nsfw', 'mursuit', 'murrsuit'] && cp.hashtags) OR
-        (ARRAY ['porn', 'nudity', 'sexual'] && cp.self_labels)) = $3)
+  AND (
+    -- Standard criteria.
+    (
+        (COALESCE($1::TEXT[], '{}') = '{}' OR
+            $1::TEXT[] && cp.hashtags)
+            -- Match has_media status. If unspecified, do not filter.
+        AND ($2::BOOLEAN IS NULL OR
+            COALESCE(cp.has_media, false) = $2)
+            -- Filter by NSFW status. If unspecified, do not filter.
+        AND ($3::BOOLEAN IS NULL OR
+            ((ARRAY ['nsfw', 'mursuit', 'murrsuit'] && cp.hashtags) OR
+                (ARRAY ['porn', 'nudity', 'sexual'] && cp.self_labels)) = $3)
+    ) OR
+    -- Pinned DID criteria.
+    cp.actor_did = ANY($4::TEXT[])
+  )
       -- Remove posts newer than the cursor timestamp
-  AND (cp.indexed_at < $4)
+  AND (cp.indexed_at < $5)
 ORDER BY
     cp.indexed_at DESC
-LIMIT $5
+LIMIT $6
 `
 
 type GetFurryNewFeedParams struct {
 	Hashtags        []string
 	HasMedia        pgtype.Bool
 	IsNSFW          pgtype.Bool
+	PinnedDIDs      []string
 	CursorTimestamp pgtype.Timestamptz
 	Limit           int32
 }
@@ -88,6 +96,7 @@ func (q *Queries) GetFurryNewFeed(ctx context.Context, arg GetFurryNewFeedParams
 		arg.Hashtags,
 		arg.HasMedia,
 		arg.IsNSFW,
+		arg.PinnedDIDs,
 		arg.CursorTimestamp,
 		arg.Limit,
 	)

@@ -27,15 +27,22 @@ WHERE
       -- Remove posts deleted by the actors
   AND cp.deleted_at IS NULL
       -- Match at least one of the queried hashtags. If unspecified, do not filter.
-  AND (COALESCE(@hashtags::TEXT[], '{}') = '{}' OR
-       @hashtags::TEXT[] && cp.hashtags)
-      -- Match has_media status. If unspecified, do not filter.
-  AND (sqlc.narg(has_media)::BOOLEAN IS NULL OR
-       COALESCE(cp.has_media, false) = @has_media)
-      -- Filter by NSFW status. If unspecified, do not filter.
-  AND (sqlc.narg(is_nsfw)::BOOLEAN IS NULL OR
-       ((ARRAY ['nsfw', 'mursuit', 'murrsuit'] && cp.hashtags) OR
-        (ARRAY ['porn', 'nudity', 'sexual'] && cp.self_labels)) = @is_nsfw)
+  AND (
+    -- Standard criteria.
+    (
+        (COALESCE(@hashtags::TEXT[], '{}') = '{}' OR
+            @hashtags::TEXT[] && cp.hashtags)
+            -- Match has_media status. If unspecified, do not filter.
+        AND (sqlc.narg(has_media)::BOOLEAN IS NULL OR
+            COALESCE(cp.has_media, false) = @has_media)
+            -- Filter by NSFW status. If unspecified, do not filter.
+        AND (sqlc.narg(is_nsfw)::BOOLEAN IS NULL OR
+            ((ARRAY ['nsfw', 'mursuit', 'murrsuit'] && cp.hashtags) OR
+                (ARRAY ['porn', 'nudity', 'sexual'] && cp.self_labels)) = @is_nsfw)
+    ) OR
+    -- Pinned DID criteria.
+    cp.actor_did = ANY(@pinned_dids::TEXT[])
+  )
       -- Remove posts newer than the cursor timestamp
   AND (cp.indexed_at < @cursor_timestamp)
 ORDER BY

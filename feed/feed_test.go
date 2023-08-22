@@ -21,9 +21,15 @@ func TestChronologicalGenerator(t *testing.T) {
 	t.Cleanup(cancel)
 	harness := testenv.StartHarness(ctx, t)
 	furry := harness.PDS.MustNewUser(t, "furry.tpds")
+	pinnedFurry := harness.PDS.MustNewUser(t, "pinnedFurry.tpds")
 	_, err := harness.Store.CreateActor(ctx, store.CreateActorOpts{
 		Status: bffv1pb.ActorStatus_ACTOR_STATUS_APPROVED,
 		DID:    furry.DID(),
+	})
+	require.NoError(t, err)
+	_, err = harness.Store.CreateActor(ctx, store.CreateActorOpts{
+		Status: bffv1pb.ActorStatus_ACTOR_STATUS_APPROVED,
+		DID:    pinnedFurry.DID(),
 	})
 	require.NoError(t, err)
 
@@ -33,6 +39,7 @@ func TestChronologicalGenerator(t *testing.T) {
 	nsfwArtPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "nsfwArt")
 	poastPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "poast")
 	nsfwLabelledPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "nsfw-labelled")
+	pinnedPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "pinned-post")
 
 	for _, opts := range []store.CreatePostOpts{
 		{
@@ -90,21 +97,33 @@ func TestChronologicalGenerator(t *testing.T) {
 			Raw:        &bsky.FeedPost{},
 			SelfLabels: []string{"sexual"},
 		},
+		{
+			URI:        pinnedPost,
+			ActorDID:   pinnedFurry.DID(),
+			CreatedAt:  time.Time{},
+			IndexedAt:  time.Time{},
+			Hashtags:   []string{},
+			HasMedia:   true,
+			Raw:        &bsky.FeedPost{},
+			SelfLabels: []string{},
+		},
 	} {
 		require.NoError(t, harness.Store.CreatePost(ctx, opts))
 	}
 
 	for _, test := range []struct {
 		name          string
-		opts          generatorOpts
+		opts          chronologicalGeneratorOpts
 		expectedPosts []string
 	}{
 		{
 			name: "all",
-			opts: generatorOpts{
-				Hashtags: []string{},
-				IsNSFW:   tristate.Maybe,
-				HasMedia: tristate.Maybe,
+			opts: chronologicalGeneratorOpts{
+				generatorOpts: generatorOpts{
+					Hashtags: []string{},
+					IsNSFW:   tristate.Maybe,
+					HasMedia: tristate.Maybe,
+				},
 			},
 			expectedPosts: []string{
 				fursuitPost,
@@ -113,34 +132,51 @@ func TestChronologicalGenerator(t *testing.T) {
 				nsfwArtPost,
 				poastPost,
 				nsfwLabelledPost,
+				pinnedPost,
 			},
 		},
 		{
 			name: "all fursuits",
-			opts: generatorOpts{
-				Hashtags: []string{"fursuit"},
-				IsNSFW:   tristate.Maybe,
-				HasMedia: tristate.True,
+			opts: chronologicalGeneratorOpts{
+				generatorOpts: generatorOpts{
+					Hashtags: []string{"fursuit"},
+					IsNSFW:   tristate.Maybe,
+					HasMedia: tristate.True,
+				},
 			},
 			expectedPosts: []string{fursuitPost, murrsuitPost},
 		},
 		{
 			name: "sfw only fursuits",
-			opts: generatorOpts{
-				Hashtags: []string{"fursuit"},
-				IsNSFW:   tristate.False,
-				HasMedia: tristate.True,
+			opts: chronologicalGeneratorOpts{
+				generatorOpts: generatorOpts{
+					Hashtags: []string{"fursuit"},
+					IsNSFW:   tristate.False,
+					HasMedia: tristate.True,
+				},
 			},
 			expectedPosts: []string{fursuitPost},
 		},
 		{
 			name: "nsfw only art",
-			opts: generatorOpts{
-				Hashtags: []string{"art", "furryart"},
-				IsNSFW:   tristate.True,
-				HasMedia: tristate.True,
+			opts: chronologicalGeneratorOpts{
+				generatorOpts: generatorOpts{
+					Hashtags: []string{"art", "furryart"},
+					IsNSFW:   tristate.True,
+					HasMedia: tristate.True,
+				},
 			},
 			expectedPosts: []string{nsfwArtPost, nsfwLabelledPost},
+		},
+		{
+			name: "pinned post",
+			opts: chronologicalGeneratorOpts{
+				generatorOpts: generatorOpts{
+					Hashtags: []string{"placeholder"},
+				},
+				PinnedDIDs: []string{pinnedFurry.DID()},
+			},
+			expectedPosts: []string{pinnedPost},
 		},
 	} {
 		test := test
