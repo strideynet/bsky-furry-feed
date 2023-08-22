@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"github.com/strideynet/bsky-furry-feed/feed"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
 	"net/http"
@@ -20,10 +19,12 @@ type describeFeedGeneratorResponse struct {
 func describeFeedGeneratorHandler(
 	log *zap.Logger,
 	hostname string,
-	registry *feed.Service,
+	feedService feedService,
 ) (string, http.Handler) {
 	feedURI := func(feedName string) string {
 		return fmt.Sprintf(
+			// TODO(noah): This should be returning the profile that owns the
+			// content not the serverDID
 			"at://%s/app.bsky.feed.generator/%s",
 			serverDID(hostname),
 			feedName,
@@ -31,9 +32,9 @@ func describeFeedGeneratorHandler(
 	}
 
 	feeds := []describeFeedGeneratorResponseFeed{}
-	for _, id := range registry.IDs() {
+	for _, meta := range feedService.Metas() {
 		feeds = append(feeds, describeFeedGeneratorResponseFeed{
-			URI: feedURI(id),
+			URI: feedURI(meta.ID),
 		})
 	}
 

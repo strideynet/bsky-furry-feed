@@ -49,11 +49,16 @@ func jsonHandler(log *zap.Logger, h func(r *http.Request) (any, error)) http.Han
 	}
 }
 
+type feedService interface {
+	Metas() []feed.Meta
+	GetFeedPosts(ctx context.Context, feedKey string, cursor string, limit int) (posts []feed.Post, err error)
+}
+
 func New(
 	log *zap.Logger,
 	hostname string,
 	listenAddr string,
-	feedRegistry *feed.Service,
+	feedService feedService,
 	pgxStore *store.PGXStore,
 	bskyCredentials *bluesky.Credentials,
 	authEngine *AuthEngine,
@@ -75,13 +80,13 @@ func New(
 	})
 
 	// Mount xrpc handlers
-	didEndpointPath, didHandler, err := didHandler(hostname)
+	didEndpointPath, didHandler, err := didHandler(log, hostname)
 	if err != nil {
 		return nil, fmt.Errorf("creating did handler: %w", err)
 	}
 	mux.Handle(didEndpointPath, didHandler)
-	mux.Handle(getFeedSkeletonHandler(log, feedRegistry))
-	mux.Handle(describeFeedGeneratorHandler(log, hostname, feedRegistry))
+	mux.Handle(getFeedSkeletonHandler(log, feedService))
+	mux.Handle(describeFeedGeneratorHandler(log, hostname, feedService))
 
 	// Mount Buf Connect services
 	modSvcHandler := &ModerationServiceHandler{
@@ -106,7 +111,7 @@ func New(
 	mux.Handle(
 		bffv1pbconnect.NewPublicServiceHandler(
 			&PublicServiceHandler{
-				feedMetaSourcer: feedRegistry,
+				feedService: feedService,
 			},
 			interceptors,
 		),

@@ -9,16 +9,8 @@ import (
 	"testing"
 )
 
-type fakeMetaSourcer struct {
-	metas []feed.Meta
-}
-
-func (m *fakeMetaSourcer) Metas() []feed.Meta {
-	return m.metas
-}
-
 func TestPublicServiceHandler_ListFeeds(t *testing.T) {
-	h := PublicServiceHandler{feedMetaSourcer: &fakeMetaSourcer{
+	h := PublicServiceHandler{feedService: &fakeFeedService{
 		metas: []feed.Meta{
 			{
 				ID:          "foo",

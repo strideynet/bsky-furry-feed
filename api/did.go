@@ -1,8 +1,8 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
+	"go.uber.org/zap"
 	"net/http"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -12,33 +12,32 @@ func serverDID(hostname string) string {
 	return fmt.Sprintf("did:web:%s", hostname)
 }
 
-func generateDIDJSON(hostname string) ([]byte, error) {
-	type Object map[string]any
-
-	did := Object{
-		"@context": []string{"https://www.w3.org/ns/did/v1"},
-		"id":       serverDID(hostname),
-		"service": []Object{{
-			"id":              "#bsky_fg",
-			"type":            "BskyFeedGenerator",
-			"serviceEndpoint": fmt.Sprintf("https://%s", hostname),
-		}},
-	}
-
-	return json.Marshal(did)
+type WebDIDService struct {
+	ID              string `json:"id"`
+	Type            string `json:"type"`
+	ServiceEndpoint string `json:"serviceEndpoint"`
 }
 
-func didHandler(hostname string) (string, http.Handler, error) {
-	did, err := generateDIDJSON(hostname)
-	if err != nil {
-		return "", nil, fmt.Errorf("generating did json: %w", err)
-	}
+type WebDID struct {
+	Context []string        `json:"@context"`
+	ID      string          `json:"id"`
+	Service []WebDIDService `json:"service"`
+}
 
-	var h http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-
-		_, _ = w.Write(did)
-	}
+func didHandler(log *zap.Logger, hostname string) (string, http.Handler, error) {
+	h := jsonHandler(log, func(r *http.Request) (any, error) {
+		return WebDID{
+			Context: []string{"https://www.w3.org/ns/did/v1"},
+			ID:      serverDID(hostname),
+			Service: []WebDIDService{
+				{
+					ID:              "#bsky_fg",
+					Type:            "BskyFeedGenerator",
+					ServiceEndpoint: fmt.Sprintf("https://%s", hostname),
+				},
+			},
+		}, nil
+	})
 
 	return "/.well-known/did.json", otelhttp.NewHandler(h, "get_well_known_did"), nil
 }

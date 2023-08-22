@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-func TestModerationServiceHandler_CreateActor(t *testing.T) {
+func TestAPI_ModerationServiceHandler_CreateActor(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
 	}
