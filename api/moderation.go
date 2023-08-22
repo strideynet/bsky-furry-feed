@@ -2,10 +2,12 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/bluesky-social/indigo/api/bsky"
+	"github.com/bluesky-social/indigo/mst"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"golang.org/x/exp/slices"
 
@@ -448,25 +450,33 @@ func (m *ModerationServiceHandler) updateProfileAndFollow(ctx context.Context, a
 
 	record, err := c.GetRecord(ctx, "app.bsky.actor.profile", head, actorDID, "self")
 	if err != nil {
-		return fmt.Errorf("getting profile: %w", err)
+		if !errors.Is(err, mst.ErrNotFound) {
+			return fmt.Errorf("getting profile: %w", err)
+		}
+		record = nil
 	}
 
 	var profile *bsky.ActorProfile
-	switch record := record.(type) {
-	case *bsky.ActorProfile:
-		profile = record
-	default:
-		return fmt.Errorf("expected *bsky.ActorProfile, got %T", record)
+	if record != nil {
+		switch record := record.(type) {
+		case *bsky.ActorProfile:
+			profile = record
+		default:
+			return fmt.Errorf("expected *bsky.ActorProfile, got %T", record)
+		}
 	}
 
 	displayName := ""
-	if profile.DisplayName != nil {
-		displayName = *profile.DisplayName
-	}
-
 	description := ""
-	if profile.Description != nil {
-		description = *profile.Description
+
+	if profile != nil {
+		if profile.DisplayName != nil {
+			displayName = *profile.DisplayName
+		}
+
+		if profile.Description != nil {
+			description = *profile.Description
+		}
 	}
 
 	if err := tx.CreateLatestActorProfile(ctx, store.CreateLatestActorProfileOpts{
