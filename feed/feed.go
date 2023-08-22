@@ -106,7 +106,12 @@ type generatorOpts struct {
 	HasMedia tristate.Tristate
 }
 
-func chronologicalGenerator(opts generatorOpts) GenerateFunc {
+type chronologicalGeneratorOpts struct {
+	generatorOpts
+	PinnedDIDs []string
+}
+
+func chronologicalGenerator(opts chronologicalGeneratorOpts) GenerateFunc {
 	return func(ctx context.Context, pgxStore *store.PGXStore, cursor string, limit int) ([]Post, error) {
 		cursorTime := time.Now().UTC()
 		if cursor != "" {
@@ -121,6 +126,7 @@ func chronologicalGenerator(opts generatorOpts) GenerateFunc {
 			Hashtags:   opts.Hashtags,
 			IsNSFW:     opts.IsNSFW,
 			HasMedia:   opts.HasMedia,
+			PinnedDIDs: opts.PinnedDIDs,
 			CursorTime: cursorTime,
 		}
 
@@ -141,7 +147,12 @@ func chronologicalGenerator(opts generatorOpts) GenerateFunc {
 	}
 }
 
-func preScoredGenerator(alg string, opts generatorOpts) GenerateFunc {
+type preScoredGeneratorOpts struct {
+	generatorOpts
+	Alg string
+}
+
+func preScoredGenerator(opts preScoredGeneratorOpts) GenerateFunc {
 	return func(ctx context.Context, pgxStore *store.PGXStore, cursor string, limit int) ([]Post, error) {
 		type cursorValues struct {
 			GenerationSeq int64   `json:"generation_seq"`
@@ -153,10 +164,10 @@ func preScoredGenerator(alg string, opts generatorOpts) GenerateFunc {
 			Hashtags: opts.Hashtags,
 			IsNSFW:   opts.IsNSFW,
 			HasMedia: opts.HasMedia,
-			Alg:      alg,
+			Alg:      opts.Alg,
 		}
 		if cursor == "" {
-			seq, err := pgxStore.GetLatestScoreGeneration(ctx, alg)
+			seq, err := pgxStore.GetLatestScoreGeneration(ctx, opts.Alg)
 			if err != nil {
 				return nil, fmt.Errorf("executing GetLatestScoreGeneration: %w", err)
 			}
@@ -216,7 +227,9 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		DisplayName: "🐾 Hot",
 		Description: "Hottest posts by furries across Bluesky. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
 		Priority:    100,
-	}, preScoredGenerator("classic", generatorOpts{}))
+	}, preScoredGenerator(preScoredGeneratorOpts{
+		Alg: "classic",
+	}))
 
 	// Reverse chronological based feeds
 	r.Register(Meta{
@@ -224,100 +237,128 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		DisplayName: "🐾 New",
 		Description: "Posts by furries across Bluesky. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
 		Priority:    101,
-	}, chronologicalGenerator(generatorOpts{}))
+	}, chronologicalGenerator(chronologicalGeneratorOpts{}))
 	r.Register(Meta{
 		ID:          "furry-fursuit",
 		DisplayName: "🐾 Fursuits",
 		Description: "Posts by furries with #fursuit.\n\nJoin the furry feeds by following @furryli.st",
-	}, chronologicalGenerator(generatorOpts{
-		Hashtags: []string{"fursuit"},
-		HasMedia: tristate.True,
-	}))
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
+		generatorOpts: generatorOpts{
+			Hashtags: []string{"fursuit"},
+			HasMedia: tristate.True,
+		},
+	},
+	))
 	r.Register(Meta{
 		ID:          "fursuit-nsfw",
 		DisplayName: "🐾 Murrsuits 🌙",
 		Description: "Posts by furries that have an image and #murrsuit or #fursuit.\n\nJoin the furry feeds by following @furryli.st",
-	}, chronologicalGenerator(generatorOpts{
-		Hashtags: []string{"fursuit", "murrsuit", "mursuit"},
-		HasMedia: tristate.True,
-		IsNSFW:   tristate.True,
-	}))
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
+		generatorOpts: generatorOpts{
+			Hashtags: []string{"fursuit", "murrsuit", "mursuit"},
+			HasMedia: tristate.True,
+			IsNSFW:   tristate.True,
+		},
+	},
+	))
 	r.Register(Meta{
 		ID:          "fursuit-clean",
 		DisplayName: "🐾 Fursuits 🧼",
 		Description: "Posts by furries with #fursuit and without #nsfw.\n\nJoin the furry feeds by following @furryli.st",
-	}, chronologicalGenerator(generatorOpts{
-		Hashtags: []string{"fursuit"},
-		HasMedia: tristate.True,
-		IsNSFW:   tristate.False,
-	}))
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
+		generatorOpts: generatorOpts{
+			Hashtags: []string{"fursuit"},
+			HasMedia: tristate.True,
+			IsNSFW:   tristate.False,
+		},
+	},
+	))
 	r.Register(Meta{
 		ID:          "furry-art",
 		DisplayName: "🐾 Art",
 		Description: "Posts by furries with #art or #furryart. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
-	}, chronologicalGenerator(generatorOpts{
-		Hashtags: []string{"art", "furryart"},
-		HasMedia: tristate.True,
-	}))
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
+		generatorOpts: generatorOpts{
+			Hashtags: []string{"art", "furryart"},
+			HasMedia: tristate.True,
+		},
+	},
+	))
 	r.Register(Meta{
 		ID:          "art-clean",
 		DisplayName: "🐾 Art 🧼",
 		Description: "Posts by furries with #art or #furryart and without #nsfw.\n\nJoin the furry feeds by following @furryli.st",
-	}, chronologicalGenerator(generatorOpts{
-		Hashtags: []string{"art", "furryart"},
-		HasMedia: tristate.True,
-		IsNSFW:   tristate.False,
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
+		generatorOpts: generatorOpts{
+			Hashtags: []string{"art", "furryart"},
+			HasMedia: tristate.True,
+			IsNSFW:   tristate.False,
+		},
 	}))
 	r.Register(Meta{
 		ID:          "art-nsfw",
 		DisplayName: "🐾 Art 🌙",
 		Description: "Posts by furries with #art or #furryart and #nsfw.\n\nJoin the furry feeds by following @furryli.st",
-	}, chronologicalGenerator(generatorOpts{
-		Hashtags: []string{"art", "furryart"},
-		HasMedia: tristate.True,
-		IsNSFW:   tristate.True,
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
+		generatorOpts: generatorOpts{
+			Hashtags: []string{"art", "furryart"},
+			HasMedia: tristate.True,
+			IsNSFW:   tristate.True,
+		},
 	}))
 	r.Register(Meta{
 		ID:          "furry-nsfw",
 		DisplayName: "🐾 New 🌙",
 		Description: "Posts by furries that have #nsfw.\n\nJoin the furry feeds by following @furryli.st",
-	}, chronologicalGenerator(generatorOpts{
-		IsNSFW: tristate.True,
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
+		generatorOpts: generatorOpts{
+			IsNSFW: tristate.True,
+		},
 	}))
 	r.Register(Meta{
 		ID:          "furry-comms",
 		DisplayName: "🐾 #CommsOpen",
 		Description: "Posts by furries that have #commsopen.\n\nJoin the furry feeds by following @furryli.st",
-	}, chronologicalGenerator(generatorOpts{
-		Hashtags: []string{"commsopen"},
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
+		generatorOpts: generatorOpts{
+			Hashtags: []string{"commsopen"},
+		},
 	}))
 	r.Register(Meta{
 		ID:          "con-denfur",
 		DisplayName: "🐾 DenFur 2023",
 		Description: "A feed for all things DenFur! Use #denfur or #denfur2023 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
-	}, chronologicalGenerator(generatorOpts{
-		Hashtags: []string{"denfur", "denfur2023"},
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
+		generatorOpts: generatorOpts{
+			Hashtags: []string{"denfur", "denfur2023"},
+		},
 	}))
 	r.Register(Meta{
 		ID:          "merch",
 		DisplayName: "🐾 #FurSale",
 		Description: "Buy and sell furry merch on the FurSale feed. Use #fursale or #merch to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
-	}, chronologicalGenerator(generatorOpts{
-		Hashtags: []string{"fursale", "merch"},
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
+		generatorOpts: generatorOpts{
+			Hashtags: []string{"fursale", "merch"},
+		},
 	}))
 	r.Register(Meta{
 		ID:          "streamers",
 		DisplayName: "🐾 Streamers",
 		Description: "Find furs going live on streaming platforms. Use #goinglive or #furrylive to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
-	}, chronologicalGenerator(generatorOpts{
-		Hashtags: []string{"goinglive", "furrylive"},
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
+		generatorOpts: generatorOpts{
+			Hashtags: []string{"goinglive", "furrylive"},
+		},
 	}))
 	r.Register(Meta{
 		ID:          "furry-test",
 		DisplayName: "🐾 Test 🚨🛠️",
 		Description: "Experimental version of the '🐾 Hot' feed.\ntest\ntest\n\ndouble break",
 		Priority:    -1,
-	}, preScoredGenerator("classic", generatorOpts{}))
+	}, preScoredGenerator(preScoredGeneratorOpts{
+		Alg: "classic",
+	}))
 
 	return r
 }

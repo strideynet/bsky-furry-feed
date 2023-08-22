@@ -9,6 +9,7 @@ overrides:
        subject_uri: SubjectURI
        is_nsfw: IsNSFW
        after_uri: AfterURI
+       pinned_dids: PinnedDIDs
      overrides:
        - column: candidate_posts.raw
          go_type:

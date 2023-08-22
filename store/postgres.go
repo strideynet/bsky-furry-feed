@@ -544,6 +544,7 @@ type ListPostsForNewFeedOpts struct {
 	Hashtags   []string
 	IsNSFW     tristate.Tristate
 	HasMedia   tristate.Tristate
+	PinnedDIDs []string
 	Limit      int
 }
 
@@ -567,9 +568,10 @@ func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNew
 			Valid: true,
 			Time:  opts.CursorTime,
 		},
-		Hashtags: opts.Hashtags,
-		HasMedia: tristateToPgtypeBool(opts.HasMedia),
-		IsNSFW:   tristateToPgtypeBool(opts.IsNSFW),
+		Hashtags:   opts.Hashtags,
+		HasMedia:   tristateToPgtypeBool(opts.HasMedia),
+		IsNSFW:     tristateToPgtypeBool(opts.IsNSFW),
+		PinnedDIDs: opts.PinnedDIDs,
 	}
 	if opts.Limit != 0 {
 		queryParams.Limit = int32(opts.Limit)
