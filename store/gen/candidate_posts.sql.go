@@ -15,7 +15,14 @@ import (
 const createCandidatePost = `-- name: CreateCandidatePost :exec
 INSERT INTO
 candidate_posts (
-    uri, actor_did, created_at, indexed_at, hashtags, has_media, raw, self_labels
+    uri,
+    actor_did,
+    created_at,
+    indexed_at,
+    hashtags,
+    has_media,
+    raw,
+    self_labels
 )
 VALUES
 ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -52,31 +59,40 @@ FROM
     candidate_posts AS cp
 INNER JOIN candidate_actors AS ca ON cp.actor_did = ca.did
 WHERE
-      -- Only include posts by approved actors
-      ca.status = 'approved'
-      -- Remove posts hidden by our moderators
-  AND cp.is_hidden = false
-      -- Remove posts deleted by the actors
-  AND cp.deleted_at IS NULL
-      -- Match at least one of the queried hashtags. If unspecified, do not filter.
-  AND (
+    -- Only include posts by approved actors
+    ca.status = 'approved'
+    -- Remove posts hidden by our moderators
+    AND cp.is_hidden = false
+    -- Remove posts deleted by the actors
+    AND cp.deleted_at IS NULL
+    AND (
     -- Standard criteria.
-    (
-        (COALESCE($1::TEXT[], '{}') = '{}' OR
-            $1::TEXT[] && cp.hashtags)
+        (
+            -- Match at least one of the queried hashtags.
+            -- If unspecified, do not filter.
+            (
+                COALESCE($1::TEXT [], '{}') = '{}'
+                OR $1::TEXT [] && cp.hashtags
+            )
             -- Match has_media status. If unspecified, do not filter.
-        AND ($2::BOOLEAN IS NULL OR
-            COALESCE(cp.has_media, false) = $2)
+            AND (
+                $2::BOOLEAN IS NULL
+                OR COALESCE(cp.has_media, false) = $2
+            )
             -- Filter by NSFW status. If unspecified, do not filter.
-        AND ($3::BOOLEAN IS NULL OR
-            ((ARRAY ['nsfw', 'mursuit', 'murrsuit'] && cp.hashtags) OR
-                (ARRAY ['porn', 'nudity', 'sexual'] && cp.self_labels)) = $3)
-    ) OR
-    -- Pinned DID criteria.
-    cp.actor_did = ANY($4::TEXT[])
-  )
-      -- Remove posts newer than the cursor timestamp
-  AND (cp.indexed_at < $5)
+            AND (
+                $3::BOOLEAN IS NULL
+                OR (
+                    (ARRAY['nsfw', 'mursuit', 'murrsuit'] && cp.hashtags)
+                    OR (ARRAY['porn', 'nudity', 'sexual'] && cp.self_labels)
+                ) = $3
+            )
+        )
+        -- Pinned DID criteria.
+        OR cp.actor_did = ANY($4::TEXT [])
+    )
+    -- Remove posts newer than the cursor timestamp
+    AND (cp.indexed_at < $5)
 ORDER BY
     cp.indexed_at DESC
 LIMIT $6
@@ -165,28 +181,34 @@ FROM
 INNER JOIN candidate_actors AS ca ON cp.actor_did = ca.did
 INNER JOIN post_scores AS ph
     ON
-        ph.uri = cp.uri AND ph.alg = $1
+        cp.uri = ph.uri AND ph.alg = $1
         AND ph.generation_seq = $2
 WHERE
     cp.is_hidden = false
     AND ca.status = 'approved'
+    -- Match at least one of the queried hashtags.
+    -- If unspecified, do not filter.
     AND (
         COALESCE($3::TEXT [], '{}') = '{}'
         OR $3::TEXT [] && cp.hashtags
     )
+    -- Match has_media status. If unspecified, do not filter.
     AND (
         $4::BOOLEAN IS NULL
         OR COALESCE(cp.has_media, false) = $4
     )
+    -- Filter by NSFW status. If unspecified, do not filter.
     AND (
         $5::BOOLEAN IS NULL
-        OR (ARRAY['nsfw', 'mursuit', 'murrsuit'] && cp.hashtags)
-        = $5
+        OR (
+            (ARRAY['nsfw', 'mursuit', 'murrsuit'] && cp.hashtags)
+            OR (ARRAY['porn', 'nudity', 'sexual'] && cp.self_labels)
+        ) = $5
     )
     AND cp.deleted_at IS NULL
     AND (
-        (ph.score, ph.uri)
-        < ($6::REAL, $7::TEXT)
+        ROW(ph.score, ph.uri)
+        < ROW(($6)::REAL, ($7)::TEXT)
     )
 ORDER BY
     ph.score DESC, ph.uri DESC

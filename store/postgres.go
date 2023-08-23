@@ -800,10 +800,10 @@ func (s *PGXStore) GetActorProfileHistory(ctx context.Context, did string) (out 
 	return out, convertPGXError(err)
 }
 
-func (s *PGXStore) MaterializeClassicPostScores(ctx context.Context, lookbackPeriod time.Duration) (int64, error) {
-	return s.queries.MaterializePostScores(ctx, pgtype.Interval{Valid: true, Microseconds: lookbackPeriod.Microseconds()})
+func (s *PGXStore) MaterializeClassicPostScores(ctx context.Context, after time.Time) (int64, error) {
+	return s.queries.MaterializePostScores(ctx, pgtype.Timestamptz{Time: after, Valid: true})
 }
 
-func (s *PGXStore) DeleteOldPostScores(ctx context.Context, retentionPeriod time.Duration) (int64, error) {
-	return s.queries.DeleteOldPostScores(ctx, pgtype.Interval{Valid: true, Microseconds: retentionPeriod.Microseconds()})
+func (s *PGXStore) DeleteOldPostScores(ctx context.Context, before time.Time) (int64, error) {
+	return s.queries.DeleteOldPostScores(ctx, pgtype.Timestamptz{Time: before, Valid: true})
 }

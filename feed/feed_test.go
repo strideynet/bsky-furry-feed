@@ -193,3 +193,179 @@ func TestChronologicalGenerator(t *testing.T) {
 		})
 	}
 }
+
+func TestPreScoredGenerator(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	harness := testenv.StartHarness(ctx, t)
+	furry := harness.PDS.MustNewUser(t, "furry.tpds")
+	pinnedFurry := harness.PDS.MustNewUser(t, "pinnedFurry.tpds")
+	_, err := harness.Store.CreateActor(ctx, store.CreateActorOpts{
+		Status: bffv1pb.ActorStatus_ACTOR_STATUS_APPROVED,
+		DID:    furry.DID(),
+	})
+	require.NoError(t, err)
+	_, err = harness.Store.CreateActor(ctx, store.CreateActorOpts{
+		Status: bffv1pb.ActorStatus_ACTOR_STATUS_APPROVED,
+		DID:    pinnedFurry.DID(),
+	})
+	require.NoError(t, err)
+
+	fursuitPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "fursuit")
+	murrsuitPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "murrsuit")
+	artPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "art")
+	nsfwArtPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "nsfwArt")
+	poastPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "poast")
+	nsfwLabelledPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "nsfw-labelled")
+	pinnedPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "pinned-post")
+
+	for _, opts := range []store.CreatePostOpts{
+		{
+			URI:       fursuitPost,
+			ActorDID:  furry.DID(),
+			CreatedAt: time.Time{},
+			IndexedAt: time.Time{},
+			Hashtags:  []string{"fursuit"},
+			HasMedia:  true,
+			Raw:       &bsky.FeedPost{},
+		},
+		{
+			URI:       murrsuitPost,
+			ActorDID:  furry.DID(),
+			CreatedAt: time.Time{},
+			IndexedAt: time.Time{},
+			Hashtags:  []string{"fursuit", "murrsuit"},
+			HasMedia:  true,
+			Raw:       &bsky.FeedPost{},
+		},
+		{
+			URI:       artPost,
+			ActorDID:  furry.DID(),
+			CreatedAt: time.Time{},
+			IndexedAt: time.Time{},
+			Hashtags:  []string{"art"},
+			HasMedia:  true,
+			Raw:       &bsky.FeedPost{},
+		},
+		{
+			URI:       nsfwArtPost,
+			ActorDID:  furry.DID(),
+			CreatedAt: time.Time{},
+			IndexedAt: time.Time{},
+			Hashtags:  []string{"furryart", "nsfw"},
+			HasMedia:  true,
+			Raw:       &bsky.FeedPost{},
+		},
+		{
+			URI:       poastPost,
+			ActorDID:  furry.DID(),
+			CreatedAt: time.Time{},
+			IndexedAt: time.Time{},
+			Hashtags:  []string{},
+			HasMedia:  true,
+			Raw:       &bsky.FeedPost{},
+		},
+		{
+			URI:        nsfwLabelledPost,
+			ActorDID:   furry.DID(),
+			CreatedAt:  time.Time{},
+			IndexedAt:  time.Time{},
+			Hashtags:   []string{"art"},
+			HasMedia:   true,
+			Raw:        &bsky.FeedPost{},
+			SelfLabels: []string{"sexual"},
+		},
+		{
+			URI:        pinnedPost,
+			ActorDID:   pinnedFurry.DID(),
+			CreatedAt:  time.Time{},
+			IndexedAt:  time.Time{},
+			Hashtags:   []string{},
+			HasMedia:   true,
+			Raw:        &bsky.FeedPost{},
+			SelfLabels: []string{},
+		},
+	} {
+		require.NoError(t, harness.Store.CreatePost(ctx, opts))
+	}
+	_, err = harness.Store.MaterializeClassicPostScores(ctx, time.Time{})
+	require.NoError(t, err)
+
+	for _, test := range []struct {
+		name          string
+		opts          preScoredGeneratorOpts
+		expectedPosts []string
+	}{
+		{
+			name: "all",
+			opts: preScoredGeneratorOpts{
+				Alg: "classic",
+				generatorOpts: generatorOpts{
+					Hashtags: []string{},
+					IsNSFW:   tristate.Maybe,
+					HasMedia: tristate.Maybe,
+				},
+			},
+			expectedPosts: []string{
+				fursuitPost,
+				murrsuitPost,
+				artPost,
+				nsfwArtPost,
+				poastPost,
+				nsfwLabelledPost,
+				pinnedPost,
+			},
+		},
+		{
+			name: "all fursuits",
+			opts: preScoredGeneratorOpts{
+				Alg: "classic",
+				generatorOpts: generatorOpts{
+					Hashtags: []string{"fursuit"},
+					IsNSFW:   tristate.Maybe,
+					HasMedia: tristate.True,
+				},
+			},
+			expectedPosts: []string{fursuitPost, murrsuitPost},
+		},
+		{
+			name: "sfw only fursuits",
+			opts: preScoredGeneratorOpts{
+				Alg: "classic",
+				generatorOpts: generatorOpts{
+					Hashtags: []string{"fursuit"},
+					IsNSFW:   tristate.False,
+					HasMedia: tristate.True,
+				},
+			},
+			expectedPosts: []string{fursuitPost},
+		},
+		{
+			name: "nsfw only art",
+			opts: preScoredGeneratorOpts{
+				Alg: "classic",
+				generatorOpts: generatorOpts{
+					Hashtags: []string{"art", "furryart"},
+					IsNSFW:   tristate.True,
+					HasMedia: tristate.True,
+				},
+			},
+			expectedPosts: []string{nsfwArtPost, nsfwLabelledPost},
+		},
+	} {
+		test := test
+
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			posts, err := preScoredGenerator(test.opts)(ctx, harness.Store, "", 1000)
+			require.NoError(t, err)
+			postURIs := make([]string, len(posts))
+			for i, post := range posts {
+				postURIs[i] = post.URI
+			}
+			require.ElementsMatch(t, test.expectedPosts, postURIs)
+		})
+	}
+}
