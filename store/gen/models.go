@@ -116,6 +116,15 @@ type CandidatePost struct {
 	SelfLabels []string
 }
 
+type Con struct {
+	ID        string
+	Name      string
+	Aliases   []string
+	Location  string
+	StartDate pgtype.Date
+	EndDate   pgtype.Date
+}
+
 type FirehoseCommitCursor struct {
 	Cursor int64
 }

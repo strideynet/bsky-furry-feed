@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -53,7 +54,7 @@ type Service struct {
 	store *store.PGXStore
 }
 
-func (s *Service) Register(m Meta, generateFunc GenerateFunc) {
+func (s *Service) registerStaticFeed(m Meta, generateFunc GenerateFunc) {
 	if s.feeds == nil {
 		s.feeds = map[string]*feed{}
 	}
@@ -83,12 +84,44 @@ func (s *Service) GetFeedPosts(ctx context.Context, feedKey string, cursor strin
 			Observe(time.Since(start).Seconds())
 	}()
 
-	f, ok := s.feeds[feedKey]
-	if !ok {
-		return nil, fmt.Errorf("unrecognized feed")
+	var generate GenerateFunc
+
+	if conID := strings.TrimPrefix(feedKey, "con-"); conID != feedKey {
+		// This is con feed, use the con feed generator.
+		var err error
+		generate, err = s.conFeedGenerator(ctx, conID)
+		if err != nil {
+			return nil, fmt.Errorf("could not get con feed generator: %w", err)
+		}
+	} else {
+		f, ok := s.feeds[feedKey]
+		if !ok {
+			return nil, fmt.Errorf("unrecognized feed")
+		}
+		generate = f.generate
 	}
 
-	return f.generate(ctx, s.store, cursor, limit)
+	return generate(ctx, s.store, cursor, limit)
+}
+
+func (s *Service) conFeedGenerator(ctx context.Context, id string) (GenerateFunc, error) {
+	con, err := s.store.GetCon(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	hashtags := []string{}
+	aliases := append([]string{strings.ToLower(con.Name)}, con.Aliases...)
+	for _, alias := range aliases {
+		hashtags = append(hashtags, alias)
+		hashtags = append(hashtags, fmt.Sprintf("%s%d", alias, con.StartDate.Time.Year()))
+	}
+
+	return chronologicalGenerator(chronologicalGeneratorOpts{
+		generatorOpts: generatorOpts{
+			Hashtags: hashtags,
+		},
+	}), nil
 }
 
 type generatorOpts struct {
@@ -213,7 +246,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	}
 
 	// Hot based feeds
-	r.Register(Meta{
+	r.registerStaticFeed(Meta{
 		ID:          "furry-hot",
 		DisplayName: "🐾 Hot",
 		Description: "Hottest posts by furries across Bluesky. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
@@ -223,13 +256,13 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	}))
 
 	// Reverse chronological based feeds
-	r.Register(Meta{
+	r.registerStaticFeed(Meta{
 		ID:          "furry-new",
 		DisplayName: "🐾 New",
 		Description: "Posts by furries across Bluesky. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
 		Priority:    101,
 	}, chronologicalGenerator(chronologicalGeneratorOpts{}))
-	r.Register(Meta{
+	r.registerStaticFeed(Meta{
 		ID:          "furry-fursuit",
 		DisplayName: "🐾 Fursuits",
 		Description: "Posts by furries with #fursuit.\n\nJoin the furry feeds by following @furryli.st",
@@ -240,7 +273,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		},
 	},
 	))
-	r.Register(Meta{
+	r.registerStaticFeed(Meta{
 		ID:          "fursuit-nsfw",
 		DisplayName: "🐾 Murrsuits 🌙",
 		Description: "Posts by furries that have an image and #murrsuit or #fursuit.\n\nJoin the furry feeds by following @furryli.st",
@@ -252,7 +285,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		},
 	},
 	))
-	r.Register(Meta{
+	r.registerStaticFeed(Meta{
 		ID:          "fursuit-clean",
 		DisplayName: "🐾 Fursuits 🧼",
 		Description: "Posts by furries with #fursuit and without #nsfw.\n\nJoin the furry feeds by following @furryli.st",
@@ -264,7 +297,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		},
 	},
 	))
-	r.Register(Meta{
+	r.registerStaticFeed(Meta{
 		ID:          "furry-art",
 		DisplayName: "🐾 Art",
 		Description: "Posts by furries with #art or #furryart. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
@@ -275,7 +308,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		},
 	},
 	))
-	r.Register(Meta{
+	r.registerStaticFeed(Meta{
 		ID:          "art-clean",
 		DisplayName: "🐾 Art 🧼",
 		Description: "Posts by furries with #art or #furryart and without #nsfw.\n\nJoin the furry feeds by following @furryli.st",
@@ -286,7 +319,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 			IsNSFW:   tristate.False,
 		},
 	}))
-	r.Register(Meta{
+	r.registerStaticFeed(Meta{
 		ID:          "art-nsfw",
 		DisplayName: "🐾 Art 🌙",
 		Description: "Posts by furries with #art or #furryart and #nsfw.\n\nJoin the furry feeds by following @furryli.st",
@@ -297,7 +330,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 			IsNSFW:   tristate.True,
 		},
 	}))
-	r.Register(Meta{
+	r.registerStaticFeed(Meta{
 		ID:          "furry-nsfw",
 		DisplayName: "🐾 New 🌙",
 		Description: "Posts by furries that have #nsfw.\n\nJoin the furry feeds by following @furryli.st",
@@ -306,7 +339,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 			IsNSFW: tristate.True,
 		},
 	}))
-	r.Register(Meta{
+	r.registerStaticFeed(Meta{
 		ID:          "furry-comms",
 		DisplayName: "🐾 #CommsOpen",
 		Description: "Posts by furries that have #commsopen.\n\nJoin the furry feeds by following @furryli.st",
@@ -315,16 +348,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 			Hashtags: []string{"commsopen"},
 		},
 	}))
-	r.Register(Meta{
-		ID:          "con-denfur",
-		DisplayName: "🐾 DenFur 2023",
-		Description: "A feed for all things DenFur! Use #denfur or #denfur2023 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
-	}, chronologicalGenerator(chronologicalGeneratorOpts{
-		generatorOpts: generatorOpts{
-			Hashtags: []string{"denfur", "denfur2023"},
-		},
-	}))
-	r.Register(Meta{
+	r.registerStaticFeed(Meta{
 		ID:          "merch",
 		DisplayName: "🐾 #FurSale",
 		Description: "Buy and sell furry merch on the FurSale feed. Use #fursale or #merch to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
@@ -333,7 +357,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 			Hashtags: []string{"fursale", "merch"},
 		},
 	}))
-	r.Register(Meta{
+	r.registerStaticFeed(Meta{
 		ID:          "streamers",
 		DisplayName: "🐾 Streamers",
 		Description: "Find furs going live on streaming platforms. Use #goinglive or #furrylive to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
@@ -342,7 +366,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 			Hashtags: []string{"goinglive", "furrylive"},
 		},
 	}))
-	r.Register(Meta{
+	r.registerStaticFeed(Meta{
 		ID:          "furry-test",
 		DisplayName: "🐾 Test 🚨🛠️",
 		Description: "Experimental version of the '🐾 Hot' feed.\ntest\ntest\n\ndouble break",
