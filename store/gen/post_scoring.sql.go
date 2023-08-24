@@ -13,11 +13,11 @@ import (
 
 const deleteOldPostScores = `-- name: DeleteOldPostScores :execrows
 DELETE FROM post_scores
-WHERE generated_at < NOW() - $1::INTERVAL
+WHERE generated_at < $1::TIMESTAMPTZ
 `
 
-func (q *Queries) DeleteOldPostScores(ctx context.Context, retentionPeriod pgtype.Interval) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteOldPostScores, retentionPeriod)
+func (q *Queries) DeleteOldPostScores(ctx context.Context, before pgtype.Timestamptz) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteOldPostScores, before)
 	if err != nil {
 		return 0, err
 	}
@@ -57,12 +57,12 @@ SELECT
 FROM candidate_posts AS cp
 WHERE
     cp.deleted_at IS NULL
-    AND cp.created_at >= NOW() - $1::INTERVAL
+    AND cp.created_at >= $1::TIMESTAMPTZ
 RETURNING (SELECT seq FROM seq)
 `
 
-func (q *Queries) MaterializePostScores(ctx context.Context, lookbackPeriod pgtype.Interval) (int64, error) {
-	row := q.db.QueryRow(ctx, materializePostScores, lookbackPeriod)
+func (q *Queries) MaterializePostScores(ctx context.Context, after pgtype.Timestamptz) (int64, error) {
+	row := q.db.QueryRow(ctx, materializePostScores, after)
 	var seq int64
 	err := row.Scan(&seq)
 	return seq, err

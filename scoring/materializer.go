@@ -32,21 +32,22 @@ func NewMaterializer(
 }
 
 func (m *Materializer) materialize(ctx context.Context) error {
-	start := time.Now()
-	seq, err := m.store.MaterializeClassicPostScores(ctx, m.opts.LookbackPeriod)
+	now := time.Now()
+	seq, err := m.store.MaterializeClassicPostScores(ctx, now.Add(-m.opts.LookbackPeriod))
 	if err != nil {
 		return err
 	}
 	m.log.Info(
 		"materialized generation",
 		zap.Int64("seq", seq),
-		zap.Duration("duration", time.Since(start)),
+		zap.Duration("duration", time.Since(now)),
 	)
 	return nil
 }
 
 func (m *Materializer) cleanup(ctx context.Context) error {
-	n, err := m.store.DeleteOldPostScores(ctx, m.opts.RetentionPeriod)
+	now := time.Now()
+	n, err := m.store.DeleteOldPostScores(ctx, now.Add(-m.opts.RetentionPeriod))
 	if err != nil {
 		return err
 	}

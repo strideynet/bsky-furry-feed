@@ -1,6 +1,6 @@
 -- name: DeleteOldPostScores :execrows
 DELETE FROM post_scores
-WHERE generated_at < NOW() - sqlc.arg(retention_period)::INTERVAL;
+WHERE generated_at < sqlc.arg(before)::TIMESTAMPTZ;
 
 -- name: MaterializePostScores :one
 WITH seq AS (SELECT NEXTVAL('post_scores_generation_seq') AS seq)
@@ -20,7 +20,7 @@ SELECT
 FROM candidate_posts AS cp
 WHERE
     cp.deleted_at IS NULL
-    AND cp.created_at >= NOW() - sqlc.arg(lookback_period)::INTERVAL
+    AND cp.created_at >= sqlc.arg(after)::TIMESTAMPTZ
 RETURNING (SELECT seq FROM seq);
 
 -- name: GetLatestScoreGeneration :one

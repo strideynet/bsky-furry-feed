@@ -221,6 +221,17 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	}, preScoredGenerator(preScoredGeneratorOpts{
 		Alg: "classic",
 	}))
+	r.Register(Meta{
+		ID:          "furry-hot-nsfw",
+		DisplayName: "🐾 Hot 🌙",
+		Description: "Hottest NSFW posts by furries across Bluesky. Contains only NSFW content.\n\nJoin the furry feeds by following @furryli.st",
+		Priority:    100,
+	}, preScoredGenerator(preScoredGeneratorOpts{
+		Alg: "classic",
+		generatorOpts: generatorOpts{
+			IsNSFW: tristate.True,
+		},
+	}))
 
 	// Reverse chronological based feeds
 	r.Register(Meta{
