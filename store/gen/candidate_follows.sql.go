@@ -13,10 +13,12 @@ import (
 
 const createCandidateFollow = `-- name: CreateCandidateFollow :exec
 INSERT INTO
-    candidate_follows (uri, actor_did, subject_did, created_at,
-                       indexed_at)
+candidate_follows (
+    uri, actor_did, subject_did, created_at,
+    indexed_at
+)
 VALUES
-    ($1, $2, $3, $4, $5)
+($1, $2, $3, $4, $5)
 `
 
 type CreateCandidateFollowParams struct {
@@ -40,7 +42,7 @@ func (q *Queries) CreateCandidateFollow(ctx context.Context, arg CreateCandidate
 
 const softDeleteCandidateFollow = `-- name: SoftDeleteCandidateFollow :exec
 UPDATE
-    candidate_follows
+candidate_follows
 SET
     deleted_at = NOW()
 WHERE
