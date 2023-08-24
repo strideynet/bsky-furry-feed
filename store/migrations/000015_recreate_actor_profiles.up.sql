@@ -13,4 +13,6 @@ CREATE TABLE actor_profiles (
 
 CREATE INDEX actor_profiles_created_at_idx ON actor_profiles (created_at);
 ALTER TABLE candidate_actors ADD COLUMN current_profile_commit_cid TEXT;
-ALTER TABLE candidate_actors ADD FOREIGN KEY (did, current_profile_commit_cid) REFERENCES actor_profiles (actor_did, commit_cid) ON UPDATE CASCADE ON DELETE SET NULL;
+ALTER TABLE candidate_actors ADD FOREIGN KEY (did, current_profile_commit_cid) REFERENCES actor_profiles (
+    actor_did, commit_cid
+) ON UPDATE CASCADE ON DELETE SET NULL;

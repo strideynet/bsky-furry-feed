@@ -13,9 +13,9 @@ import (
 
 const createCandidateActor = `-- name: CreateCandidateActor :one
 INSERT INTO
-    candidate_actors (did, created_at, is_artist, comment, status, roles)
+candidate_actors (did, created_at, is_artist, comment, status, roles)
 VALUES
-    ($1, $2, $3, $4, $5, $6)
+($1, $2, $3, $4, $5, $6)
 RETURNING did, created_at, is_artist, comment, status, roles, current_profile_commit_cid
 `
 
@@ -52,23 +52,29 @@ func (q *Queries) CreateCandidateActor(ctx context.Context, arg CreateCandidateA
 
 const createLatestActorProfile = `-- name: CreateLatestActorProfile :exec
 WITH
-    ap as (
-        INSERT INTO actor_profiles
-            (actor_did, commit_cid, created_at, indexed_at, display_name,
-             description, self_labels)
-            VALUES
-                ($1, $2,
-                 $3, $4,
-                 $5, $6,
-                 $7)
-            ON CONFLICT (actor_did, commit_cid) DO
-                UPDATE SET
-                    created_at = EXCLUDED.created_at,
-                    indexed_at = EXCLUDED.indexed_at,
-                    display_name = EXCLUDED.display_name,
-                    description = EXCLUDED.description,
-                    self_labels = EXCLUDED.self_labels
-            RETURNING actor_did, commit_cid)
+ap AS (
+    INSERT INTO actor_profiles
+    (
+        actor_did, commit_cid, created_at, indexed_at, display_name,
+        description, self_labels
+    )
+    VALUES
+    (
+        $1, $2,
+        $3, $4,
+        $5, $6,
+        $7
+    )
+    ON CONFLICT (actor_did, commit_cid) DO
+    UPDATE SET
+    created_at = excluded.created_at,
+    indexed_at = excluded.indexed_at,
+    display_name = excluded.display_name,
+    description = excluded.description,
+    self_labels = excluded.self_labels
+    RETURNING actor_did, commit_cid
+)
+
 UPDATE candidate_actors ca
 SET
     current_profile_commit_cid = (SELECT commit_cid FROM ap)
@@ -100,10 +106,9 @@ func (q *Queries) CreateLatestActorProfile(ctx context.Context, arg CreateLatest
 }
 
 const getActorProfileHistory = `-- name: GetActorProfileHistory :many
-SELECT
-    ap.actor_did, ap.commit_cid, ap.created_at, ap.indexed_at, ap.display_name, ap.description, ap.self_labels
+SELECT ap.actor_did, ap.commit_cid, ap.created_at, ap.indexed_at, ap.display_name, ap.description, ap.self_labels
 FROM
-    actor_profiles ap
+    actor_profiles AS ap
 WHERE
     ap.actor_did = $1
 ORDER BY
@@ -162,13 +167,14 @@ func (q *Queries) GetCandidateActorByDID(ctx context.Context, did string) (Candi
 }
 
 const getLatestActorProfile = `-- name: GetLatestActorProfile :one
-SELECT
-    ap.actor_did, ap.commit_cid, ap.created_at, ap.indexed_at, ap.display_name, ap.description, ap.self_labels
+SELECT ap.actor_did, ap.commit_cid, ap.created_at, ap.indexed_at, ap.display_name, ap.description, ap.self_labels
 FROM
-    candidate_actors ca
-        INNER JOIN actor_profiles ap ON ap.actor_did = ca.did AND
-                                        ap.commit_cid =
-                                        ca.current_profile_commit_cid
+    candidate_actors AS ca
+INNER JOIN actor_profiles AS ap
+    ON
+        ca.did = ap.actor_did
+        AND ca.current_profile_commit_cid
+        = ap.commit_cid
 WHERE
     ca.did = $1
 `
@@ -191,10 +197,12 @@ func (q *Queries) GetLatestActorProfile(ctx context.Context, did string) (ActorP
 const listCandidateActors = `-- name: ListCandidateActors :many
 SELECT did, created_at, is_artist, comment, status, roles, current_profile_commit_cid
 FROM
-    candidate_actors ca
+    candidate_actors AS ca
 WHERE
-    ($1::actor_status IS NULL OR
-     ca.status = $1)
+    (
+        $1::actor_status IS NULL
+        OR ca.status = $1
+    )
 ORDER BY
     did
 `
@@ -230,10 +238,10 @@ func (q *Queries) ListCandidateActors(ctx context.Context, status NullActorStatu
 const listCandidateActorsRequiringProfileBackfill = `-- name: ListCandidateActorsRequiringProfileBackfill :many
 SELECT did, created_at, is_artist, comment, status, roles, current_profile_commit_cid
 FROM
-    candidate_actors ca
+    candidate_actors AS ca
 WHERE
-      ca.status = 'approved'
-  AND ca.current_profile_commit_cid IS NULL
+    ca.status = 'approved'
+    AND ca.current_profile_commit_cid IS NULL
 ORDER BY
     did
 `
@@ -269,9 +277,9 @@ func (q *Queries) ListCandidateActorsRequiringProfileBackfill(ctx context.Contex
 const updateCandidateActor = `-- name: UpdateCandidateActor :one
 UPDATE candidate_actors ca
 SET
-    status=COALESCE($1, ca.status),
-    is_artist=COALESCE($2, ca.is_artist),
-    comment=COALESCE($3, ca.comment)
+    status = COALESCE($1, ca.status),
+    is_artist = COALESCE($2, ca.is_artist),
+    comment = COALESCE($3, ca.comment)
 WHERE
     did = $4
 RETURNING did, created_at, is_artist, comment, status, roles, current_profile_commit_cid

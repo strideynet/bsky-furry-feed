@@ -24,7 +24,7 @@ const setFirehoseCommitCursor = `-- name: SetFirehoseCommitCursor :exec
 INSERT INTO firehose_commit_cursor (cursor)
 VALUES ($1)
 ON CONFLICT ((0)) DO
-UPDATE SET cursor = EXCLUDED.cursor
+UPDATE SET cursor = excluded.cursor
 `
 
 func (q *Queries) SetFirehoseCommitCursor(ctx context.Context, cursor int64) error {

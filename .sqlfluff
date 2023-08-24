@@ -1,0 +1,5 @@
+[sqlfluff]
+dialect = postgres
+templater = raw
+max_line_length = 120
+exclude_rules = references.consistent, references.qualification, ambiguous.column_count

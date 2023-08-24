@@ -13,10 +13,12 @@ import (
 
 const createCandidateLike = `-- name: CreateCandidateLike :exec
 INSERT INTO
-    candidate_likes (uri, actor_did, subject_uri, created_at,
-                     indexed_at)
+candidate_likes (
+    uri, actor_did, subject_uri, created_at,
+    indexed_at
+)
 VALUES
-    ($1, $2, $3, $4, $5)
+($1, $2, $3, $4, $5)
 `
 
 type CreateCandidateLikeParams struct {
@@ -40,7 +42,7 @@ func (q *Queries) CreateCandidateLike(ctx context.Context, arg CreateCandidateLi
 
 const softDeleteCandidateLike = `-- name: SoftDeleteCandidateLike :exec
 UPDATE
-    candidate_likes
+candidate_likes
 SET
     deleted_at = NOW()
 WHERE
