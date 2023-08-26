@@ -222,7 +222,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		Alg: "classic",
 	}))
 	r.Register(Meta{
-		ID:          "furry-hot-nsfw",
+		ID:          "hot-nsfw",
 		DisplayName: "🐾 Hot 🌙",
 		Description: "Hottest NSFW posts by furries across Bluesky. Contains only NSFW content.\n\nJoin the furry feeds by following @furryli.st",
 		Priority:    100,
