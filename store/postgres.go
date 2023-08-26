@@ -807,3 +807,7 @@ func (s *PGXStore) MaterializeClassicPostScores(ctx context.Context, after time.
 func (s *PGXStore) DeleteOldPostScores(ctx context.Context, before time.Time) (int64, error) {
 	return s.queries.DeleteOldPostScores(ctx, pgtype.Timestamptz{Time: before, Valid: true})
 }
+
+func (s *PGXStore) GetCon(ctx context.Context, id string) (gen.Con, error) {
+	return s.queries.GetCon(ctx, id)
+}
