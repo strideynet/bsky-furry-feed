@@ -6,7 +6,8 @@ require (
 	cloud.google.com/go/cloudsqlconn v1.2.4
 	connectrpc.com/connect v1.11.0
 	connectrpc.com/otelconnect v0.5.0
-	github.com/bluesky-social/indigo v0.0.0-20230815172301-d9efabf04191
+	github.com/bluesky-social/indigo v0.0.0-20230828224954-ebc21133a67a
+	github.com/docker/go-connections v0.4.0
 	github.com/golang-migrate/migrate/v4 v4.16.2
 	github.com/google/go-cmp v0.5.9
 	github.com/gorilla/websocket v1.5.0
@@ -19,7 +20,7 @@ require (
 	github.com/testcontainers/testcontainers-go v0.21.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.21.0
 	github.com/urfave/cli/v2 v2.25.1
-	github.com/whyrusleeping/cbor-gen v0.0.0-20230331140348-1f892b517e70
+	github.com/whyrusleeping/cbor-gen v0.0.0-20230818171029-f91ae536ca25
 	go.opentelemetry.io/contrib/detectors/gcp v1.17.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.42.0
 	go.opentelemetry.io/otel v1.16.0
@@ -29,7 +30,7 @@ require (
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20230510235704-dd950f8aeaea
 	golang.org/x/sync v0.3.0
-	golang.org/x/sys v0.10.0
+	golang.org/x/sys v0.11.0
 	google.golang.org/protobuf v1.31.0
 )
 
@@ -45,7 +46,6 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0 // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/docker/docker v24.0.5+incompatible // indirect
-	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/go-kit/log v0.2.1 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
@@ -62,7 +62,7 @@ require (
 	github.com/lestrrat-go/httpcc v1.0.1 // indirect
 	github.com/lestrrat-go/httprc v1.0.4 // indirect
 	github.com/lestrrat-go/iter v1.0.2 // indirect
-	github.com/lestrrat-go/jwx/v2 v2.0.11 // indirect
+	github.com/lestrrat-go/jwx/v2 v2.0.12 // indirect
 	github.com/lestrrat-go/option v1.0.1 // indirect
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
@@ -82,8 +82,9 @@ require (
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
-	github.com/whyrusleeping/go-did v0.0.0-20230717231106-35050b2a69a3 // indirect
-	gitlab.com/yawning/secp256k1-voi v0.0.0-20230702045112-3980093d98cd // indirect
+	github.com/whyrusleeping/go-did v0.0.0-20230824162731-404d1707d5d6 // indirect
+	gitlab.com/yawning/secp256k1-voi v0.0.0-20230815035612-a7264edccf80 // indirect
+	gitlab.com/yawning/tuplehash v0.0.0-20230713102510-df83abbf9a02 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.16.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.16.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.19.0 // indirect
@@ -170,10 +171,10 @@ require (
 	go.opentelemetry.io/otel/trace v1.16.0
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.11.0 // indirect
+	golang.org/x/crypto v0.12.0 // indirect
 	golang.org/x/net v0.12.0 // indirect
 	golang.org/x/oauth2 v0.8.0 // indirect
-	golang.org/x/text v0.11.0
+	golang.org/x/text v0.12.0
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.121.0 // indirect
