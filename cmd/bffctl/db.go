@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -169,25 +171,33 @@ func dbCandidateActorsBackfillProfiles(log *zap.Logger, env *environment) *cli.C
 
 				record, err := client.GetRecord(cctx.Context, "app.bsky.actor.profile", head, r.DID, "self")
 				if err != nil {
-					return fmt.Errorf("getting profile: %w", err)
+					if !errors.Is(err, io.EOF) {
+						return fmt.Errorf("getting profile: %w", err)
+					}
+					record = nil
 				}
 
 				var profile *bsky.ActorProfile
-				switch record := record.(type) {
-				case *bsky.ActorProfile:
-					profile = record
-				default:
-					return fmt.Errorf("expected *bsky.ActorProfile, got %T", record)
+				if record != nil {
+					switch record := record.(type) {
+					case *bsky.ActorProfile:
+						profile = record
+					default:
+						return fmt.Errorf("expected *bsky.ActorProfile, got %T", record)
+					}
 				}
 
 				displayName := ""
-				if profile.DisplayName != nil {
-					displayName = *profile.DisplayName
-				}
-
 				description := ""
-				if profile.Description != nil {
-					description = *profile.Description
+
+				if profile != nil {
+					if profile.DisplayName != nil {
+						displayName = *profile.DisplayName
+					}
+
+					if profile.Description != nil {
+						description = *profile.Description
+					}
 				}
 
 				params := gen.CreateLatestActorProfileParams{
@@ -210,6 +220,7 @@ func dbCandidateActorsBackfillProfiles(log *zap.Logger, env *environment) *cli.C
 						Valid:  true,
 						String: description,
 					},
+					SelfLabels: []string{},
 				}
 				log.Info("backfilling candidate actor profile",
 					zap.Any("data", params),

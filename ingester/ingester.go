@@ -5,11 +5,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/bluesky-social/indigo/events/schedulers/sequential"
+	"io"
 	"strconv"
+
+	"github.com/bluesky-social/indigo/events/schedulers/sequential"
+	"github.com/ipld/go-car/v2"
 
 	"github.com/bluesky-social/indigo/util"
 	"github.com/ipfs/go-cid"
+	"github.com/ipfs/go-libipfs/blocks"
 
 	"net/http"
 	"sync"
@@ -25,8 +29,6 @@ import (
 	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/bluesky-social/indigo/events"
 	lexutil "github.com/bluesky-social/indigo/lex/util"
-	"github.com/bluesky-social/indigo/repo"
-	"github.com/bluesky-social/indigo/repomgr"
 	"github.com/gorilla/websocket"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -282,16 +284,34 @@ func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncS
 	if err != nil {
 		return fmt.Errorf("parsing timestamp: %w", err)
 	}
-	rr, err := repo.ReadRepoFromCar(ctx, bytes.NewReader(evt.Blocks))
+
+	br, err := car.NewBlockReader(bytes.NewReader(evt.Blocks))
 	if err != nil {
-		return fmt.Errorf("reading repo from car: %w", err)
+		return fmt.Errorf("reading car file: %w", err)
 	}
+
+	blocks := map[string]blocks.Block{}
+	for {
+		block, err := br.Next()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return err
+		}
+		blocks[block.Cid().KeyString()] = block
+	}
+
 	for _, op := range evt.Ops {
 		uri := fmt.Sprintf("at://%s/%s", evt.Repo, op.Path)
+		if op.Cid == nil {
+			continue
+		}
+		opCid := cid.Cid(*op.Cid)
 
-		switch repomgr.EventKind(op.Action) {
-		case repomgr.EvtKindCreateRecord:
-			recordCid, record, err := rr.GetRecord(ctx, op.Path)
+		switch op.Action {
+		case "create":
+			record, err := lexutil.CborDecodeValue(blocks[opCid.KeyString()].RawData())
 			if err != nil {
 				if errors.Is(err, lexutil.ErrUnrecognizedType) {
 					continue
@@ -299,30 +319,18 @@ func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncS
 				return fmt.Errorf("create (%s): getting record for op: %w", uri, err)
 			}
 
-			// Ensure there isn't a mismatch between the reference and the found
-			// object.
-			if lexutil.LexLink(recordCid) != *op.Cid {
-				return fmt.Errorf("create (%s): mismatch in record and op cid: %s != %s", uri, recordCid, *op.Cid)
-			}
-
 			if err := fi.handleRecordCreate(
 				ctx, evt.Repo, uri, record,
 			); err != nil {
 				return fmt.Errorf("create (%s): handling record create: %w", uri, err)
 			}
-		case repomgr.EvtKindUpdateRecord:
-			recordCid, record, err := rr.GetRecord(ctx, op.Path)
+		case "update":
+			record, err := lexutil.CborDecodeValue(blocks[opCid.KeyString()].RawData())
 			if err != nil {
 				if errors.Is(err, lexutil.ErrUnrecognizedType) {
 					continue
 				}
-				return fmt.Errorf("update (%s): getting record for op: %w", uri, err)
-			}
-
-			// Ensure there isn't a mismatch between the reference and the found
-			// object.
-			if lexutil.LexLink(recordCid) != *op.Cid {
-				return fmt.Errorf("update (%s): mismatch in record and op cid: %s != %s", uri, recordCid, *op.Cid)
+				return fmt.Errorf("create (%s): getting record for op: %w", uri, err)
 			}
 
 			if err := fi.handleRecordUpdate(
@@ -330,7 +338,7 @@ func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncS
 			); err != nil {
 				return fmt.Errorf("update (%s): handling record update: %w", uri, err)
 			}
-		case repomgr.EvtKindDeleteRecord:
+		case "delete":
 			if err := fi.handleRecordDelete(
 				ctx, evt.Repo, uri,
 			); err != nil {

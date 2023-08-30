@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/bluesky-social/indigo/api/bsky"
-	"github.com/bluesky-social/indigo/mst"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"golang.org/x/exp/slices"
 
@@ -450,7 +450,7 @@ func (m *ModerationServiceHandler) updateProfileAndFollow(ctx context.Context, a
 
 	record, err := c.GetRecord(ctx, "app.bsky.actor.profile", head, actorDID, "self")
 	if err != nil {
-		if !errors.Is(err, mst.ErrNotFound) {
+		if !errors.Is(err, io.EOF) {
 			return fmt.Errorf("getting profile: %w", err)
 		}
 		record = nil

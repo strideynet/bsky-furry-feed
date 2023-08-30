@@ -11,10 +11,11 @@ import (
 	"github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/bluesky-social/indigo/lex/util"
-	"github.com/bluesky-social/indigo/repo"
+	lexutil "github.com/bluesky-social/indigo/lex/util"
 	indigoUtils "github.com/bluesky-social/indigo/util"
 	"github.com/bluesky-social/indigo/xrpc"
 	"github.com/ipfs/go-cid"
+	"github.com/ipld/go-car/v2"
 	typegen "github.com/whyrusleeping/cbor-gen"
 )
 
@@ -145,17 +146,32 @@ func (c *Client) GetRecord(
 		return nil, err
 	}
 
-	rr, err := repo.ReadRepoFromCar(ctx, bytes.NewReader(blocks))
+	br, err := car.NewBlockReader(bytes.NewReader(blocks))
 	if err != nil {
 		return nil, err
 	}
 
-	_, record, err := rr.GetRecord(ctx, collection+"/"+rkey)
-	if err != nil {
-		return nil, err
-	}
+	for {
+		block, err := br.Next()
+		if err != nil {
+			return nil, err
+		}
 
-	return record, nil
+		typ, err := lexutil.CborTypeExtract(block.RawData())
+		if err != nil {
+			continue
+		}
+		if typ != collection {
+			continue
+		}
+
+		record, err := lexutil.CborDecodeValue(block.RawData())
+		if err != nil {
+			return nil, err
+		}
+
+		return record, nil
+	}
 }
 
 // Follow creates an app.bsky.graph.follow for the user the client is
@@ -278,7 +294,7 @@ type RepoPutRecord_Input struct {
 
 // PutRecord creates or updates a record in the actor's repository.
 func (c *Client) PutRecord(
-	ctx context.Context, collection, rkey string, record repo.CborMarshaler,
+	ctx context.Context, collection, rkey string, record typegen.CBORMarshaler,
 ) error {
 	var out atproto.RepoPutRecord_Output
 	if err := c.xrpc.Do(ctx, xrpc.Procedure, "application/json", "com.atproto.repo.putRecord", nil, &RepoPutRecord_Input{
