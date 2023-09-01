@@ -246,7 +246,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		Description: "Posts by furries with #fursuit.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
-			Hashtags: []string{"fursuit"},
+			Hashtags: []string{"fursuit", "fursuitfriday"},
 			HasMedia: tristate.True,
 		},
 	},
@@ -257,7 +257,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		Description: "Posts by furries that have an image and #murrsuit or #fursuit.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
-			Hashtags: []string{"fursuit", "murrsuit", "mursuit"},
+			Hashtags: []string{"fursuit", "fursuitfriday", "murrsuit", "mursuit"},
 			HasMedia: tristate.True,
 			IsNSFW:   tristate.True,
 		},
@@ -269,7 +269,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		Description: "Posts by furries with #fursuit and without #nsfw.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
-			Hashtags: []string{"fursuit"},
+			Hashtags: []string{"fursuit", "fursuitfriday"},
 			HasMedia: tristate.True,
 			IsNSFW:   tristate.False,
 		},
