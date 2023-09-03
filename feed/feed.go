@@ -368,6 +368,15 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		},
 	}))
 	r.Register(Meta{
+		ID:          "games",
+		DisplayName: "🐾 Games",
+		Description: "A feed for talking about and showing off furry visual novels and games. Use #FurryVN or #FurryGame to include a post in the feed. \n\nSponsored by @MinoHotel.bsky.social\n\nJoin the furry feeds by following @furryli.st",
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
+		generatorOpts: generatorOpts{
+			Hashtags: []string{"furryvn", "furrygames", "furrygame"},
+		},
+	}))
+	r.Register(Meta{
 		ID:          "furry-test",
 		DisplayName: "🐾 Test 🚨🛠️",
 		Description: "Experimental version of the '🐾 Hot' feed.\ntest\ntest\n\ndouble break",
