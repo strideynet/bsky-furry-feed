@@ -373,7 +373,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		Description: "A feed for talking about and showing off furry visual novels and games. Use #FurryVN or #FurryGame to include a post in the feed. \n\nSponsored by @MinoHotel.bsky.social\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
-			Hashtags: []string{"furryvn", "furrygames", "furrygame", "furvn", "furgames", "furgame"},
+			Hashtags: []string{"furryvn", "furrygames", "furrygame"},
 		},
 	}))
 	r.Register(Meta{
