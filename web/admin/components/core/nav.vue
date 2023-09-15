@@ -1,6 +1,5 @@
 <script setup>
 import { search } from "~/lib/search";
-import { logout } from "~/lib/auth";
 
 const profile = await useProfile();
 const showSearch = ref(false);
@@ -34,19 +33,15 @@ async function doSearch() {
 
     <div class="ml-auto flex items-center gap-2">
       <shared-search @toggle-search="showSearch = !showSearch" />
-      <img
-        class="rounded-full"
-        :src="profile.avatar"
-        height="32"
-        width="32"
-        alt=""
-      />
-      <button
-        class="text-white bg-gray-700 px-2 py-1 rounded-lg"
-        @click="logout"
-      >
-        Logout
-      </button>
+      <nuxt-link href="/settings">
+        <img
+          class="rounded-full"
+          :src="profile.avatar"
+          height="32"
+          width="32"
+          alt=""
+        />
+      </nuxt-link>
     </div>
   </nav>
   <div
