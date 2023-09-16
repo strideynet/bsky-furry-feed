@@ -46,7 +46,7 @@ await loadProfile();
     <user-queue-actions
       v-if="status === ActorStatus.PENDING"
       :did="data.did"
-      :handle="data.handle"
+      :name="data.displayName || data.handle.replace(/.bsky.social$/, '')"
       :pending="pending"
       @next="next"
       @loading="loading = true"
