@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { showQueueActionConfirmation } from "~/lib/settings";
 import { ApprovalQueueAction } from "../../proto/bff/v1/moderation_service_pb";
 
 const props = defineProps<{
@@ -15,6 +16,13 @@ const reject = () => process(props.did, ApprovalQueueAction.REJECT);
 
 const api = await useAPI();
 async function process(did: string, action: ApprovalQueueAction) {
+  if (showQueueActionConfirmation.value) {
+    const verb = action === ApprovalQueueAction.APPROVE ? "approve" : "reject";
+
+    if (!confirm(`Do you want to ${verb} ${props.handle}?`)) {
+      return;
+    }
+  }
   loading.value = true;
   $emit("loading");
   await api.processApprovalQueue({
