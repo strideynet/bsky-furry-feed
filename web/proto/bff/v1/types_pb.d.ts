@@ -87,6 +87,14 @@ export declare class Actor extends Message<Actor> {
    */
   roles: string[];
 
+  /**
+   * in_queue_after is the time after which an actor with the PENDING status
+   * is available to be processed in the queue
+   *
+   * @generated from field: google.protobuf.Timestamp in_queue_after = 8;
+   */
+  inQueueAfter?: Timestamp;
+
   constructor(data?: PartialMessage<Actor>);
 
   static readonly runtime: typeof proto3;

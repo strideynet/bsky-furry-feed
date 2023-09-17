@@ -304,6 +304,68 @@ export declare class ProcessApprovalQueueAuditPayload extends Message<ProcessApp
 }
 
 /**
+ * @generated from message bff.v1.HoldBackPendingActorRequest
+ */
+export declare class HoldBackPendingActorRequest extends Message<HoldBackPendingActorRequest> {
+  /**
+   * @generated from field: string did = 1;
+   */
+  did: string;
+
+  constructor(data?: PartialMessage<HoldBackPendingActorRequest>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "bff.v1.HoldBackPendingActorRequest";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): HoldBackPendingActorRequest;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): HoldBackPendingActorRequest;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): HoldBackPendingActorRequest;
+
+  static equals(a: HoldBackPendingActorRequest | PlainMessage<HoldBackPendingActorRequest> | undefined, b: HoldBackPendingActorRequest | PlainMessage<HoldBackPendingActorRequest> | undefined): boolean;
+}
+
+/**
+ * @generated from message bff.v1.HoldBackPendingActorResponse
+ */
+export declare class HoldBackPendingActorResponse extends Message<HoldBackPendingActorResponse> {
+  constructor(data?: PartialMessage<HoldBackPendingActorResponse>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "bff.v1.HoldBackPendingActorResponse";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): HoldBackPendingActorResponse;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): HoldBackPendingActorResponse;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): HoldBackPendingActorResponse;
+
+  static equals(a: HoldBackPendingActorResponse | PlainMessage<HoldBackPendingActorResponse> | undefined, b: HoldBackPendingActorResponse | PlainMessage<HoldBackPendingActorResponse> | undefined): boolean;
+}
+
+/**
+ * @generated from message bff.v1.HoldBackPendingActorAuditPayload
+ */
+export declare class HoldBackPendingActorAuditPayload extends Message<HoldBackPendingActorAuditPayload> {
+  constructor(data?: PartialMessage<HoldBackPendingActorAuditPayload>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "bff.v1.HoldBackPendingActorAuditPayload";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): HoldBackPendingActorAuditPayload;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): HoldBackPendingActorAuditPayload;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): HoldBackPendingActorAuditPayload;
+
+  static equals(a: HoldBackPendingActorAuditPayload | PlainMessage<HoldBackPendingActorAuditPayload> | undefined, b: HoldBackPendingActorAuditPayload | PlainMessage<HoldBackPendingActorAuditPayload> | undefined): boolean;
+}
+
+/**
  * @generated from message bff.v1.ListAuditEventsRequest
  */
 export declare class ListAuditEventsRequest extends Message<ListAuditEventsRequest> {

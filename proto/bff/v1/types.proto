@@ -36,4 +36,7 @@ message Actor {
   // roles is an array of roles this actor holds in relation to actions on the
   // moderation API.
   repeated string roles = 7;
+  // in_queue_after is the time after which an actor with the PENDING status
+  // is available to be processed in the queue
+  google.protobuf.Timestamp in_queue_after = 8;
 }

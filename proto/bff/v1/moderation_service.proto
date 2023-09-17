@@ -15,6 +15,9 @@ service ModerationService {
 
   // TODO: Refactor ProcessApprovalQueue to something more like "ProcessPendingActor"
   rpc ProcessApprovalQueue(ProcessApprovalQueueRequest) returns (ProcessApprovalQueueResponse) {}
+  // HoldBackPendingActor ignores a pending actor for review in some time, so we
+  // don’t need to reject actors that e.g. have no avatar or bio yet.
+  rpc HoldBackPendingActor(HoldBackPendingActorRequest) returns (HoldBackPendingActorResponse) {}
 
   // ListActors fetches multiple actors from the database. It allows this to be
   // filtered by certain attributes.
@@ -83,6 +86,12 @@ message ProcessApprovalQueueAuditPayload {
   ApprovalQueueAction action = 1;
   string reason = 2;
 }
+
+message HoldBackPendingActorRequest {
+  string did = 1;
+}
+message HoldBackPendingActorResponse {}
+message HoldBackPendingActorAuditPayload {}
 
 message ListAuditEventsRequest {
   string filter_actor_did = 1;

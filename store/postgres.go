@@ -106,12 +106,13 @@ func actorToProto(actor gen.CandidateActor) (*v1.Actor, error) {
 		return nil, fmt.Errorf("converting status: %w", err)
 	}
 	return &v1.Actor{
-		Did:       actor.DID,
-		IsArtist:  actor.IsArtist,
-		Comment:   actor.Comment,
-		Status:    status,
-		CreatedAt: timestamppb.New(actor.CreatedAt.Time),
-		Roles:     actor.Roles,
+		Did:          actor.DID,
+		IsArtist:     actor.IsArtist,
+		Comment:      actor.Comment,
+		Status:       status,
+		CreatedAt:    timestamppb.New(actor.CreatedAt.Time),
+		Roles:        actor.Roles,
+		InQueueAfter: timestamppb.New(actor.InQueueAfter.Time),
 	}, nil
 }
 
@@ -806,4 +807,8 @@ func (s *PGXStore) MaterializeClassicPostScores(ctx context.Context, after time.
 
 func (s *PGXStore) DeleteOldPostScores(ctx context.Context, before time.Time) (int64, error) {
 	return s.queries.DeleteOldPostScores(ctx, pgtype.Timestamptz{Time: before, Valid: true})
+}
+
+func (s *PGXStore) HoldBackPendingActor(ctx context.Context, did string) error {
+	return s.queries.HoldBackPendingActor(ctx, did)
 }

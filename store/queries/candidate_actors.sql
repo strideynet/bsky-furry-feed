@@ -95,3 +95,11 @@ WHERE
     AND ca.current_profile_commit_cid IS NULL
 ORDER BY
     did;
+
+-- name: HoldBackPendingActor :exec
+UPDATE candidate_actors ca
+SET
+    in_queue_after = NOW() + interval '4' day
+WHERE
+    ca.status = 'pending'
+    AND ca.did = sqlc.arg(did);

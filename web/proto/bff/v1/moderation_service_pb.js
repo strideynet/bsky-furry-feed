@@ -125,6 +125,32 @@ export const ProcessApprovalQueueAuditPayload = proto3.makeMessageType(
 );
 
 /**
+ * @generated from message bff.v1.HoldBackPendingActorRequest
+ */
+export const HoldBackPendingActorRequest = proto3.makeMessageType(
+  "bff.v1.HoldBackPendingActorRequest",
+  () => [
+    { no: 1, name: "did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ],
+);
+
+/**
+ * @generated from message bff.v1.HoldBackPendingActorResponse
+ */
+export const HoldBackPendingActorResponse = proto3.makeMessageType(
+  "bff.v1.HoldBackPendingActorResponse",
+  [],
+);
+
+/**
+ * @generated from message bff.v1.HoldBackPendingActorAuditPayload
+ */
+export const HoldBackPendingActorAuditPayload = proto3.makeMessageType(
+  "bff.v1.HoldBackPendingActorAuditPayload",
+  [],
+);
+
+/**
  * @generated from message bff.v1.ListAuditEventsRequest
  */
 export const ListAuditEventsRequest = proto3.makeMessageType(
