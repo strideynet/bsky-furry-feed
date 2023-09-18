@@ -11,7 +11,7 @@ defineProps<{ noPadding?: boolean; variant?: "error" }>();
       'flex gap-2 items-center': variant,
     }"
   >
-    <icon-cross-octagon v-if="variant === 'error'" />
+    <icon-cross-octagon v-if="variant === 'error'" class="flex-shrink-0" />
     <slot />
   </div>
 </template>
