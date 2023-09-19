@@ -266,7 +266,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "fursuit-clean",
 		DisplayName: "🐾 Fursuits 🧼",
-		Description: "Posts by furries with #fursuit and without #nsfw.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Posts by furries with #fursuit that haven't been marked NSFW.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags: []string{"fursuit", "fursuitfriday"},
@@ -278,7 +278,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "furry-art",
 		DisplayName: "🐾 Art",
-		Description: "Posts by furries with #art or #furryart. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Posts by furries with #furryart. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags: []string{"art", "furryart"},
@@ -289,7 +289,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "art-clean",
 		DisplayName: "🐾 Art 🧼",
-		Description: "Posts by furries with #art or #furryart and without #nsfw.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Posts by furries with #furryart and that haven't been marked NSFW.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags: []string{"art", "furryart"},
@@ -300,7 +300,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "art-nsfw",
 		DisplayName: "🐾 Art 🌙",
-		Description: "Posts by furries with #art or #furryart and #nsfw.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Posts by furries with #furryart and marked NSFW.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags: []string{"art", "furryart"},
@@ -311,7 +311,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "furry-nsfw",
 		DisplayName: "🐾 New 🌙",
-		Description: "Posts by furries that have #nsfw.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Posts by furries that have been marked NSFW.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			IsNSFW: tristate.True,
