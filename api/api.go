@@ -1,33 +1,20 @@
 package api
 
 import (
-	"connectrpc.com/connect"
-	"connectrpc.com/otelconnect"
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+
+	"connectrpc.com/connect"
+	"connectrpc.com/otelconnect"
 	"github.com/rs/cors"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/feed"
 	"github.com/strideynet/bsky-furry-feed/proto/bff/v1/bffv1pbconnect"
 	"github.com/strideynet/bsky-furry-feed/store"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
-	"net/http"
-	"time"
 )
-
-var tracer = otel.Tracer("github.com/strideynet/bsky-furry-feed/api")
-
-func endSpan(span trace.Span, err error) {
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-	}
-	span.End()
-}
 
 func handleErr(w http.ResponseWriter, log *zap.Logger, err error) {
 	log.Error("failed to handle request", zap.Error(err))
@@ -55,11 +42,13 @@ type feedService interface {
 }
 
 func New(
+	ctx context.Context,
 	log *zap.Logger,
 	hostname string,
 	listenAddr string,
 	feedService feedService,
 	pgxStore *store.PGXStore,
+	pdsHost string,
 	bskyCredentials *bluesky.Credentials,
 	authEngine *AuthEngine,
 ) (*http.Server, error) {
@@ -88,14 +77,16 @@ func New(
 	mux.Handle(getFeedSkeletonHandler(log, feedService))
 	mux.Handle(describeFeedGeneratorHandler(log, hostname, feedService))
 
+	client, err := bluesky.ClientFromCredentials(ctx, pdsHost, bskyCredentials)
+	if err != nil {
+		return nil, fmt.Errorf("creating bluesky client: %w", err)
+	}
+
 	// Mount Buf Connect services
 	modSvcHandler := &ModerationServiceHandler{
-		store: pgxStore,
-		log:   log,
-		clientCache: &cachedBlueSkyClient{
-			creds:            bskyCredentials,
-			renewalThreshold: time.Minute * 5,
-		},
+		store:      pgxStore,
+		log:        log,
+		client:     client,
 		authEngine: authEngine,
 	}
 	interceptors := connect.WithInterceptors(

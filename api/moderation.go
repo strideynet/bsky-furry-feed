@@ -18,10 +18,10 @@ import (
 )
 
 type ModerationServiceHandler struct {
-	store       *store.PGXStore
-	log         *zap.Logger
-	clientCache *cachedBlueSkyClient
-	authEngine  *AuthEngine
+	store      *store.PGXStore
+	log        *zap.Logger
+	client     *bluesky.Client
+	authEngine *AuthEngine
 }
 
 func (m *ModerationServiceHandler) BanActor(ctx context.Context, req *connect.Request[v1.BanActorRequest]) (*connect.Response[v1.BanActorResponse], error) {
@@ -35,11 +35,6 @@ func (m *ModerationServiceHandler) BanActor(ctx context.Context, req *connect.Re
 		return nil, fmt.Errorf("actor_did is required")
 	case req.Msg.Reason == "":
 		return nil, fmt.Errorf("reason is required")
-	}
-
-	c, err := m.clientCache.Get(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("getting bsky client: %w", err)
 	}
 
 	tx, err := m.store.TX(ctx)
@@ -67,7 +62,7 @@ func (m *ModerationServiceHandler) BanActor(ctx context.Context, req *connect.Re
 		return nil, fmt.Errorf("creating audit event: %w", err)
 	}
 
-	if err := c.Unfollow(ctx, req.Msg.ActorDid); err != nil {
+	if err := m.client.Unfollow(ctx, req.Msg.ActorDid); err != nil {
 		return nil, fmt.Errorf("unfollowing actor: %w", err)
 	}
 
@@ -90,11 +85,6 @@ func (m *ModerationServiceHandler) UnapproveActor(ctx context.Context, req *conn
 		return nil, fmt.Errorf("actor_did is required")
 	case req.Msg.Reason == "":
 		return nil, fmt.Errorf("reason is required")
-	}
-
-	c, err := m.clientCache.Get(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("getting bsky client: %w", err)
 	}
 
 	tx, err := m.store.TX(ctx)
@@ -130,7 +120,7 @@ func (m *ModerationServiceHandler) UnapproveActor(ctx context.Context, req *conn
 		return nil, fmt.Errorf("creating audit event: %w", err)
 	}
 
-	if err := c.Unfollow(ctx, req.Msg.ActorDid); err != nil {
+	if err := m.client.Unfollow(ctx, req.Msg.ActorDid); err != nil {
 		return nil, fmt.Errorf("unfollowing actor: %w", err)
 	}
 
@@ -329,11 +319,6 @@ func (m *ModerationServiceHandler) ProcessApprovalQueue(ctx context.Context, req
 	}
 	isArtist := req.Msg.IsArtist
 
-	c, err := m.clientCache.Get(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("getting bsky client: %w", err)
-	}
-
 	tx, err := m.store.TX(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("starting transaction: %w", err)
@@ -358,7 +343,7 @@ func (m *ModerationServiceHandler) ProcessApprovalQueue(ctx context.Context, req
 	}
 
 	if statusToSet == v1.ActorStatus_ACTOR_STATUS_APPROVED {
-		if err := m.updateProfileAndFollow(ctx, actorDID, c, tx); err != nil {
+		if err := m.updateProfileAndFollow(ctx, actorDID, tx); err != nil {
 			return nil, fmt.Errorf("updating profile and following actor: %w", err)
 		}
 	}
@@ -394,11 +379,6 @@ func (m *ModerationServiceHandler) ForceApproveActor(ctx context.Context, req *c
 		return nil, fmt.Errorf("reason is required")
 	}
 
-	c, err := m.clientCache.Get(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("getting bsky client: %w", err)
-	}
-
 	tx, err := m.store.TX(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("starting transaction: %w", err)
@@ -421,7 +401,7 @@ func (m *ModerationServiceHandler) ForceApproveActor(ctx context.Context, req *c
 		return nil, fmt.Errorf("updating actor: %w", err)
 	}
 
-	if err := m.updateProfileAndFollow(ctx, req.Msg.ActorDid, c, tx); err != nil {
+	if err := m.updateProfileAndFollow(ctx, req.Msg.ActorDid, tx); err != nil {
 		return nil, fmt.Errorf("updating profile and following actor: %w", err)
 	}
 
@@ -442,13 +422,13 @@ func (m *ModerationServiceHandler) ForceApproveActor(ctx context.Context, req *c
 	return connect.NewResponse(&v1.ForceApproveActorResponse{}), nil
 }
 
-func (m *ModerationServiceHandler) updateProfileAndFollow(ctx context.Context, actorDID string, c *bluesky.Client, tx *store.PGXTX) error {
-	head, err := c.GetHead(ctx, actorDID)
+func (m *ModerationServiceHandler) updateProfileAndFollow(ctx context.Context, actorDID string, tx *store.PGXTX) error {
+	head, err := m.client.GetHead(ctx, actorDID)
 	if err != nil {
 		return fmt.Errorf("getting head: %w", err)
 	}
 
-	record, err := c.GetRecord(ctx, "app.bsky.actor.profile", head, actorDID, "self")
+	record, err := m.client.GetRecord(ctx, "app.bsky.actor.profile", head, actorDID, "self")
 	if err != nil {
 		if !errors.Is(err, mst.ErrNotFound) {
 			return fmt.Errorf("getting profile: %w", err)
@@ -490,7 +470,7 @@ func (m *ModerationServiceHandler) updateProfileAndFollow(ctx context.Context, a
 		return fmt.Errorf("updating actor profile: %w", err)
 	}
 
-	if err := c.Follow(ctx, actorDID); err != nil {
+	if err := m.client.Follow(ctx, actorDID); err != nil {
 		return fmt.Errorf("following approved actor: %w", err)
 	}
 

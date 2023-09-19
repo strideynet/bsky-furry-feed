@@ -1,15 +1,18 @@
 package api
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
+	"connectrpc.com/connect"
+	"github.com/bluesky-social/indigo/api/atproto"
+	"github.com/bluesky-social/indigo/xrpc"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.uber.org/zap"
-	"strings"
 )
 
 type actorGetter interface {
@@ -21,11 +24,16 @@ func BSkyTokenValidator(pdsHost string) func(ctx context.Context, token string) 
 	// This also lets us introspect information about the user - we can't just
 	// parse the JWT as they do not use public key signing for the JWT.
 	return func(ctx context.Context, token string) (did string, err error) {
-		_, did, err = bluesky.ClientFromToken(ctx, pdsHost, token)
+		ua := bluesky.UserAgent
+		res, err := atproto.ServerGetSession(ctx, &xrpc.Client{
+			Host:      pdsHost,
+			UserAgent: &ua,
+			Auth:      &xrpc.AuthInfo{AccessJwt: token},
+		})
 		if err != nil {
-			return "", fmt.Errorf("client from token: %w", err)
+			return "", fmt.Errorf("get session: %w", err)
 		}
-		return did, nil
+		return res.Did, nil
 	}
 }
 

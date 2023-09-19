@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"golang.org/x/exp/slices"
 	"os"
+
+	"golang.org/x/exp/slices"
 
 	"github.com/joho/godotenv"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
