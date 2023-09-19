@@ -281,7 +281,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		Description: "Posts by furries with #furryart. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
-			Hashtags: []string{"art", "furryart"},
+			Hashtags: []string{"furryart"},
 			HasMedia: tristate.True,
 		},
 	},
@@ -292,7 +292,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		Description: "Posts by furries with #furryart and that haven't been marked NSFW.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
-			Hashtags: []string{"art", "furryart"},
+			Hashtags: []string{"furryart"},
 			HasMedia: tristate.True,
 			IsNSFW:   tristate.False,
 		},
@@ -303,7 +303,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		Description: "Posts by furries with #furryart and marked NSFW.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
-			Hashtags: []string{"art", "furryart"},
+			Hashtags: []string{"furryart"},
 			HasMedia: tristate.True,
 			IsNSFW:   tristate.True,
 		},
