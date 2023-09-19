@@ -99,7 +99,7 @@ ORDER BY
 -- name: HoldBackPendingActor :exec
 UPDATE candidate_actors ca
 SET
-    in_queue_after = NOW() + interval '4' day
+    held_until = $1
 WHERE
     ca.status = 'pending'
     AND ca.did = sqlc.arg(did);

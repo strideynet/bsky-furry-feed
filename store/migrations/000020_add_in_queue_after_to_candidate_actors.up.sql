@@ -1,1 +1,0 @@
-ALTER TABLE candidate_actors ADD COLUMN in_queue_after TIMESTAMPTZ DEFAULT NOW() NOT NULL;

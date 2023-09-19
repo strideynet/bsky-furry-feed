@@ -10,6 +10,7 @@ import (
 	"github.com/bluesky-social/indigo/mst"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"golang.org/x/exp/slices"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"connectrpc.com/connect"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
@@ -391,13 +392,17 @@ func (m *ModerationServiceHandler) HoldBackPendingActor(ctx context.Context, req
 		return nil, fmt.Errorf("candidate actor status was %q not %q", actor.Status, v1.ActorStatus_ACTOR_STATUS_PENDING)
 	}
 
-	err = tx.HoldBackPendingActor(ctx, actorDID)
+	heldUntil := time.Now().Add(req.Msg.Duration.AsDuration())
+
+	err = tx.HoldBackPendingActor(ctx, actorDID, heldUntil)
 	if err != nil {
 		return nil, fmt.Errorf("holding back actor: %w", err)
 	}
 
 	_, err = tx.CreateAuditEvent(ctx, store.CreateAuditEventOpts{
-		Payload:    &v1.HoldBackPendingActorAuditPayload{},
+		Payload: &v1.HoldBackPendingActorAuditPayload{
+			HeldUntil: timestamppb.New(heldUntil),
+		},
 		ActorDID:   authCtx.DID,
 		SubjectDID: actorDID,
 	})

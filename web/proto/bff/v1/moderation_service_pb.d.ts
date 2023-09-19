@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import type { Any, BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage, Timestamp } from "@bufbuild/protobuf";
+import type { Any, BinaryReadOptions, Duration, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage, Timestamp } from "@bufbuild/protobuf";
 import { Message, proto3 } from "@bufbuild/protobuf";
 import type { Actor, ActorStatus } from "./types_pb.js";
 
@@ -312,6 +312,11 @@ export declare class HoldBackPendingActorRequest extends Message<HoldBackPending
    */
   did: string;
 
+  /**
+   * @generated from field: google.protobuf.Duration duration = 2;
+   */
+  duration?: Duration;
+
   constructor(data?: PartialMessage<HoldBackPendingActorRequest>);
 
   static readonly runtime: typeof proto3;
@@ -350,6 +355,11 @@ export declare class HoldBackPendingActorResponse extends Message<HoldBackPendin
  * @generated from message bff.v1.HoldBackPendingActorAuditPayload
  */
 export declare class HoldBackPendingActorAuditPayload extends Message<HoldBackPendingActorAuditPayload> {
+  /**
+   * @generated from field: google.protobuf.Timestamp held_until = 1;
+   */
+  heldUntil?: Timestamp;
+
   constructor(data?: PartialMessage<HoldBackPendingActorAuditPayload>);
 
   static readonly runtime: typeof proto3;

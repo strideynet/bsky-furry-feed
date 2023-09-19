@@ -11,6 +11,7 @@ import (
 	bffv1pb "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/proto/bff/v1/bffv1pbconnect"
 	"github.com/strideynet/bsky-furry-feed/store"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 func TestAPI_ModerationServiceHandler_CreateActor(t *testing.T) {
@@ -90,7 +91,8 @@ func TestAPI_ModerationServiceHandler_HoldBackPendingActor(t *testing.T) {
 	)
 
 	_, err = modSvcClient.HoldBackPendingActor(ctx, connect.NewRequest(&bffv1pb.HoldBackPendingActorRequest{
-		Did: furryActor.DID(),
+		Did:      furryActor.DID(),
+		Duration: durationpb.New(time.Hour * 24 * 2),
 	}))
 	require.NoError(t, err)
 
@@ -100,5 +102,5 @@ func TestAPI_ModerationServiceHandler_HoldBackPendingActor(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, furryActor.DID(), res.Msg.Actor.Did)
 	require.Equal(t, bffv1pb.ActorStatus_ACTOR_STATUS_PENDING, res.Msg.Actor.Status)
-	require.WithinDuration(t, time.Now().Add(time.Hour*24*4), res.Msg.Actor.InQueueAfter.AsTime(), time.Second*5)
+	require.WithinDuration(t, time.Now().Add(time.Hour*24*2), res.Msg.Actor.HeldUntil.AsTime(), time.Second*5)
 }

@@ -1,1 +1,0 @@
-ALTER TABLE candidate_actors DROP COLUMN in_queue_after;

@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { Any, proto3, Timestamp } from "@bufbuild/protobuf";
+import { Any, Duration, proto3, Timestamp } from "@bufbuild/protobuf";
 import { Actor, ActorStatus } from "./types_pb.js";
 
 /**
@@ -131,6 +131,7 @@ export const HoldBackPendingActorRequest = proto3.makeMessageType(
   "bff.v1.HoldBackPendingActorRequest",
   () => [
     { no: 1, name: "did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "duration", kind: "message", T: Duration },
   ],
 );
 
@@ -147,7 +148,9 @@ export const HoldBackPendingActorResponse = proto3.makeMessageType(
  */
 export const HoldBackPendingActorAuditPayload = proto3.makeMessageType(
   "bff.v1.HoldBackPendingActorAuditPayload",
-  [],
+  () => [
+    { no: 1, name: "held_until", kind: "message", T: Timestamp },
+  ],
 );
 
 /**

@@ -88,12 +88,13 @@ export declare class Actor extends Message<Actor> {
   roles: string[];
 
   /**
-   * in_queue_after is the time after which an actor with the PENDING status
-   * is available to be processed in the queue
+   * held_until is the time until an actor with the PENDING status
+   * is ignored in the queue to be processed later, e.g. when the actor doesn’t
+   * have an avatar
    *
-   * @generated from field: google.protobuf.Timestamp in_queue_after = 8;
+   * @generated from field: google.protobuf.Timestamp held_until = 8;
    */
-  inQueueAfter?: Timestamp;
+  heldUntil?: Timestamp;
 
   constructor(data?: PartialMessage<Actor>);
 

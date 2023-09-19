@@ -20,7 +20,7 @@ const nextActor = async () => {
     });
 
   const actors = queue.actors.filter(
-    (a) => a.inQueueAfter && a.inQueueAfter.toDate() < new Date()
+    (a) => a.heldUntil && a.heldUntil.toDate() < new Date()
   );
 
   pending.value = actors.length - 1;

@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
 import "google/protobuf/any.proto";
 import "bff/v1/types.proto";
 
@@ -89,9 +90,12 @@ message ProcessApprovalQueueAuditPayload {
 
 message HoldBackPendingActorRequest {
   string did = 1;
+  google.protobuf.Duration duration = 2;
 }
 message HoldBackPendingActorResponse {}
-message HoldBackPendingActorAuditPayload {}
+message HoldBackPendingActorAuditPayload {
+  google.protobuf.Timestamp held_until = 1;
+}
 
 message ListAuditEventsRequest {
   string filter_actor_did = 1;

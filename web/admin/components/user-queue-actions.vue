@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { showQueueActionConfirmation } from "~/lib/settings";
 import { ApprovalQueueAction } from "../../proto/bff/v1/moderation_service_pb";
+import { Duration } from "@bufbuild/protobuf";
 
 const props = defineProps<{
   did: string;
@@ -36,7 +37,7 @@ async function holdBack() {
   if (showQueueActionConfirmation.value) {
     if (
       !confirm(
-        `Do you want to hold back ${props.name}? Their account will appear in the queue again in a few days.`
+        `Do you want to hold back ${props.name}? Their account will appear in the queue again in 48 hours.`
       )
     ) {
       return;
@@ -47,6 +48,9 @@ async function holdBack() {
   $emit("loading");
   await api.holdBackPendingActor({
     did: props.did,
+    duration: {
+      seconds: BigInt(60 * 60 * 24 * 2),
+    },
   });
   $emit("next");
   loading.value = false;

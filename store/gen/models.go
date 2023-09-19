@@ -83,7 +83,7 @@ type CandidateActor struct {
 	Status                  ActorStatus
 	Roles                   []string
 	CurrentProfileCommitCid pgtype.Text
-	InQueueAfter            pgtype.Timestamptz
+	HeldUntil               pgtype.Timestamptz
 }
 
 type CandidateFollow struct {

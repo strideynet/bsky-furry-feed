@@ -1,0 +1,1 @@
+ALTER TABLE candidate_actors ADD COLUMN held_until TIMESTAMPTZ DEFAULT NOW() NOT NULL;
