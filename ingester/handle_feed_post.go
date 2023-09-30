@@ -18,19 +18,38 @@ import (
 // postTextWithAlts appends the alt texts of images to the text itself. This
 // lets us detect hashtags within an alt text.
 func postTextWithAlts(data *bsky.FeedPost) string {
-	text := data.Text
-	if data.Embed != nil && data.Embed.EmbedImages != nil && data.Embed.EmbedImages.Images != nil {
+	var buf strings.Builder
+
+	buf.WriteString(data.Text)
+
+        // Collect alt texts when only images are embedded
+	if data.Embed != nil && data.Embed.EmbedImages != nil {
 		for _, image := range data.Embed.EmbedImages.Images {
-			if image.Alt != "" {
-				text = text + "\n" + image.Alt
+			if image.Alt == "" {
+				continue
 			}
+			buf.WriteRune('\n')
+			buf.WriteString(image.Alt)
 		}
 	}
-	return text
+
+       // Collect alt texts when images and a post is embedded (e.g a quote post that also includes an image)
+	if data.Embed != nil && data.Embed.EmbedRecordWithMedia != nil && data.Embed.EmbedRecordWithMedia.Media != nil && data.Embed.EmbedRecordWithMedia.Media.EmbedImages != nil {
+		for _, image := range data.Embed.EmbedRecordWithMedia.Media.EmbedImages.Images {
+			if image.Alt == "" {
+				continue
+			}
+			buf.WriteRune('\n')
+			buf.WriteString(image.Alt)
+		}
+	}
+
+	return buf.String()
 }
 
 func hasMedia(data *bsky.FeedPost) bool {
-	return data.Embed != nil && data.Embed.EmbedImages != nil && len(data.Embed.EmbedImages.Images) > 0
+	return data.Embed != nil && ((data.Embed.EmbedImages != nil && len(data.Embed.EmbedImages.Images) > 0) ||
+		(data.Embed.EmbedRecordWithMedia != nil && data.Embed.EmbedRecordWithMedia.Media != nil && data.Embed.EmbedRecordWithMedia.Media.EmbedImages != nil && len(data.Embed.EmbedRecordWithMedia.Media.EmbedImages.Images) > 0))
 }
 
 func extractFacetsHashtags(facets []*bsky.RichtextFacet) []string {

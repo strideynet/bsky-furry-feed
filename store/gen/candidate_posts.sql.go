@@ -62,7 +62,7 @@ WHERE
     -- Only include posts by approved actors
     ca.status = 'approved'
     -- Remove posts hidden by our moderators
-    AND cp.is_hidden = false
+    AND cp.is_hidden = FALSE
     -- Remove posts deleted by the actors
     AND cp.deleted_at IS NULL
     AND (
@@ -77,7 +77,7 @@ WHERE
             -- Match has_media status. If unspecified, do not filter.
             AND (
                 $2::BOOLEAN IS NULL
-                OR COALESCE(cp.has_media, false) = $2
+                OR COALESCE(cp.has_media, FALSE) = $2
             )
             -- Filter by NSFW status. If unspecified, do not filter.
             AND (
@@ -184,7 +184,7 @@ INNER JOIN post_scores AS ph
         cp.uri = ph.uri AND ph.alg = $1
         AND ph.generation_seq = $2
 WHERE
-    cp.is_hidden = false
+    cp.is_hidden = FALSE
     AND ca.status = 'approved'
     -- Match at least one of the queried hashtags.
     -- If unspecified, do not filter.
@@ -195,7 +195,7 @@ WHERE
     -- Match has_media status. If unspecified, do not filter.
     AND (
         $4::BOOLEAN IS NULL
-        OR COALESCE(cp.has_media, false) = $4
+        OR COALESCE(cp.has_media, FALSE) = $4
     )
     -- Filter by NSFW status. If unspecified, do not filter.
     AND (
