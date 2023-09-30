@@ -22,6 +22,7 @@ func postTextWithAlts(data *bsky.FeedPost) string {
 
 	buf.WriteString(data.Text)
 
+        // Collect alt texts when only images are embedded
 	if data.Embed != nil && data.Embed.EmbedImages != nil {
 		for _, image := range data.Embed.EmbedImages.Images {
 			if image.Alt == "" {
