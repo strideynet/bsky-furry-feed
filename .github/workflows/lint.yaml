@@ -39,3 +39,14 @@ jobs:
       - run: sqlc generate
       - name: Check that sqlc queries are up-to-date
         run: git diff --exit-code
+  lint-sql:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v2"
+        with:
+          python-version: "3.8"
+      - name: Install sqlfluff
+        run: "pip install sqlfluff==2.3.2"
+      - name: Lint sql files
+        run: "sqlfluff lint"
