@@ -3,15 +3,15 @@ import { getProfile } from "~/lib/cached-bsky";
 
 const props = defineProps<{ did: string }>();
 
-const { data } = await getProfile(props.did);
+const profile = await getProfile(props.did);
 </script>
 
 <template>
   <nuxt-link
     class="flex items-center underline hover:no-underline"
-    :href="`/users/${data.did}`"
+    :href="`/users/${profile.did}`"
   >
-    <shared-avatar class="mr-1" :url="data.avatar" :size="20" />
-    {{ data.handle }}
+    <shared-avatar class="mr-1" :url="profile.avatar" :size="20" />
+    {{ profile.handle }}
   </nuxt-link>
 </template>
