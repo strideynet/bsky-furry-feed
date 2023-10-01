@@ -49,10 +49,41 @@ func Test_extractNormalizedHashtags(t *testing.T) {
 			},
 			want: []string{"seni", "ısırır", "isirır"},
 		},
+		{
+			name: "tags out of line",
+			post: &bsky.FeedPost{
+				Text:  "word",
+				Tags:  []string{"foo", "FOO", "BAR"},
+				Langs: nil,
+			},
+			want: []string{"foo", "bar"},
+		},
+		{
+			name: "tags in facets",
+			post: &bsky.FeedPost{
+				Text: "word",
+				Facets: []*bsky.RichtextFacet{
+					{
+						Index: &bsky.RichtextFacet_ByteSlice{ByteStart: 0, ByteEnd: 2},
+						Features: []*bsky.RichtextFacet_Features_Elem{
+							{RichtextFacet_Tag: &bsky.RichtextFacet_Tag{LexiconTypeID: "app.bsky.richtext.facet#tag", Tag: "foo"}},
+						},
+					},
+					{
+						Index: &bsky.RichtextFacet_ByteSlice{ByteStart: 2, ByteEnd: 4},
+						Features: []*bsky.RichtextFacet_Features_Elem{
+							{RichtextFacet_Tag: &bsky.RichtextFacet_Tag{LexiconTypeID: "app.bsky.richtext.facet#tag", Tag: "bar"}},
+						},
+					},
+				},
+				Langs: nil,
+			},
+			want: []string{"foo", "bar"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.ElementsMatch(t, tt.want, extractNormalizedHashtags(tt.post))
+			require.ElementsMatch(t, tt.want, normalizeHashtags(extractHashtags(tt.post), tt.post.Langs))
 		})
 	}
 }

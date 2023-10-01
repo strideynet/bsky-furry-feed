@@ -75,8 +75,8 @@ github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24
 github.com/beorn7/perks v1.0.0/go.mod h1:KWe93zE9D1o94FZ5RNwFwVgaQK1VOXiVxmqh+CedLV8=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
-github.com/bluesky-social/indigo v0.0.0-20230919180850-251fff6498dc h1:zgMSIxrsR7ZASv3uge+N2wY6EV8gojrP9G7hAorz6d0=
-github.com/bluesky-social/indigo v0.0.0-20230919180850-251fff6498dc/go.mod h1:xeZ7rqlwFUpv5iuzYwOXDo4PgNzYPl6J/DytBvQgVuE=
+github.com/bluesky-social/indigo v0.0.0-20230927045008-5a4f71b2536c h1:KLkg0A9xn/WrhSnrJ5SaRIByeEOeZdSQxOdGkOmZk50=
+github.com/bluesky-social/indigo v0.0.0-20230927045008-5a4f71b2536c/go.mod h1:xeZ7rqlwFUpv5iuzYwOXDo4PgNzYPl6J/DytBvQgVuE=
 github.com/brianvoe/gofakeit/v6 v6.20.2 h1:FLloufuC7NcbHqDzVQ42CG9AKryS1gAGCRt8nQRsW+Y=
 github.com/brianvoe/gofakeit/v6 v6.20.2/go.mod h1:Ow6qC71xtwm79anlwKRlWZW6zVq9D2XHE4QSSMP/rU8=
 github.com/cenkalti/backoff/v4 v4.2.1 h1:y4OZtCnogmCPw98Zjyt5a6+QwPLGkiQsYW5oUqylYbM=
