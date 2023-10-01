@@ -16,10 +16,9 @@ const loading = ref(false);
 const status = ref<ActorStatus>();
 const data = ref<ProfileViewDetailed>();
 const loadProfile = async () => {
-  const result = await getProfile(props.did);
-  data.value = result.data;
+  data.value = await getProfile(props.did);
   const { actor } = await api
-    .getActor({ did: result.data.did })
+    .getActor({ did: data.value.did })
     .catch(() => ({ actor: undefined }));
   isArtist.value = Boolean(actor?.isArtist);
   status.value = actor?.status;
