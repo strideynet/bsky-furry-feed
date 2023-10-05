@@ -51,7 +51,7 @@ WHERE
             AND (
                 sqlc.narg(is_nsfw)::BOOLEAN IS NULL
                 OR (
-                    (ARRAY['nsfw', 'mursuit', 'murrsuit'] && cp.hashtags)
+                    (ARRAY['nsfw', 'mursuit', 'murrsuit', 'nsfwfurry', 'furrynsfw'] && cp.hashtags)
                     OR (ARRAY['porn', 'nudity', 'sexual'] && cp.self_labels)
                 ) = sqlc.narg(is_nsfw)
             )
@@ -102,7 +102,7 @@ WHERE
     AND (
         sqlc.narg(is_nsfw)::BOOLEAN IS NULL
         OR (
-            (ARRAY['nsfw', 'mursuit', 'murrsuit'] && cp.hashtags)
+            (ARRAY['nsfw', 'mursuit', 'murrsuit', 'nsfwfurry', 'furrynsfw'] && cp.hashtags)
             OR (ARRAY['porn', 'nudity', 'sexual'] && cp.self_labels)
         ) = sqlc.narg(is_nsfw)
     )

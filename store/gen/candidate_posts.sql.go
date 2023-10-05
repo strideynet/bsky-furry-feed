@@ -83,7 +83,7 @@ WHERE
             AND (
                 $3::BOOLEAN IS NULL
                 OR (
-                    (ARRAY['nsfw', 'mursuit', 'murrsuit'] && cp.hashtags)
+                    (ARRAY['nsfw', 'mursuit', 'murrsuit', 'nsfwfurry', 'furrynsfw'] && cp.hashtags)
                     OR (ARRAY['porn', 'nudity', 'sexual'] && cp.self_labels)
                 ) = $3
             )
@@ -201,7 +201,7 @@ WHERE
     AND (
         $5::BOOLEAN IS NULL
         OR (
-            (ARRAY['nsfw', 'mursuit', 'murrsuit'] && cp.hashtags)
+            (ARRAY['nsfw', 'mursuit', 'murrsuit', 'nsfwfurry', 'furrynsfw'] && cp.hashtags)
             OR (ARRAY['porn', 'nudity', 'sexual'] && cp.self_labels)
         ) = $5
     )
