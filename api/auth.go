@@ -50,6 +50,7 @@ var moderatorPermissions = []string{
 	"/bff.v1.ModerationService/ListAuditEvents",
 	"/bff.v1.ModerationService/ProcessApprovalQueue",
 	"/bff.v1.ModerationService/CreateCommentAuditEvent",
+	"/bff.v1.ModerationService/HoldBackPendingActor",
 }
 
 var adminPermissions = append([]string{

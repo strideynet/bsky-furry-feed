@@ -112,6 +112,7 @@ func actorToProto(actor gen.CandidateActor) (*v1.Actor, error) {
 		Status:    status,
 		CreatedAt: timestamppb.New(actor.CreatedAt.Time),
 		Roles:     actor.Roles,
+		HeldUntil: timestamppb.New(actor.HeldUntil.Time),
 	}, nil
 }
 
@@ -806,4 +807,11 @@ func (s *PGXStore) MaterializeClassicPostScores(ctx context.Context, after time.
 
 func (s *PGXStore) DeleteOldPostScores(ctx context.Context, before time.Time) (int64, error) {
 	return s.queries.DeleteOldPostScores(ctx, pgtype.Timestamptz{Time: before, Valid: true})
+}
+
+func (s *PGXStore) HoldBackPendingActor(ctx context.Context, did string, duration time.Time) error {
+	return s.queries.HoldBackPendingActor(ctx, gen.HoldBackPendingActorParams{
+		DID:       did,
+		HeldUntil: pgtype.Timestamptz{Time: duration, Valid: true},
+	})
 }

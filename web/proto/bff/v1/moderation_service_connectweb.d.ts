@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { BanActorRequest, BanActorResponse, CreateActorRequest, CreateActorResponse, CreateCommentAuditEventRequest, CreateCommentAuditEventResponse, ForceApproveActorRequest, ForceApproveActorResponse, GetActorRequest, GetActorResponse, ListActorsRequest, ListActorsResponse, ListAuditEventsRequest, ListAuditEventsResponse, PingRequest, PingResponse, ProcessApprovalQueueRequest, ProcessApprovalQueueResponse, UnapproveActorRequest, UnapproveActorResponse } from "./moderation_service_pb.js";
+import { BanActorRequest, BanActorResponse, CreateActorRequest, CreateActorResponse, CreateCommentAuditEventRequest, CreateCommentAuditEventResponse, ForceApproveActorRequest, ForceApproveActorResponse, GetActorRequest, GetActorResponse, HoldBackPendingActorRequest, HoldBackPendingActorResponse, ListActorsRequest, ListActorsResponse, ListAuditEventsRequest, ListAuditEventsResponse, PingRequest, PingResponse, ProcessApprovalQueueRequest, ProcessApprovalQueueResponse, UnapproveActorRequest, UnapproveActorResponse } from "./moderation_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -33,6 +33,18 @@ export declare const ModerationService: {
       readonly name: "ProcessApprovalQueue",
       readonly I: typeof ProcessApprovalQueueRequest,
       readonly O: typeof ProcessApprovalQueueResponse,
+      readonly kind: MethodKind.Unary,
+    },
+    /**
+     * HoldBackPendingActor ignores a pending actor for review in some time, so we
+     * don’t need to reject actors that e.g. have no avatar or bio yet.
+     *
+     * @generated from rpc bff.v1.ModerationService.HoldBackPendingActor
+     */
+    readonly holdBackPendingActor: {
+      readonly name: "HoldBackPendingActor",
+      readonly I: typeof HoldBackPendingActorRequest,
+      readonly O: typeof HoldBackPendingActorResponse,
       readonly kind: MethodKind.Unary,
     },
     /**

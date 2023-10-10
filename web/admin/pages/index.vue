@@ -19,8 +19,12 @@ const nextActor = async () => {
       };
     });
 
-  pending.value = queue.actors.length - 1;
-  actor.value = queue.actors[0];
+  const actors = queue.actors.filter(
+    (a) => a.heldUntil && a.heldUntil.toDate() < new Date()
+  );
+
+  pending.value = actors.length - 1;
+  actor.value = actors[0];
 };
 
 await nextActor();

@@ -38,6 +38,9 @@ const (
 	// ModerationServiceProcessApprovalQueueProcedure is the fully-qualified name of the
 	// ModerationService's ProcessApprovalQueue RPC.
 	ModerationServiceProcessApprovalQueueProcedure = "/bff.v1.ModerationService/ProcessApprovalQueue"
+	// ModerationServiceHoldBackPendingActorProcedure is the fully-qualified name of the
+	// ModerationService's HoldBackPendingActor RPC.
+	ModerationServiceHoldBackPendingActorProcedure = "/bff.v1.ModerationService/HoldBackPendingActor"
 	// ModerationServiceListActorsProcedure is the fully-qualified name of the ModerationService's
 	// ListActors RPC.
 	ModerationServiceListActorsProcedure = "/bff.v1.ModerationService/ListActors"
@@ -71,6 +74,9 @@ type ModerationServiceClient interface {
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
 	// TODO: Refactor ProcessApprovalQueue to something more like "ProcessPendingActor"
 	ProcessApprovalQueue(context.Context, *connect.Request[v1.ProcessApprovalQueueRequest]) (*connect.Response[v1.ProcessApprovalQueueResponse], error)
+	// HoldBackPendingActor ignores a pending actor for review in some time, so we
+	// don’t need to reject actors that e.g. have no avatar or bio yet.
+	HoldBackPendingActor(context.Context, *connect.Request[v1.HoldBackPendingActorRequest]) (*connect.Response[v1.HoldBackPendingActorResponse], error)
 	// ListActors fetches multiple actors from the database. It allows this to be
 	// filtered by certain attributes.
 	ListActors(context.Context, *connect.Request[v1.ListActorsRequest]) (*connect.Response[v1.ListActorsResponse], error)
@@ -108,6 +114,11 @@ func NewModerationServiceClient(httpClient connect.HTTPClient, baseURL string, o
 		processApprovalQueue: connect.NewClient[v1.ProcessApprovalQueueRequest, v1.ProcessApprovalQueueResponse](
 			httpClient,
 			baseURL+ModerationServiceProcessApprovalQueueProcedure,
+			opts...,
+		),
+		holdBackPendingActor: connect.NewClient[v1.HoldBackPendingActorRequest, v1.HoldBackPendingActorResponse](
+			httpClient,
+			baseURL+ModerationServiceHoldBackPendingActorProcedure,
 			opts...,
 		),
 		listActors: connect.NewClient[v1.ListActorsRequest, v1.ListActorsResponse](
@@ -157,6 +168,7 @@ func NewModerationServiceClient(httpClient connect.HTTPClient, baseURL string, o
 type moderationServiceClient struct {
 	ping                    *connect.Client[v1.PingRequest, v1.PingResponse]
 	processApprovalQueue    *connect.Client[v1.ProcessApprovalQueueRequest, v1.ProcessApprovalQueueResponse]
+	holdBackPendingActor    *connect.Client[v1.HoldBackPendingActorRequest, v1.HoldBackPendingActorResponse]
 	listActors              *connect.Client[v1.ListActorsRequest, v1.ListActorsResponse]
 	getActor                *connect.Client[v1.GetActorRequest, v1.GetActorResponse]
 	banActor                *connect.Client[v1.BanActorRequest, v1.BanActorResponse]
@@ -175,6 +187,11 @@ func (c *moderationServiceClient) Ping(ctx context.Context, req *connect.Request
 // ProcessApprovalQueue calls bff.v1.ModerationService.ProcessApprovalQueue.
 func (c *moderationServiceClient) ProcessApprovalQueue(ctx context.Context, req *connect.Request[v1.ProcessApprovalQueueRequest]) (*connect.Response[v1.ProcessApprovalQueueResponse], error) {
 	return c.processApprovalQueue.CallUnary(ctx, req)
+}
+
+// HoldBackPendingActor calls bff.v1.ModerationService.HoldBackPendingActor.
+func (c *moderationServiceClient) HoldBackPendingActor(ctx context.Context, req *connect.Request[v1.HoldBackPendingActorRequest]) (*connect.Response[v1.HoldBackPendingActorResponse], error) {
+	return c.holdBackPendingActor.CallUnary(ctx, req)
 }
 
 // ListActors calls bff.v1.ModerationService.ListActors.
@@ -224,6 +241,9 @@ type ModerationServiceHandler interface {
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
 	// TODO: Refactor ProcessApprovalQueue to something more like "ProcessPendingActor"
 	ProcessApprovalQueue(context.Context, *connect.Request[v1.ProcessApprovalQueueRequest]) (*connect.Response[v1.ProcessApprovalQueueResponse], error)
+	// HoldBackPendingActor ignores a pending actor for review in some time, so we
+	// don’t need to reject actors that e.g. have no avatar or bio yet.
+	HoldBackPendingActor(context.Context, *connect.Request[v1.HoldBackPendingActorRequest]) (*connect.Response[v1.HoldBackPendingActorResponse], error)
 	// ListActors fetches multiple actors from the database. It allows this to be
 	// filtered by certain attributes.
 	ListActors(context.Context, *connect.Request[v1.ListActorsRequest]) (*connect.Response[v1.ListActorsResponse], error)
@@ -257,6 +277,11 @@ func NewModerationServiceHandler(svc ModerationServiceHandler, opts ...connect.H
 	moderationServiceProcessApprovalQueueHandler := connect.NewUnaryHandler(
 		ModerationServiceProcessApprovalQueueProcedure,
 		svc.ProcessApprovalQueue,
+		opts...,
+	)
+	moderationServiceHoldBackPendingActorHandler := connect.NewUnaryHandler(
+		ModerationServiceHoldBackPendingActorProcedure,
+		svc.HoldBackPendingActor,
 		opts...,
 	)
 	moderationServiceListActorsHandler := connect.NewUnaryHandler(
@@ -305,6 +330,8 @@ func NewModerationServiceHandler(svc ModerationServiceHandler, opts ...connect.H
 			moderationServicePingHandler.ServeHTTP(w, r)
 		case ModerationServiceProcessApprovalQueueProcedure:
 			moderationServiceProcessApprovalQueueHandler.ServeHTTP(w, r)
+		case ModerationServiceHoldBackPendingActorProcedure:
+			moderationServiceHoldBackPendingActorHandler.ServeHTTP(w, r)
 		case ModerationServiceListActorsProcedure:
 			moderationServiceListActorsHandler.ServeHTTP(w, r)
 		case ModerationServiceGetActorProcedure:
@@ -336,6 +363,10 @@ func (UnimplementedModerationServiceHandler) Ping(context.Context, *connect.Requ
 
 func (UnimplementedModerationServiceHandler) ProcessApprovalQueue(context.Context, *connect.Request[v1.ProcessApprovalQueueRequest]) (*connect.Response[v1.ProcessApprovalQueueResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("bff.v1.ModerationService.ProcessApprovalQueue is not implemented"))
+}
+
+func (UnimplementedModerationServiceHandler) HoldBackPendingActor(context.Context, *connect.Request[v1.HoldBackPendingActorRequest]) (*connect.Response[v1.HoldBackPendingActorResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("bff.v1.ModerationService.HoldBackPendingActor is not implemented"))
 }
 
 func (UnimplementedModerationServiceHandler) ListActors(context.Context, *connect.Request[v1.ListActorsRequest]) (*connect.Response[v1.ListActorsResponse], error) {

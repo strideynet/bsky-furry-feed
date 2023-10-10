@@ -16,7 +16,7 @@ INSERT INTO
 candidate_actors (did, created_at, is_artist, comment, status, roles)
 VALUES
 ($1, $2, $3, $4, $5, $6)
-RETURNING did, created_at, is_artist, comment, status, roles, current_profile_commit_cid
+RETURNING did, created_at, is_artist, comment, status, roles, current_profile_commit_cid, held_until
 `
 
 type CreateCandidateActorParams struct {
@@ -46,6 +46,7 @@ func (q *Queries) CreateCandidateActor(ctx context.Context, arg CreateCandidateA
 		&i.Status,
 		&i.Roles,
 		&i.CurrentProfileCommitCid,
+		&i.HeldUntil,
 	)
 	return i, err
 }
@@ -144,7 +145,7 @@ func (q *Queries) GetActorProfileHistory(ctx context.Context, actorDid string) (
 }
 
 const getCandidateActorByDID = `-- name: GetCandidateActorByDID :one
-SELECT did, created_at, is_artist, comment, status, roles, current_profile_commit_cid
+SELECT did, created_at, is_artist, comment, status, roles, current_profile_commit_cid, held_until
 FROM
     candidate_actors
 WHERE
@@ -162,6 +163,7 @@ func (q *Queries) GetCandidateActorByDID(ctx context.Context, did string) (Candi
 		&i.Status,
 		&i.Roles,
 		&i.CurrentProfileCommitCid,
+		&i.HeldUntil,
 	)
 	return i, err
 }
@@ -194,8 +196,27 @@ func (q *Queries) GetLatestActorProfile(ctx context.Context, did string) (ActorP
 	return i, err
 }
 
+const holdBackPendingActor = `-- name: HoldBackPendingActor :exec
+UPDATE candidate_actors ca
+SET
+    held_until = $1
+WHERE
+    ca.status = 'pending'
+    AND ca.did = $2
+`
+
+type HoldBackPendingActorParams struct {
+	HeldUntil pgtype.Timestamptz
+	DID       string
+}
+
+func (q *Queries) HoldBackPendingActor(ctx context.Context, arg HoldBackPendingActorParams) error {
+	_, err := q.db.Exec(ctx, holdBackPendingActor, arg.HeldUntil, arg.DID)
+	return err
+}
+
 const listCandidateActors = `-- name: ListCandidateActors :many
-SELECT did, created_at, is_artist, comment, status, roles, current_profile_commit_cid
+SELECT did, created_at, is_artist, comment, status, roles, current_profile_commit_cid, held_until
 FROM
     candidate_actors AS ca
 WHERE
@@ -224,6 +245,7 @@ func (q *Queries) ListCandidateActors(ctx context.Context, status NullActorStatu
 			&i.Status,
 			&i.Roles,
 			&i.CurrentProfileCommitCid,
+			&i.HeldUntil,
 		); err != nil {
 			return nil, err
 		}
@@ -236,7 +258,7 @@ func (q *Queries) ListCandidateActors(ctx context.Context, status NullActorStatu
 }
 
 const listCandidateActorsRequiringProfileBackfill = `-- name: ListCandidateActorsRequiringProfileBackfill :many
-SELECT did, created_at, is_artist, comment, status, roles, current_profile_commit_cid
+SELECT did, created_at, is_artist, comment, status, roles, current_profile_commit_cid, held_until
 FROM
     candidate_actors AS ca
 WHERE
@@ -263,6 +285,7 @@ func (q *Queries) ListCandidateActorsRequiringProfileBackfill(ctx context.Contex
 			&i.Status,
 			&i.Roles,
 			&i.CurrentProfileCommitCid,
+			&i.HeldUntil,
 		); err != nil {
 			return nil, err
 		}
@@ -282,7 +305,7 @@ SET
     comment = COALESCE($3, ca.comment)
 WHERE
     did = $4
-RETURNING did, created_at, is_artist, comment, status, roles, current_profile_commit_cid
+RETURNING did, created_at, is_artist, comment, status, roles, current_profile_commit_cid, held_until
 `
 
 type UpdateCandidateActorParams struct {
@@ -308,6 +331,7 @@ func (q *Queries) UpdateCandidateActor(ctx context.Context, arg UpdateCandidateA
 		&i.Status,
 		&i.Roles,
 		&i.CurrentProfileCommitCid,
+		&i.HeldUntil,
 	)
 	return i, err
 }

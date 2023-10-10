@@ -87,6 +87,15 @@ export declare class Actor extends Message<Actor> {
    */
   roles: string[];
 
+  /**
+   * held_until is the time until an actor with the PENDING status
+   * is ignored in the queue to be processed later, e.g. when the actor doesn’t
+   * have an avatar
+   *
+   * @generated from field: google.protobuf.Timestamp held_until = 8;
+   */
+  heldUntil?: Timestamp;
+
   constructor(data?: PartialMessage<Actor>);
 
   static readonly runtime: typeof proto3;

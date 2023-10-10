@@ -36,4 +36,8 @@ message Actor {
   // roles is an array of roles this actor holds in relation to actions on the
   // moderation API.
   repeated string roles = 7;
+  // held_until is the time until an actor with the PENDING status
+  // is ignored in the queue to be processed later, e.g. when the actor doesn’t
+  // have an avatar
+  google.protobuf.Timestamp held_until = 8;
 }

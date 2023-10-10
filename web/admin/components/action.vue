@@ -8,6 +8,7 @@ import {
   ForceApproveActorAuditPayload,
   ProcessApprovalQueueAuditPayload,
   UnapproveActorAuditPayload,
+  HoldBackPendingActorAuditPayload,
 } from "../../proto/bff/v1/moderation_service_pb";
 
 const props = defineProps<{
@@ -33,6 +34,8 @@ const payload = computed(() => {
       return CreateActorAuditPayload.fromBinary(value);
     case "bff.v1.ForceApproveActorAuditPayload":
       return ForceApproveActorAuditPayload.fromBinary(value);
+    case "bff.v1.HoldBackPendingActorAuditPayload":
+      return HoldBackPendingActorAuditPayload.fromBinary(value);
     default:
       console.warn(`Missing payload decoding: ${typeUrl}`);
   }
@@ -55,6 +58,8 @@ const type = computed(() => {
     return "track";
   } else if (data instanceof ForceApproveActorAuditPayload) {
     return "force_approve";
+  } else if (data instanceof HoldBackPendingActorAuditPayload) {
+    return "hold_back";
   }
 });
 
@@ -76,6 +81,8 @@ const actionText = computed(() => {
         : "started tracking this user.";
     case "force_approve":
       return props.lookupUser ? "force-approved" : "force-approved this user.";
+    case "hold_back":
+      return props.lookupUser ? "held back" : "held back this user.";
   }
 });
 
@@ -115,6 +122,10 @@ const comment = computed(() => {
       />
       <icon-database
         v-else-if="type === 'track'"
+        class="text-gray-600 dark:text-gray-200"
+      />
+      <icon-clock
+        v-else-if="type === 'hold_back'"
         class="text-gray-600 dark:text-gray-200"
       />
     </div>

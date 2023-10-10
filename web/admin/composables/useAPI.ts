@@ -7,6 +7,7 @@ import {
   CommentAuditPayload,
   CreateActorAuditPayload,
   ForceApproveActorAuditPayload,
+  HoldBackPendingActorAuditPayload,
   ProcessApprovalQueueAuditPayload,
   UnapproveActorAuditPayload,
 } from "../../proto/bff/v1/moderation_service_pb";
@@ -33,7 +34,8 @@ export default async function () {
         CreateActorAuditPayload,
         ProcessApprovalQueueAuditPayload,
         UnapproveActorAuditPayload,
-        ForceApproveActorAuditPayload
+        ForceApproveActorAuditPayload,
+        HoldBackPendingActorAuditPayload
       ),
     },
   });

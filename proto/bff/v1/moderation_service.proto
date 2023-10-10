@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
 import "google/protobuf/any.proto";
 import "bff/v1/types.proto";
 
@@ -15,6 +16,9 @@ service ModerationService {
 
   // TODO: Refactor ProcessApprovalQueue to something more like "ProcessPendingActor"
   rpc ProcessApprovalQueue(ProcessApprovalQueueRequest) returns (ProcessApprovalQueueResponse) {}
+  // HoldBackPendingActor ignores a pending actor for review in some time, so we
+  // don’t need to reject actors that e.g. have no avatar or bio yet.
+  rpc HoldBackPendingActor(HoldBackPendingActorRequest) returns (HoldBackPendingActorResponse) {}
 
   // ListActors fetches multiple actors from the database. It allows this to be
   // filtered by certain attributes.
@@ -82,6 +86,15 @@ message ProcessApprovalQueueResponse {}
 message ProcessApprovalQueueAuditPayload {
   ApprovalQueueAction action = 1;
   string reason = 2;
+}
+
+message HoldBackPendingActorRequest {
+  string did = 1;
+  google.protobuf.Duration duration = 2;
+}
+message HoldBackPendingActorResponse {}
+message HoldBackPendingActorAuditPayload {
+  google.protobuf.Timestamp held_until = 1;
 }
 
 message ListAuditEventsRequest {

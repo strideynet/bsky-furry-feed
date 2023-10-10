@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { Any, proto3, Timestamp } from "@bufbuild/protobuf";
+import { Any, Duration, proto3, Timestamp } from "@bufbuild/protobuf";
 import { Actor, ActorStatus } from "./types_pb.js";
 
 /**
@@ -121,6 +121,35 @@ export const ProcessApprovalQueueAuditPayload = proto3.makeMessageType(
   () => [
     { no: 1, name: "action", kind: "enum", T: proto3.getEnumType(ApprovalQueueAction) },
     { no: 2, name: "reason", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ],
+);
+
+/**
+ * @generated from message bff.v1.HoldBackPendingActorRequest
+ */
+export const HoldBackPendingActorRequest = proto3.makeMessageType(
+  "bff.v1.HoldBackPendingActorRequest",
+  () => [
+    { no: 1, name: "did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "duration", kind: "message", T: Duration },
+  ],
+);
+
+/**
+ * @generated from message bff.v1.HoldBackPendingActorResponse
+ */
+export const HoldBackPendingActorResponse = proto3.makeMessageType(
+  "bff.v1.HoldBackPendingActorResponse",
+  [],
+);
+
+/**
+ * @generated from message bff.v1.HoldBackPendingActorAuditPayload
+ */
+export const HoldBackPendingActorAuditPayload = proto3.makeMessageType(
+  "bff.v1.HoldBackPendingActorAuditPayload",
+  () => [
+    { no: 1, name: "held_until", kind: "message", T: Timestamp },
   ],
 );
 

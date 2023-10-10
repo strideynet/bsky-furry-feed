@@ -31,6 +31,7 @@ export const Actor = proto3.makeMessageType(
     { no: 5, name: "status", kind: "enum", T: proto3.getEnumType(ActorStatus) },
     { no: 6, name: "created_at", kind: "message", T: Timestamp },
     { no: 7, name: "roles", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 8, name: "held_until", kind: "message", T: Timestamp },
   ],
 );
 

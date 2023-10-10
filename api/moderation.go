@@ -10,6 +10,7 @@ import (
 	"github.com/bluesky-social/indigo/mst"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"golang.org/x/exp/slices"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"connectrpc.com/connect"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
@@ -364,6 +365,55 @@ func (m *ModerationServiceHandler) ProcessApprovalQueue(ctx context.Context, req
 		return nil, fmt.Errorf("committing transaction: %w", err)
 	}
 	return connect.NewResponse(&v1.ProcessApprovalQueueResponse{}), nil
+}
+
+func (m *ModerationServiceHandler) HoldBackPendingActor(ctx context.Context, req *connect.Request[v1.HoldBackPendingActorRequest]) (*connect.Response[v1.HoldBackPendingActorResponse], error) {
+	authCtx, err := m.authEngine.auth(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("authenticating: %w", err)
+	}
+
+	actorDID := req.Msg.Did
+	if actorDID == "" {
+		return nil, fmt.Errorf("validating did: missing")
+	}
+
+	tx, err := m.store.TX(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("starting transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	actor, err := tx.GetActorByDID(ctx, actorDID)
+	if err != nil {
+		return nil, fmt.Errorf("fetching actor: %w", err)
+	}
+	if actor.Status != v1.ActorStatus_ACTOR_STATUS_PENDING {
+		return nil, fmt.Errorf("candidate actor status was %q not %q", actor.Status, v1.ActorStatus_ACTOR_STATUS_PENDING)
+	}
+
+	heldUntil := time.Now().Add(req.Msg.Duration.AsDuration())
+
+	err = tx.HoldBackPendingActor(ctx, actorDID, heldUntil)
+	if err != nil {
+		return nil, fmt.Errorf("holding back actor: %w", err)
+	}
+
+	_, err = tx.CreateAuditEvent(ctx, store.CreateAuditEventOpts{
+		Payload: &v1.HoldBackPendingActorAuditPayload{
+			HeldUntil: timestamppb.New(heldUntil),
+		},
+		ActorDID:   authCtx.DID,
+		SubjectDID: actorDID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("creating audit event: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("committing transaction: %w", err)
+	}
+	return connect.NewResponse(&v1.HoldBackPendingActorResponse{}), nil
 }
 
 func (m *ModerationServiceHandler) ForceApproveActor(ctx context.Context, req *connect.Request[v1.ForceApproveActorRequest]) (*connect.Response[v1.ForceApproveActorResponse], error) {
