@@ -77,6 +77,7 @@ func TestFirehoseIngester(t *testing.T) {
 
 		uri string
 	}{
+
 		{
 			name: "non furry ignored",
 			user: nonFurry,
@@ -101,7 +102,7 @@ func TestFirehoseIngester(t *testing.T) {
 			post: &bsky.FeedPost{
 				LexiconTypeID: "app.bsky.feed.post",
 				CreatedAt:     now.Format(time.RFC3339Nano),
-				Text:          "paws paws paws",
+				Text:          "paws paws paws simple",
 			},
 			wantPost: &gen.CandidatePost{
 				ActorDID: approvedFurry.DID(),
@@ -229,6 +230,7 @@ func TestFirehoseIngester(t *testing.T) {
 				Text:          "paws paws paws",
 				Labels: &bsky.FeedPost_Labels{
 					LabelDefs_SelfLabels: &atproto.LabelDefs_SelfLabels{
+						LexiconTypeID: "com.atproto.label.defs#selfLabels",
 						Values: []*atproto.LabelDefs_SelfLabel{
 							{
 								Val: "adult",
@@ -248,7 +250,9 @@ func TestFirehoseIngester(t *testing.T) {
 					Bool:  false,
 					Valid: true,
 				},
-				SelfLabels: []string{},
+				SelfLabels: []string{
+					"adult",
+				},
 			},
 		},
 	}
