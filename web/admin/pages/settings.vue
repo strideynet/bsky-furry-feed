@@ -6,9 +6,7 @@ import { logout } from "~/lib/auth";
 <template>
   <div>
     <h1 class="text-xl font-bold">My settings</h1>
-    <p class="text-gray-600 dark:text-gray-400 mb-4">
-      Settings aren’t synced across your devices.
-    </p>
+    <p class="text-muted mb-4">Settings aren’t synced across your devices.</p>
 
     <div class="flex gap-2 mb-4">
       <input
