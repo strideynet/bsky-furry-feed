@@ -1,8 +1,7 @@
-name: "Build"
+name: Deploy
 on:
-  push:
-    branches:
-      - main
+  release:
+    types: [released]
 jobs:
   build-and-push-docker:
     name: Build and push Docker image
@@ -30,8 +29,7 @@ jobs:
             ghcr.io/${{ github.repository }}/bffsrv
           # generate Docker tags based on the following events/attributes
           tags: |
-            type=ref,event=branch
-            type=sha
+            type=semver,pattern=v{{version}}
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
@@ -40,3 +38,10 @@ jobs:
           file: bffsrv.Dockerfile
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+  deploy-kubernetes:
+    needs: [build-and-push-docker]
+    name: Deploy Kubernetes
+    environment: production
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo wahoo

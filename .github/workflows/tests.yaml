@@ -1,18 +1,17 @@
-name: Tests
-
+name: Lint and Test
 on:
   push:
     branches: [main]
   pull_request:
 
 jobs:
-  go:
+  test-go:
+    name: "Test Go"
     services:
       dind:
         image: docker:23.0-rc-dind-rootless
         ports:
           - 2375:2375
-    name: "Go: Test"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -23,3 +22,48 @@ jobs:
         run: go test -race -coverprofile=coverage.txt -covermode=atomic -v ./...
       - name: Upload coverage
         uses: codecov/codecov-action@v3
+  lint-go:
+    name: Lint Go
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.21"
+          cache: false
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.53
+          args: --timeout=5m
+  check-sqlc:
+    name: Check sqlc generation
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.21"
+          cache: false
+      - name: Install sqlc
+        run: go install github.com/kyleconroy/sqlc/cmd/sqlc@v1.19.0
+      - run: sqlc generate
+      - name: Check that sqlc queries are up-to-date
+        run: git diff --exit-code
+  lint-sql:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: "actions/checkout@v2"
+      - uses: "actions/setup-python@v2"
+        with:
+          python-version: "3.8"
+      - name: Install sqlfluff
+        run: "pip install sqlfluff==2.3.2"
+      - name: Lint sql files
+        run: "sqlfluff lint"
