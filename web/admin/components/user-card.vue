@@ -18,7 +18,7 @@ const data = ref<ProfileViewDetailed>();
 const loadProfile = async () => {
   data.value = await getProfile(props.did);
   const { actor } = await api
-    .getActor({ did: data.value.did })
+    .getActor({ did: data.value?.did || props.did })
     .catch(() => ({ actor: undefined }));
   isArtist.value = Boolean(actor?.isArtist);
   status.value = actor?.status;
@@ -100,9 +100,20 @@ await loadProfile();
       />
     </div>
   </shared-card>
-  <shared-card v-else class="bg-red-200 dark:bg-red-700">
-    Profile with did {{ did }} was not found.
-  </shared-card>
+  <template v-else>
+    <user-queue-actions
+      v-if="status === ActorStatus.PENDING"
+      :did="props.did"
+      :name="props.did"
+      :pending="pending"
+      reject-only
+      @next="next"
+      @loading="loading = true"
+    />
+    <shared-card class="bg-red-200 dark:bg-red-700">
+      Profile with did {{ did }} was not found.
+    </shared-card>
+  </template>
 </template>
 
 <style scoped>

@@ -6,6 +6,7 @@ const props = defineProps<{
   did: string;
   name: string;
   pending?: number;
+  rejectOnly?: boolean;
 }>();
 const $emit = defineEmits(["loading", "next"]);
 
@@ -72,6 +73,7 @@ async function holdBack() {
         ({{ pending }} more...)
       </span>
       <button
+        v-if="!rejectOnly"
         class="py-0.5 max-md:py-1 max-md:px-3 px-2 max-md:ml-auto mr-1 text-white bg-blue-500 dark:bg-blue-600 rounded-lg hover:bg-blue-600 dark:hover:bg-blue-700 disabled:bg-blue-300 disabled:dark:bg-blue-500 disabled:cursor-not-allowed"
         :disabled="loading"
         @click="accept"
@@ -88,6 +90,7 @@ async function holdBack() {
       </button>
 
       <button
+        v-if="!rejectOnly"
         class="py-0.5 max-md:py-1 whitespace-nowrap max-md:px-3 px-2 text-white bg-gray-500 dark:bg-gray-600 hover:bg-gray-600 dark:hover:bg-gray-700 disabled:bg-gray-400 disabled:dark:bg-gray-500 rounded-lg disabled:cursor-not-allowed"
         :disabled="loading"
         @click="holdBack"
