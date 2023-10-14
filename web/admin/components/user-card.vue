@@ -100,7 +100,7 @@ await loadProfile();
       />
     </div>
   </shared-card>
-  <template v-else>
+  <div v-else>
     <user-queue-actions
       v-if="status === ActorStatus.PENDING"
       :did="props.did"
@@ -113,7 +113,7 @@ await loadProfile();
     <shared-card class="bg-red-200 dark:bg-red-700">
       Profile with did {{ did }} was not found.
     </shared-card>
-  </template>
+  </div>
 </template>
 
 <style scoped>

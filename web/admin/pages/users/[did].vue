@@ -7,23 +7,27 @@ const api = await useAPI();
 
 const error = ref<string>();
 
-const subject = ref() as Ref<ProfileViewDetailed>;
+const subject = ref<ProfileViewDetailed>();
 const agent = newAgent();
-async function loadProfile() {
-  const { data } = await agent.getProfile({
-    actor: String(useRoute().params.did),
-  });
+async function loadProfile(did: string) {
+  const { data } = await agent
+    .getProfile({
+      actor: did,
+    })
+    .catch(() => {
+      return { data: undefined };
+    });
   subject.value = data;
 }
 
 const auditEvents: Ref<AuditEvent[]> = ref([]);
 
-async function loadEvents() {
+async function loadEvents(fallbackDid: string) {
   error.value = "";
 
   const response = await api
     .listAuditEvents({
-      filterSubjectDid: subject.value.did,
+      filterSubjectDid: subject.value?.did || fallbackDid,
     })
     .catch((err) => {
       error.value = err.rawMessage;
@@ -37,21 +41,24 @@ async function loadEvents() {
 async function comment(comment: string) {
   error.value = "";
 
+  const did = subject.value?.did || String(useRoute().params.did);
+
   await api
     .createCommentAuditEvent({
-      subjectDid: subject.value.did,
+      subjectDid: did,
       comment,
     })
     .catch((err) => {
       error.value = err.rawMessage;
     });
 
-  if (!error.value) await loadEvents();
+  if (!error.value) await loadEvents(did);
 }
 
 async function refresh() {
-  await loadProfile();
-  await loadEvents();
+  const did = String(useRoute().params.did);
+  await loadProfile(did);
+  await loadEvents(did);
 }
 
 await refresh();
@@ -63,7 +70,7 @@ await refresh();
     <div v-else>
       <user-card
         class="mb-5"
-        :did="subject.did"
+        :did="subject?.did || String($route.params.did)"
         variant="profile"
         @next="refresh"
       />
@@ -77,7 +84,7 @@ await refresh();
         :key="action.id"
         :action="action"
       />
-      <shared-comment-box @comment="comment" />
+      <shared-comment-box v-if="subject" @comment="comment" />
     </div>
   </div>
 </template>
