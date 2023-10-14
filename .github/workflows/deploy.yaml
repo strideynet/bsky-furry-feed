@@ -61,4 +61,9 @@ jobs:
         with:
           cluster_name: 'us-east'
           location: 'us-east1'
-      - run: kubectl get pods -A
+      - uses: Azure/k8s-deploy@v4
+        with:
+          namespace: 'default'
+          manifests: |
+            infra/k8s
+          images: 'ghcr.io/strideynet/bsky-furry-feed/bffsrv:${{ github.ref_name }}'
