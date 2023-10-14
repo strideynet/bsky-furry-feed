@@ -38,20 +38,26 @@ jobs:
           file: bffsrv.Dockerfile
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-  deploy-kubernetes:
+  approve-deployment:
     needs: [build-and-push-docker]
+    environment: production
+    runs-on: ubuntu-latest
+  deploy-kubernetes:
+    needs: [approve-deployment]
     name: Deploy Kubernetes
     environment: production
     runs-on: ubuntu-latest
     steps:
       - run: echo k8s
   deploy-web-admin:
+    needs: [approve-deployment]
     name: Deploy Admin web
     environment: production
     runs-on: ubuntu-latest
     steps:
       - run: echo admin
   deploy-web-info:
+    needs: [approve-deployment]
     name: Deploy Info web
     environment: production
     runs-on: ubuntu-latest
