@@ -44,7 +44,7 @@ var authenticatedUserPermissions = []string{
 	"/bff.v1.UserService/JoinApprovalQueue",
 }
 
-var moderatorPermissions = []string{
+var approverPermissions = []string{
 	"/bff.v1.ModerationService/GetActor",
 	"/bff.v1.ModerationService/ListActors",
 	"/bff.v1.ModerationService/ListAuditEvents",
@@ -53,16 +53,20 @@ var moderatorPermissions = []string{
 	"/bff.v1.ModerationService/HoldBackPendingActor",
 }
 
-var adminPermissions = append([]string{
-	"/bff.v1.ModerationService/BanActor",
+var moderatorPermissions = append([]string{
 	"/bff.v1.ModerationService/UnapproveActor",
 	"/bff.v1.ModerationService/ForceApproveActor",
+}, approverPermissions...)
+
+var adminPermissions = append([]string{
+	"/bff.v1.ModerationService/BanActor",
 	"/bff.v1.ModerationService/CreateActor",
 }, moderatorPermissions...)
 
 var roleToPermissions = map[string][]string{
 	"admin":     adminPermissions,
 	"moderator": moderatorPermissions,
+	"approver":  approverPermissions,
 }
 
 // AuthEngine helps authenticate requests made by users and apply authorization
