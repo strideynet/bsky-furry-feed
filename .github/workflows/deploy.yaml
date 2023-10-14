@@ -44,4 +44,16 @@ jobs:
     environment: production
     runs-on: ubuntu-latest
     steps:
-      - run: echo wahoo
+      - run: echo k8s
+  deploy-web-admin:
+    name: Deploy Admin web
+    environment: production
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo admin
+  deploy-web-info:
+    name: Deploy Info web
+    environment: production
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo info
