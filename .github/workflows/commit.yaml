@@ -93,7 +93,8 @@ jobs:
             ghcr.io/${{ github.repository }}/bffsrv
           # generate Docker tags based on the following events/attributes
           tags: |
-            type=ref
+            type=ref,event=branch
+            type=ref,event=pr
             type=sha
       - name: Build and push
         uses: docker/build-push-action@v4
