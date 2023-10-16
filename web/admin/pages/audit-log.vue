@@ -17,9 +17,7 @@ const { auditEvents } = await api.listAuditEvents({}).catch((err) => {
     <shared-card v-if="error" variant="error">{{ error }}</shared-card>
     <div v-else>
       <h1 class="text-xl font-bold">Audit log</h1>
-      <p class="text-gray-600 dark:text-gray-400">
-        Showing the last 100 audit events.
-      </p>
+      <p class="text-muted">Showing the last 100 audit events.</p>
       <action
         v-for="event in auditEvents"
         :key="event.id"

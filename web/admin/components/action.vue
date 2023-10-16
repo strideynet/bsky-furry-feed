@@ -134,7 +134,7 @@ const comment = computed(() => {
         <user-link :did="action.actorDid" />
         {{ actionText }}
         <user-link v-if="lookupUser" :did="action.subjectDid" />
-        <span class="text-gray-600 dark:text-gray-400 text-xs">{{
+        <span class="text-muted text-xs">{{
           action.createdAt?.toDate().toLocaleDateString("en", {
             day: "numeric",
             month: "short",

@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  .text-muted {
+    @apply text-gray-600 dark:text-gray-400;
+  }
+}

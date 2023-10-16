@@ -64,7 +64,7 @@ await loadProfile();
         <div class="meta">
           <span class="meta-item">
             <nuxt-link
-              class="underline hover:no-underline text-gray-600 dark:text-gray-400"
+              class="underline hover:no-underline text-muted"
               :href="`https://bsky.app/profile/${data.handle}`"
               target="_blank"
               >@{{ data.handle }}</nuxt-link
@@ -72,22 +72,22 @@ await loadProfile();
           </span>
           <span class="meta-item">
             {{ data.followersCount }}
-            <span class="text-gray-600 dark:text-gray-400">followers</span>
+            <span class="text-muted">followers</span>
           </span>
           <span class="meta-item">
             {{ data.followsCount }}
-            <span class="text-gray-600 dark:text-gray-400">follows</span>
+            <span class="text-muted">follows</span>
           </span>
           <span class="meta-item">
             {{ data.postsCount }}
-            <span class="text-gray-600 dark:text-gray-400">posts</span>
+            <span class="text-muted">posts</span>
           </span>
         </div>
         <div v-if="variant === 'profile'" class="meta">
           <span class="meta-item inline-flex items-center">
             <icon-check v-if="isArtist" class="text-green-500" />
             <icon-cross v-else class="text-red-500" />
-            <span class="text-gray-600 dark:text-gray-400">Artist</span>
+            <span class="text-muted">Artist</span>
           </span>
         </div>
       </div>
