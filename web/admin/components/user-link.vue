@@ -9,9 +9,9 @@ const profile = await getProfile(props.did);
 <template>
   <nuxt-link
     class="flex items-center underline hover:no-underline"
-    :href="`/users/${profile.did}`"
+    :href="`/users/${profile?.did || did}`"
   >
-    <shared-avatar class="mr-1" :url="profile.avatar" :size="20" />
-    {{ profile.handle }}
+    <shared-avatar class="mr-1" :url="profile?.avatar" :size="20" />
+    {{ profile?.handle || did }}
   </nuxt-link>
 </template>
