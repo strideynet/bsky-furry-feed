@@ -74,42 +74,49 @@ WHERE
                 COALESCE($1::TEXT [], '{}') = '{}'
                 OR $1::TEXT [] && cp.hashtags
             )
+            -- If any hashtags are disallowed, filter them out.
+            AND (
+                COALESCE($2::TEXT [], '{}') = '{}'
+                OR NOT $2::TEXT [] && cp.hashtags
+            )
             -- Match has_media status. If unspecified, do not filter.
             AND (
-                $2::BOOLEAN IS NULL
-                OR COALESCE(cp.has_media, FALSE) = $2
+                $3::BOOLEAN IS NULL
+                OR COALESCE(cp.has_media, FALSE) = $3
             )
             -- Filter by NSFW status. If unspecified, do not filter.
             AND (
-                $3::BOOLEAN IS NULL
+                $4::BOOLEAN IS NULL
                 OR (
                     (ARRAY['nsfw', 'mursuit', 'murrsuit', 'nsfwfurry', 'furrynsfw'] && cp.hashtags)
                     OR (ARRAY['porn', 'nudity', 'sexual'] && cp.self_labels)
-                ) = $3
+                ) = $4
             )
         )
         -- Pinned DID criteria.
-        OR cp.actor_did = ANY($4::TEXT [])
+        OR cp.actor_did = ANY($5::TEXT [])
     )
     -- Remove posts newer than the cursor timestamp
-    AND (cp.indexed_at < $5)
+    AND (cp.indexed_at < $6)
 ORDER BY
     cp.indexed_at DESC
-LIMIT $6
+LIMIT $7
 `
 
 type GetFurryNewFeedParams struct {
-	Hashtags        []string
-	HasMedia        pgtype.Bool
-	IsNSFW          pgtype.Bool
-	PinnedDIDs      []string
-	CursorTimestamp pgtype.Timestamptz
-	Limit           int32
+	Hashtags           []string
+	DisallowedHashtags []string
+	HasMedia           pgtype.Bool
+	IsNSFW             pgtype.Bool
+	PinnedDIDs         []string
+	CursorTimestamp    pgtype.Timestamptz
+	Limit              int32
 }
 
 func (q *Queries) GetFurryNewFeed(ctx context.Context, arg GetFurryNewFeedParams) ([]CandidatePost, error) {
 	rows, err := q.db.Query(ctx, getFurryNewFeed,
 		arg.Hashtags,
+		arg.DisallowedHashtags,
 		arg.HasMedia,
 		arg.IsNSFW,
 		arg.PinnedDIDs,
@@ -192,38 +199,44 @@ WHERE
         COALESCE($3::TEXT [], '{}') = '{}'
         OR $3::TEXT [] && cp.hashtags
     )
+    -- If any hashtags are disallowed, filter them out.
+    AND (
+        COALESCE($4::TEXT [], '{}') = '{}'
+        OR NOT $4::TEXT [] && cp.hashtags
+    )
     -- Match has_media status. If unspecified, do not filter.
     AND (
-        $4::BOOLEAN IS NULL
-        OR COALESCE(cp.has_media, FALSE) = $4
+        $5::BOOLEAN IS NULL
+        OR COALESCE(cp.has_media, FALSE) = $5
     )
     -- Filter by NSFW status. If unspecified, do not filter.
     AND (
-        $5::BOOLEAN IS NULL
+        $6::BOOLEAN IS NULL
         OR (
             (ARRAY['nsfw', 'mursuit', 'murrsuit', 'nsfwfurry', 'furrynsfw'] && cp.hashtags)
             OR (ARRAY['porn', 'nudity', 'sexual'] && cp.self_labels)
-        ) = $5
+        ) = $6
     )
     AND cp.deleted_at IS NULL
     AND (
         ROW(ph.score, ph.uri)
-        < ROW(($6)::REAL, ($7)::TEXT)
+        < ROW(($7)::REAL, ($8)::TEXT)
     )
 ORDER BY
     ph.score DESC, ph.uri DESC
-LIMIT $8
+LIMIT $9
 `
 
 type ListScoredPostsParams struct {
-	Alg           string
-	GenerationSeq int64
-	Hashtags      []string
-	HasMedia      pgtype.Bool
-	IsNSFW        pgtype.Bool
-	AfterScore    float32
-	AfterURI      string
-	Limit         int32
+	Alg                string
+	GenerationSeq      int64
+	Hashtags           []string
+	DisallowedHashtags []string
+	HasMedia           pgtype.Bool
+	IsNSFW             pgtype.Bool
+	AfterScore         float32
+	AfterURI           string
+	Limit              int32
 }
 
 type ListScoredPostsRow struct {
@@ -245,6 +258,7 @@ func (q *Queries) ListScoredPosts(ctx context.Context, arg ListScoredPostsParams
 		arg.Alg,
 		arg.GenerationSeq,
 		arg.Hashtags,
+		arg.DisallowedHashtags,
 		arg.HasMedia,
 		arg.IsNSFW,
 		arg.AfterScore,

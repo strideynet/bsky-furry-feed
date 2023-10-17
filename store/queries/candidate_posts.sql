@@ -42,6 +42,11 @@ WHERE
                 COALESCE(sqlc.narg(hashtags)::TEXT [], '{}') = '{}'
                 OR sqlc.arg(hashtags)::TEXT [] && cp.hashtags
             )
+            -- If any hashtags are disallowed, filter them out.
+            AND (
+                COALESCE(sqlc.narg(disallowed_hashtags)::TEXT [], '{}') = '{}'
+                OR NOT sqlc.narg(disallowed_hashtags)::TEXT [] && cp.hashtags
+            )
             -- Match has_media status. If unspecified, do not filter.
             AND (
                 sqlc.narg(has_media)::BOOLEAN IS NULL
@@ -92,6 +97,11 @@ WHERE
     AND (
         COALESCE(sqlc.narg(hashtags)::TEXT [], '{}') = '{}'
         OR sqlc.narg(hashtags)::TEXT [] && cp.hashtags
+    )
+    -- If any hashtags are disallowed, filter them out.
+    AND (
+        COALESCE(sqlc.narg(disallowed_hashtags)::TEXT [], '{}') = '{}'
+        OR NOT sqlc.narg(disallowed_hashtags)::TEXT [] && cp.hashtags
     )
     -- Match has_media status. If unspecified, do not filter.
     AND (
