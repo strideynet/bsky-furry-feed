@@ -32,11 +32,18 @@ async function process(
   }
   loading.value = true;
   $emit("loading");
-  await api.processApprovalQueue({
-    did,
-    action,
-    reason,
-  });
+  try {
+    await api.processApprovalQueue({
+      did,
+      action,
+      reason,
+    });
+  } catch (err) {
+    const message = String(err);
+    if (!message.includes("candidate actor status was")) {
+      alert("An error occurred while processing the queue: " + message);
+    }
+  }
   $emit("next");
   loading.value = false;
 }
@@ -53,12 +60,19 @@ async function holdBack() {
 
   loading.value = true;
   $emit("loading");
-  await api.holdBackPendingActor({
-    did: props.did,
-    duration: {
-      seconds: BigInt(60 * 60 * 24 * 2),
-    },
-  });
+  try {
+    await api.holdBackPendingActor({
+      did: props.did,
+      duration: {
+        seconds: BigInt(60 * 60 * 24 * 2),
+      },
+    });
+  } catch (err) {
+    const message = String(err);
+    if (!message.includes("candidate actor status was")) {
+      alert("An error occurred while holding back the user: " + message);
+    }
+  }
   $emit("next");
   loading.value = false;
 }
