@@ -11,7 +11,6 @@ const props = defineProps<{
 const $emit = defineEmits(["next"]);
 
 const api = await useAPI();
-const isArtist = ref(false);
 const loading = ref(false);
 const status = ref<ActorStatus>();
 const data = ref<ProfileViewDetailed>();
@@ -20,7 +19,6 @@ const loadProfile = async () => {
   const { actor } = await api
     .getActor({ did: data.value?.did || props.did })
     .catch(() => ({ actor: undefined }));
-  isArtist.value = Boolean(actor?.isArtist);
   status.value = actor?.status;
 };
 
@@ -81,13 +79,6 @@ await loadProfile();
           <span class="meta-item">
             {{ data.postsCount }}
             <span class="text-muted">posts</span>
-          </span>
-        </div>
-        <div v-if="variant === 'profile'" class="meta">
-          <span class="meta-item inline-flex items-center">
-            <icon-check v-if="isArtist" class="text-green-500" />
-            <icon-cross v-else class="text-red-500" />
-            <span class="text-muted">Artist</span>
           </span>
         </div>
       </div>
