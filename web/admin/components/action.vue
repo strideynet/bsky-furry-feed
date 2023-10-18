@@ -95,7 +95,8 @@ const comment = computed(() => {
     data instanceof UnapproveActorAuditPayload ||
     data instanceof BanActorAuditPayload ||
     data instanceof CreateActorAuditPayload ||
-    data instanceof ForceApproveActorAuditPayload
+    data instanceof ForceApproveActorAuditPayload ||
+    data instanceof ProcessApprovalQueueAuditPayload
   ) {
     return data.reason;
   }
