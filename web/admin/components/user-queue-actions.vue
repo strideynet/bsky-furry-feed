@@ -11,13 +11,19 @@ const props = defineProps<{
 const $emit = defineEmits(["loading", "next"]);
 
 const loading = ref(false);
+const showRejectModal = ref(false);
 
 const accept = () => process(props.did, ApprovalQueueAction.APPROVE);
-const reject = () => process(props.did, ApprovalQueueAction.REJECT);
+const reject = (reason: string) =>
+  process(props.did, ApprovalQueueAction.REJECT, reason);
 
 const api = await useAPI();
-async function process(did: string, action: ApprovalQueueAction) {
-  if (showQueueActionConfirmation.value) {
+async function process(
+  did: string,
+  action: ApprovalQueueAction,
+  reason?: string
+) {
+  if (showQueueActionConfirmation.value && !reason) {
     const verb = action === ApprovalQueueAction.APPROVE ? "approve" : "reject";
 
     if (!confirm(`Do you want to ${verb} ${props.name}?`)) {
@@ -29,6 +35,7 @@ async function process(did: string, action: ApprovalQueueAction) {
   await api.processApprovalQueue({
     did,
     action,
+    reason,
   });
   $emit("next");
   loading.value = false;
@@ -61,6 +68,18 @@ async function holdBack() {
   <div
     class="mb-3 rounded-lg bg-orange-400 text-black px-3 py-1 flex items-baseline text-sm max-md:flex-col"
   >
+    <reject-reason-modal
+      v-if="showRejectModal"
+      :name="name"
+      @cancel="showRejectModal = false"
+      @reject="
+        (reason) => {
+          showRejectModal = false;
+          reject(reason);
+        }
+      "
+    />
+
     <span class="max-w-full flex max-md:mb-1"
       ><span class="truncate">{{ name }}</span>
       &nbsp;
@@ -84,7 +103,7 @@ async function holdBack() {
       <button
         class="py-0.5 max-md:py-1 max-md:px-3 px-2 mr-1 bg-red-500 dark:bg-red-600 hover:bg-red-600 dark:hover:bg-red-700 disabled:bg-red-400 disabled:dark:bg-red-500 rounded-lg disabled:cursor-not-allowed"
         :disabled="loading"
-        @click="reject"
+        @click="showRejectModal = true"
       >
         Reject
       </button>
