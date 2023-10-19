@@ -24,7 +24,8 @@ const nextActor = async () => {
   );
 
   pending.value = actors.length - 1;
-  actor.value = actors[0];
+  const index = Math.floor(Math.random() * actors.length);
+  actor.value = actors[index];
 };
 
 await nextActor();
