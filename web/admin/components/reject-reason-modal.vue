@@ -38,7 +38,7 @@ function handleCheck(reason: string, value: boolean) {
   <div
     class="fixed flex top-0 left-0 right-0 bottom-0 z-10 justify-center items-center"
   >
-    <shared-card class="text-white z-10 bg-white dark:bg-gray-900">
+    <shared-card class="dark:text-white z-10 bg-white dark:bg-gray-900">
       <h2 class="text-lg font-bold">Reject {{ name }}</h2>
       <p class="text-muted mb-3">
         Please select all applicable reasons for the rejection.
