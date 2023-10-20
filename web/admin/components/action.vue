@@ -135,15 +135,11 @@ const comment = computed(() => {
         <user-link :did="action.actorDid" />
         {{ actionText }}
         <user-link v-if="lookupUser" :did="action.subjectDid" />
-        <span class="text-muted text-xs">{{
-          action.createdAt?.toDate().toLocaleDateString("en", {
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })
-        }}</span>
+        <shared-date
+          v-if="action.createdAt"
+          class="text-muted text-xs"
+          :date="action.createdAt?.toDate()"
+        />
       </div>
       <shared-card v-if="comment" no-padding class="text-sm px-3 py-2 mt-2">
         <shared-markdown :markdown="comment" />
