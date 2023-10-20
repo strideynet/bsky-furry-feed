@@ -34,12 +34,11 @@ async function doSearch() {
     <div class="ml-auto flex items-center gap-2">
       <shared-search @toggle-search="showSearch = !showSearch" />
       <nuxt-link href="/settings">
-        <img
-          class="rounded-full"
-          :src="profile.avatar"
-          height="32"
-          width="32"
-          alt=""
+        <shared-avatar
+          :did="profile.did"
+          :has-avatar="profile.avatar"
+          resize="72x72"
+          :size="32"
         />
       </nuxt-link>
     </div>

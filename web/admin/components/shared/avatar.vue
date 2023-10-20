@@ -1,10 +1,25 @@
 <script lang="ts" setup>
-defineProps<{ url?: string; size: number }>();
+const props = defineProps<{
+  did?: string;
+  hasAvatar: boolean;
+  resize?: "72x72" | "20x20";
+  size: number;
+}>();
+
+const url = computed(() => {
+  let base = `https://bsky-cdn.codingpa.ws/avatar/${props.did}`;
+
+  if (props.resize) {
+    base += `/${props.resize}`;
+  }
+
+  return base;
+});
 </script>
 
 <template>
   <img
-    v-if="url"
+    v-if="did && hasAvatar"
     class="rounded-full"
     :src="url"
     :height="size"
