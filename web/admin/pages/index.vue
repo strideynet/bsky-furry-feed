@@ -33,7 +33,7 @@ await nextActor();
 
 <template>
   <shared-card v-if="error" variant="error">{{ error }}</shared-card>
-  <user-card
+  <user-profile
     v-else-if="actor"
     :did="actor.did"
     :pending="pending"
