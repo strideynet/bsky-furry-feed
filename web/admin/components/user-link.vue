@@ -11,7 +11,13 @@ const profile = await getProfile(props.did);
     class="flex items-center underline hover:no-underline"
     :href="`/users/${profile?.did || did}`"
   >
-    <shared-avatar class="mr-1" :url="profile?.avatar" :size="20" />
+    <shared-avatar
+      class="mr-1"
+      :did="profile?.did"
+      resize="20x20"
+      :has-avatar="Boolean(profile?.avatar)"
+      :size="20"
+    />
     {{ profile?.handle || did }}
   </nuxt-link>
 </template>
