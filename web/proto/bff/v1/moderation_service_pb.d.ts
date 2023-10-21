@@ -903,3 +903,70 @@ export declare class AuditEvent extends Message<AuditEvent> {
   static equals(a: AuditEvent | PlainMessage<AuditEvent> | undefined, b: AuditEvent | PlainMessage<AuditEvent> | undefined): boolean;
 }
 
+/**
+ * @generated from message bff.v1.ListRolesRequest
+ */
+export declare class ListRolesRequest extends Message<ListRolesRequest> {
+  constructor(data?: PartialMessage<ListRolesRequest>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "bff.v1.ListRolesRequest";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListRolesRequest;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListRolesRequest;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListRolesRequest;
+
+  static equals(a: ListRolesRequest | PlainMessage<ListRolesRequest> | undefined, b: ListRolesRequest | PlainMessage<ListRolesRequest> | undefined): boolean;
+}
+
+/**
+ * @generated from message bff.v1.ListRolesResponse
+ */
+export declare class ListRolesResponse extends Message<ListRolesResponse> {
+  /**
+   * @generated from field: map<string, bff.v1.Role> roles = 1;
+   */
+  roles: { [key: string]: Role };
+
+  constructor(data?: PartialMessage<ListRolesResponse>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "bff.v1.ListRolesResponse";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListRolesResponse;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListRolesResponse;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListRolesResponse;
+
+  static equals(a: ListRolesResponse | PlainMessage<ListRolesResponse> | undefined, b: ListRolesResponse | PlainMessage<ListRolesResponse> | undefined): boolean;
+}
+
+/**
+ * @generated from message bff.v1.Role
+ */
+export declare class Role extends Message<Role> {
+  /**
+   * @generated from field: repeated string permissions = 1;
+   */
+  permissions: string[];
+
+  constructor(data?: PartialMessage<Role>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "bff.v1.Role";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Role;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Role;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Role;
+
+  static equals(a: Role | PlainMessage<Role> | undefined, b: Role | PlainMessage<Role> | undefined): boolean;
+}
+
