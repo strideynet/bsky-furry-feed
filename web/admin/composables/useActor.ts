@@ -1,4 +1,5 @@
 import { Actor } from "../../proto/bff/v1/types_pb";
+import { useUserAPI } from "./useAPI";
 
 type ActorWithInfo = Actor & {
   isAdmin: boolean;
@@ -9,13 +10,10 @@ export default async function (): Promise<Ref<ActorWithInfo>> {
   const actor = useState<ActorWithInfo>("actor");
 
   if (!actor.value) {
-    const api = await useAPI();
-    const user = await useUser();
+    const api = await useUserAPI();
     const result = (await api
-      .getActor({
-        did: user.value.did,
-      })
-      .then((r) => ({ ...r.actor }))) as ActorWithInfo;
+      .getMe({})
+      .then((r) => ({ ...r.Actor }))) as ActorWithInfo;
 
     result.isAdmin = result?.roles?.includes("admin");
     result.isModOrHigher =
