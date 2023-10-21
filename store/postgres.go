@@ -553,12 +553,13 @@ func (s *PGXStore) DeleteFollow(ctx context.Context, opts DeleteFollowOpts) (err
 }
 
 type ListPostsForNewFeedOpts struct {
-	CursorTime time.Time
-	Hashtags   []string
-	IsNSFW     tristate.Tristate
-	HasMedia   tristate.Tristate
-	PinnedDIDs []string
-	Limit      int
+	CursorTime         time.Time
+	Hashtags           []string
+	DisallowedHashtags []string
+	IsNSFW             tristate.Tristate
+	HasMedia           tristate.Tristate
+	PinnedDIDs         []string
+	Limit              int
 }
 
 func tristateToPgtypeBool(t tristate.Tristate) pgtype.Bool {
@@ -581,10 +582,11 @@ func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNew
 			Valid: true,
 			Time:  opts.CursorTime,
 		},
-		Hashtags:   opts.Hashtags,
-		HasMedia:   tristateToPgtypeBool(opts.HasMedia),
-		IsNSFW:     tristateToPgtypeBool(opts.IsNSFW),
-		PinnedDIDs: opts.PinnedDIDs,
+		Hashtags:           opts.Hashtags,
+		DisallowedHashtags: opts.DisallowedHashtags,
+		HasMedia:           tristateToPgtypeBool(opts.HasMedia),
+		IsNSFW:             tristateToPgtypeBool(opts.IsNSFW),
+		PinnedDIDs:         opts.PinnedDIDs,
 	}
 	if opts.Limit != 0 {
 		queryParams.Limit = int32(opts.Limit)
@@ -617,12 +619,13 @@ type ListPostsForHotFeedCursor struct {
 }
 
 type ListPostsForHotFeedOpts struct {
-	Alg      string
-	Cursor   ListPostsForHotFeedCursor
-	Hashtags []string
-	IsNSFW   tristate.Tristate
-	HasMedia tristate.Tristate
-	Limit    int
+	Alg                string
+	Cursor             ListPostsForHotFeedCursor
+	Hashtags           []string
+	DisallowedHashtags []string
+	IsNSFW             tristate.Tristate
+	HasMedia           tristate.Tristate
+	Limit              int
 }
 
 func (s *PGXStore) ListScoredPosts(ctx context.Context, opts ListPostsForHotFeedOpts) (out []gen.ListScoredPostsRow, err error) {
@@ -633,13 +636,14 @@ func (s *PGXStore) ListScoredPosts(ctx context.Context, opts ListPostsForHotFeed
 	}()
 
 	queryParams := gen.ListScoredPostsParams{
-		Alg:           opts.Alg,
-		Hashtags:      opts.Hashtags,
-		HasMedia:      tristateToPgtypeBool(opts.HasMedia),
-		IsNSFW:        tristateToPgtypeBool(opts.IsNSFW),
-		GenerationSeq: opts.Cursor.GenerationSeq,
-		AfterScore:    opts.Cursor.AfterScore,
-		AfterURI:      opts.Cursor.AfterURI,
+		Alg:                opts.Alg,
+		Hashtags:           opts.Hashtags,
+		DisallowedHashtags: opts.DisallowedHashtags,
+		HasMedia:           tristateToPgtypeBool(opts.HasMedia),
+		IsNSFW:             tristateToPgtypeBool(opts.IsNSFW),
+		GenerationSeq:      opts.Cursor.GenerationSeq,
+		AfterScore:         opts.Cursor.AfterScore,
+		AfterURI:           opts.Cursor.AfterURI,
 	}
 	if opts.Limit != 0 {
 		queryParams.Limit = int32(opts.Limit)

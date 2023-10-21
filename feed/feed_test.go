@@ -39,6 +39,7 @@ func TestChronologicalGenerator(t *testing.T) {
 	nsfwArtPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "nsfwArt")
 	poastPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "poast")
 	nsfwLabelledPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "nsfw-labelled")
+	aiArtPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "ai")
 	pinnedPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "pinned-post")
 
 	for _, opts := range []store.CreatePostOpts{
@@ -98,6 +99,15 @@ func TestChronologicalGenerator(t *testing.T) {
 			SelfLabels: []string{"sexual"},
 		},
 		{
+			URI:       aiArtPost,
+			ActorDID:  furry.DID(),
+			CreatedAt: time.Time{},
+			IndexedAt: time.Time{},
+			Hashtags:  []string{"art", "aiart", "aiartist"},
+			HasMedia:  true,
+			Raw:       &bsky.FeedPost{},
+		},
+		{
 			URI:        pinnedPost,
 			ActorDID:   pinnedFurry.DID(),
 			CreatedAt:  time.Time{},
@@ -133,6 +143,7 @@ func TestChronologicalGenerator(t *testing.T) {
 				poastPost,
 				nsfwLabelledPost,
 				pinnedPost,
+				aiArtPost,
 			},
 		},
 		{
@@ -156,6 +167,17 @@ func TestChronologicalGenerator(t *testing.T) {
 				},
 			},
 			expectedPosts: []string{fursuitPost},
+		},
+		{
+			name: "art",
+			opts: chronologicalGeneratorOpts{
+				generatorOpts: generatorOpts{
+					Hashtags:           []string{"art", "furryart"},
+					DisallowedHashtags: []string{"aiart"},
+					HasMedia:           tristate.True,
+				},
+			},
+			expectedPosts: []string{artPost, nsfwArtPost, nsfwLabelledPost},
 		},
 		{
 			name: "nsfw only art",
@@ -219,6 +241,7 @@ func TestPreScoredGenerator(t *testing.T) {
 	nsfwArtPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "nsfwArt")
 	poastPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "poast")
 	nsfwLabelledPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "nsfw-labelled")
+	aiArtPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "ai")
 	pinnedPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "pinned-post")
 
 	for _, opts := range []store.CreatePostOpts{
@@ -278,6 +301,15 @@ func TestPreScoredGenerator(t *testing.T) {
 			SelfLabels: []string{"sexual"},
 		},
 		{
+			URI:       aiArtPost,
+			ActorDID:  furry.DID(),
+			CreatedAt: time.Time{},
+			IndexedAt: time.Time{},
+			Hashtags:  []string{"art", "aiart", "aiartist"},
+			HasMedia:  true,
+			Raw:       &bsky.FeedPost{},
+		},
+		{
 			URI:        pinnedPost,
 			ActorDID:   pinnedFurry.DID(),
 			CreatedAt:  time.Time{},
@@ -315,6 +347,7 @@ func TestPreScoredGenerator(t *testing.T) {
 				nsfwArtPost,
 				poastPost,
 				nsfwLabelledPost,
+				aiArtPost,
 				pinnedPost,
 			},
 		},
@@ -341,6 +374,18 @@ func TestPreScoredGenerator(t *testing.T) {
 				},
 			},
 			expectedPosts: []string{fursuitPost},
+		},
+		{
+			name: "art",
+			opts: preScoredGeneratorOpts{
+				Alg: "classic",
+				generatorOpts: generatorOpts{
+					Hashtags:           []string{"art", "furryart"},
+					DisallowedHashtags: []string{"aiart"},
+					HasMedia:           tristate.True,
+				},
+			},
+			expectedPosts: []string{artPost, nsfwArtPost, nsfwLabelledPost},
 		},
 		{
 			name: "nsfw only art",
