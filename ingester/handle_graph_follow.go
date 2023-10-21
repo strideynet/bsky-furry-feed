@@ -39,11 +39,18 @@ func (fi *FirehoseIngester) handleGraphFollowCreate(
 		return fmt.Errorf("creating follow: %w", err)
 	}
 
+	if fi.IsFurryFeedDID(data.Subject) {
+		if err := fi.actorCache.OptInOrMarkPending(ctx, repoDID); err != nil {
+			return fmt.Errorf("opting in: %w", err)
+		}
+	}
+
 	return nil
 }
 
 func (fi *FirehoseIngester) handleGraphFollowDelete(
 	ctx context.Context,
+	repoDID string,
 	recordUri string,
 ) (err error) {
 	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_feed_follow_delete")
@@ -51,10 +58,18 @@ func (fi *FirehoseIngester) handleGraphFollowDelete(
 		endSpan(span, err)
 	}()
 
-	if err := fi.store.DeleteFollow(
+	subjectDID, err := fi.store.DeleteFollow(
 		ctx, store.DeleteFollowOpts{URI: recordUri},
-	); err != nil {
+	)
+
+	if err != nil {
 		return fmt.Errorf("deleting follow: %w", err)
+	}
+
+	if fi.IsFurryFeedDID(subjectDID) {
+		if err := fi.actorCache.OptOutOrForget(ctx, repoDID); err != nil {
+			return fmt.Errorf("opting out: %w", err)
+		}
 	}
 
 	return nil

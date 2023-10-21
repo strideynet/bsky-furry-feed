@@ -80,6 +80,10 @@ func actorStatusFromProto(s v1.ActorStatus) (gen.ActorStatus, error) {
 		return gen.ActorStatusBanned, nil
 	case v1.ActorStatus_ACTOR_STATUS_NONE:
 		return gen.ActorStatusNone, nil
+	case v1.ActorStatus_ACTOR_STATUS_OPTED_OUT:
+		return gen.ActorStatusOptedOut, nil
+	case v1.ActorStatus_ACTOR_STATUS_REJECTED:
+		return gen.ActorStatusRejected, nil
 	default:
 		return "", fmt.Errorf("unhandled proto actor status: %s", s)
 	}
@@ -95,6 +99,10 @@ func actorStatusToProto(s gen.ActorStatus) (v1.ActorStatus, error) {
 		return v1.ActorStatus_ACTOR_STATUS_BANNED, nil
 	case gen.ActorStatusNone:
 		return v1.ActorStatus_ACTOR_STATUS_NONE, nil
+	case gen.ActorStatusOptedOut:
+		return v1.ActorStatus_ACTOR_STATUS_OPTED_OUT, nil
+	case gen.ActorStatusRejected:
+		return v1.ActorStatus_ACTOR_STATUS_REJECTED, nil
 	default:
 		return v1.ActorStatus_ACTOR_STATUS_UNSPECIFIED, fmt.Errorf("unsupported actor status: %s", s)
 	}
@@ -538,18 +546,18 @@ type DeleteFollowOpts struct {
 	URI string
 }
 
-func (s *PGXStore) DeleteFollow(ctx context.Context, opts DeleteFollowOpts) (err error) {
+func (s *PGXStore) DeleteFollow(ctx context.Context, opts DeleteFollowOpts) (subjectDID string, err error) {
 	ctx, span := tracer.Start(ctx, "pgx_store.delete_follow")
 	defer func() {
 		endSpan(span, err)
 	}()
 
-	err = s.queries.SoftDeleteCandidateFollow(ctx, opts.URI)
+	subjectDID, err = s.queries.SoftDeleteCandidateFollow(ctx, opts.URI)
 	if err != nil {
-		return fmt.Errorf("executing SoftDeleteCandidateFollow query: %w", convertPGXError(err))
+		return "", fmt.Errorf("executing SoftDeleteCandidateFollow query: %w", convertPGXError(err))
 	}
 
-	return nil
+	return subjectDID, nil
 }
 
 type ListPostsForNewFeedOpts struct {
@@ -818,4 +826,32 @@ func (s *PGXStore) HoldBackPendingActor(ctx context.Context, did string, duratio
 		DID:       did,
 		HeldUntil: pgtype.Timestamptz{Time: duration, Valid: true},
 	})
+}
+
+func (s *PGXStore) OptOutOrForgetActor(ctx context.Context, did string) (v1.ActorStatus, error) {
+	status, err := s.queries.OptOutOrForgetActor(ctx, did)
+	if err != nil {
+		return v1.ActorStatus_ACTOR_STATUS_UNSPECIFIED, err
+	}
+
+	protoStatus, err := actorStatusToProto(status)
+	if err != nil {
+		return v1.ActorStatus_ACTOR_STATUS_UNSPECIFIED, err
+	}
+
+	return protoStatus, nil
+}
+
+func (s *PGXStore) OptInOrMarkActorPending(ctx context.Context, did string) (v1.ActorStatus, error) {
+	status, err := s.queries.OptInOrMarkActorPending(ctx, did)
+	if err != nil {
+		return v1.ActorStatus_ACTOR_STATUS_UNSPECIFIED, err
+	}
+
+	protoStatus, err := actorStatusToProto(status)
+	if err != nil {
+		return v1.ActorStatus_ACTOR_STATUS_UNSPECIFIED, err
+	}
+
+	return protoStatus, nil
 }

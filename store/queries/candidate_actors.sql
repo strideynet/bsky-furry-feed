@@ -3,18 +3,23 @@ SELECT *
 FROM
     candidate_actors AS ca
 WHERE
-    (
+    ca.status != 'none'
+    AND (
         sqlc.narg(status)::actor_status IS NULL
         OR ca.status = sqlc.narg(status)
     )
 ORDER BY
-    did;
+    ca.did;
 
 -- name: CreateCandidateActor :one
 INSERT INTO
 candidate_actors (did, created_at, is_artist, comment, status, roles)
 VALUES
 ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (did) DO UPDATE SET is_artist = excluded.is_artist,
+comment = excluded.comment,
+status = excluded.status,
+roles = excluded.roles
 RETURNING *;
 
 -- name: UpdateCandidateActor :one
@@ -77,7 +82,7 @@ FROM
 WHERE
     ap.actor_did = $1
 ORDER BY
-    created_at DESC;
+    ap.created_at DESC;
 
 -- name: GetCandidateActorByDID :one
 SELECT *
@@ -94,7 +99,7 @@ WHERE
     ca.status = 'approved'
     AND ca.current_profile_commit_cid IS NULL
 ORDER BY
-    did;
+    ca.did;
 
 -- name: HoldBackPendingActor :exec
 UPDATE candidate_actors ca
@@ -103,3 +108,21 @@ SET
 WHERE
     ca.status = 'pending'
     AND ca.did = sqlc.arg(did);
+
+-- name: OptInOrMarkActorPending :one
+UPDATE candidate_actors ca
+SET
+    status
+    = CASE WHEN ca.status = 'opted_out' THEN 'approved' WHEN ca.status = 'none' THEN 'pending' ELSE ca.status END
+WHERE
+    ca.did = sqlc.arg(did)
+RETURNING status;
+
+-- name: OptOutOrForgetActor :one
+UPDATE candidate_actors ca
+SET
+    status
+    = CASE WHEN ca.status = 'approved' THEN 'opted_out' WHEN ca.status = 'pending' THEN 'none' ELSE ca.status END
+WHERE
+    ca.did = sqlc.arg(did)
+RETURNING status;

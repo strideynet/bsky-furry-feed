@@ -5,8 +5,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/bluesky-social/indigo/events/schedulers/sequential"
 	"strconv"
+
+	"github.com/bluesky-social/indigo/events/schedulers/sequential"
 
 	"github.com/bluesky-social/indigo/util"
 	"github.com/ipfs/go-cid"
@@ -49,6 +50,8 @@ var workItemsProcessed = promauto.NewSummaryVec(prometheus.SummaryOpts{
 type actorCacher interface {
 	GetByDID(did string) *v1.Actor
 	CreatePendingCandidateActor(ctx context.Context, did string) (err error)
+	OptInOrMarkPending(ctx context.Context, did string) (err error)
+	OptOutOrForget(ctx context.Context, did string) (err error)
 }
 
 var workerCursors = promauto.NewGaugeVec(prometheus.GaugeOpts{
@@ -342,15 +345,18 @@ func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncS
 	return nil
 }
 
+func (fi *FirehoseIngester) IsFurryFeedDID(did string) bool {
+	// TODO: Make this not hard coded
+	// https://bsky.app/profile/furryli.st
+	return did == "did:plc:jdkvwye2lf4mingzk7qdebzc"
+}
+
 func (fi *FirehoseIngester) isFurryFeedFollow(record typegen.CBORMarshaler) bool {
 	follow, ok := record.(*bsky.GraphFollow)
 	if !ok {
 		return false
 	}
-
-	// TODO: Make this not hard coded
-	// https://bsky.app/profile/furryli.st
-	return follow.Subject == "did:plc:jdkvwye2lf4mingzk7qdebzc"
+	return fi.IsFurryFeedDID(follow.Subject)
 }
 
 func endSpan(span trace.Span, err error) {
@@ -461,7 +467,7 @@ func (fi *FirehoseIngester) handleRecordDelete(
 	case "app.bsky.feed.like":
 		err = fi.handleFeedLikeDelete(ctx, recordUri)
 	case "app.bsky.graph.follow":
-		err = fi.handleGraphFollowDelete(ctx, recordUri)
+		err = fi.handleGraphFollowDelete(ctx, repoDID, recordUri)
 	default:
 		span.AddEvent("ignoring record due to unrecognized type")
 	}

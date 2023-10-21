@@ -104,7 +104,7 @@ func (m *ModerationServiceHandler) UnapproveActor(ctx context.Context, req *conn
 
 	actor, err = tx.UpdateActor(ctx, store.UpdateActorOpts{
 		DID:          req.Msg.ActorDid,
-		UpdateStatus: v1.ActorStatus_ACTOR_STATUS_NONE,
+		UpdateStatus: v1.ActorStatus_ACTOR_STATUS_REJECTED,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("updating actor: %w", err)
@@ -310,7 +310,7 @@ func (m *ModerationServiceHandler) ProcessApprovalQueue(ctx context.Context, req
 	case v1.ApprovalQueueAction_APPROVAL_QUEUE_ACTION_APPROVE:
 		statusToSet = v1.ActorStatus_ACTOR_STATUS_APPROVED
 	case v1.ApprovalQueueAction_APPROVAL_QUEUE_ACTION_REJECT:
-		statusToSet = v1.ActorStatus_ACTOR_STATUS_NONE
+		statusToSet = v1.ActorStatus_ACTOR_STATUS_REJECTED
 	default:
 		return nil, fmt.Errorf("unsupported 'action': %s", req.Msg.Action)
 	}
@@ -439,8 +439,8 @@ func (m *ModerationServiceHandler) ForceApproveActor(ctx context.Context, req *c
 	if err != nil {
 		return nil, fmt.Errorf("fetching actor: %w", err)
 	}
-	if !slices.Contains([]v1.ActorStatus{v1.ActorStatus_ACTOR_STATUS_PENDING, v1.ActorStatus_ACTOR_STATUS_NONE}, actor.Status) {
-		return nil, fmt.Errorf("candidate actor status was %q not pending or none", actor.Status)
+	if !slices.Contains([]v1.ActorStatus{v1.ActorStatus_ACTOR_STATUS_PENDING, v1.ActorStatus_ACTOR_STATUS_NONE, v1.ActorStatus_ACTOR_STATUS_REJECTED}, actor.Status) {
+		return nil, fmt.Errorf("candidate actor status was %q not pending, none, or rejected", actor.Status)
 	}
 
 	_, err = tx.UpdateActor(ctx, store.UpdateActorOpts{
