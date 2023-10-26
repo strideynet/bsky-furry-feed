@@ -12,7 +12,8 @@ const reasons = [
   "Spam",
   "Hateful content",
   "Harassment",
-  "Inappropriate behavior",
+  "Inappropriate sexual behavior",
+  "AI-generated images",
 ];
 
 const selectedReasons = ref(new Set<string>());
