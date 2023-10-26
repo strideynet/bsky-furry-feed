@@ -7,12 +7,17 @@ const props = defineProps<{ description: string }>();
 const segments = ref();
 
 const updateDescription = async () => {
+  const description = props.description;
   const descriptionRichText = new atproto.RichText(
-    { text: props.description },
+    { text: description },
     { cleanNewlines: true }
   );
   await descriptionRichText.detectFacets(newAgent());
-  segments.value = [...descriptionRichText.segments()];
+
+  // prevent race conditions
+  if (description === props.description) {
+    segments.value = [...descriptionRichText.segments()];
+  }
 };
 
 onMounted(updateDescription);
