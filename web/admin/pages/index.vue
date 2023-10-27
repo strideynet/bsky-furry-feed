@@ -41,6 +41,7 @@ const queues = computed(() => ({
       /gay (fur|dog|cat|wolf)/,
       /(f|m)urr?suit/,
       "otherkin",
+      "protogen",
     ];
 
     const description = profile.description.toLowerCase();
