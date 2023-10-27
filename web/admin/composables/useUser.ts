@@ -11,11 +11,3 @@ export default async function (): Promise<Ref<AtpSessionData>> {
 
   return user as Ref<AtpSessionData>;
 }
-
-/**
- * 6.23
-12 XHR requests
-
-3.76
-7 XHR requests
- */
