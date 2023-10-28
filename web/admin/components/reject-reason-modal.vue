@@ -36,9 +36,7 @@ function handleCheck(reason: string, value: boolean) {
 </script>
 
 <template>
-  <div
-    class="fixed flex top-0 left-0 right-0 bottom-0 z-10 justify-center items-center"
-  >
+  <core-modal @close="$emit('cancel')">
     <shared-card class="dark:text-white z-10 bg-white dark:bg-gray-900">
       <h2 class="text-lg font-bold">Reject {{ name }}</h2>
       <p class="text-muted mb-3">
@@ -105,9 +103,5 @@ function handleCheck(reason: string, value: boolean) {
         </button>
       </div>
     </shared-card>
-    <div
-      class="bg-black bg-opacity-50 absolute top-0 left-0 right-0 bottom-0"
-      @click="$emit('cancel')"
-    />
-  </div>
+  </core-modal>
 </template>

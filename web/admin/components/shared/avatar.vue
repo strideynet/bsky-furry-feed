@@ -2,7 +2,7 @@
 const props = defineProps<{
   did?: string;
   hasAvatar: boolean;
-  resize?: "72x72" | "20x20";
+  resize?: "72x72" | "20x20" | "webp";
   size: number;
 }>();
 
