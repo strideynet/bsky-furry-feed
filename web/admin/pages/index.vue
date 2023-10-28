@@ -62,7 +62,7 @@ const queues = computed(() => ({
     const profile = didToProfile(actor.did);
     if (!profile) return false;
 
-    return !profile.avatar && !profile.description;
+    return !profile.avatar || !profile.description;
   }),
   "Held back": heldBack.value,
 }));
