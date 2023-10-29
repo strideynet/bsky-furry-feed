@@ -5,7 +5,7 @@ export default async function (): Promise<Ref<AtpSessionData>> {
   const user = useState("user");
   const session = useCookie(COOKIE_NAME).value;
 
-  if (session) {
+  if (session && !user.value) {
     user.value = await fetchUser();
   }
 
