@@ -51,6 +51,7 @@ var approverPermissions = []string{
 	"/bff.v1.ModerationService/ProcessApprovalQueue",
 	"/bff.v1.ModerationService/CreateCommentAuditEvent",
 	"/bff.v1.ModerationService/HoldBackPendingActor",
+	"/bff.v1.ModerationService/ListRoles",
 }
 
 var moderatorPermissions = append([]string{

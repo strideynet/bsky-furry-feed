@@ -38,6 +38,7 @@ service ModerationService {
 
   rpc ListAuditEvents(ListAuditEventsRequest) returns (ListAuditEventsResponse) {}
   rpc CreateCommentAuditEvent(CreateCommentAuditEventRequest) returns (CreateCommentAuditEventResponse) {}
+  rpc ListRoles(ListRolesRequest) returns (ListRolesResponse) {}
 }
 
 message Post {
@@ -184,4 +185,13 @@ message AuditEvent {
   string subject_record_uri = 5;
 
   google.protobuf.Any payload = 6;
+}
+
+message ListRolesRequest {}
+message ListRolesResponse {
+  map<string, Role> roles = 1;
+}
+
+message Role {
+  repeated string permissions = 1;
 }

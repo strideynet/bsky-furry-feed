@@ -352,3 +352,31 @@ export const AuditEvent = proto3.makeMessageType(
   ],
 );
 
+/**
+ * @generated from message bff.v1.ListRolesRequest
+ */
+export const ListRolesRequest = proto3.makeMessageType(
+  "bff.v1.ListRolesRequest",
+  [],
+);
+
+/**
+ * @generated from message bff.v1.ListRolesResponse
+ */
+export const ListRolesResponse = proto3.makeMessageType(
+  "bff.v1.ListRolesResponse",
+  () => [
+    { no: 1, name: "roles", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: Role} },
+  ],
+);
+
+/**
+ * @generated from message bff.v1.Role
+ */
+export const Role = proto3.makeMessageType(
+  "bff.v1.Role",
+  () => [
+    { no: 1, name: "permissions", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ],
+);
+

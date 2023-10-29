@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { BanActorRequest, BanActorResponse, CreateActorRequest, CreateActorResponse, CreateCommentAuditEventRequest, CreateCommentAuditEventResponse, ForceApproveActorRequest, ForceApproveActorResponse, GetActorRequest, GetActorResponse, HoldBackPendingActorRequest, HoldBackPendingActorResponse, ListActorsRequest, ListActorsResponse, ListAuditEventsRequest, ListAuditEventsResponse, PingRequest, PingResponse, ProcessApprovalQueueRequest, ProcessApprovalQueueResponse, UnapproveActorRequest, UnapproveActorResponse } from "./moderation_service_pb.js";
+import { BanActorRequest, BanActorResponse, CreateActorRequest, CreateActorResponse, CreateCommentAuditEventRequest, CreateCommentAuditEventResponse, ForceApproveActorRequest, ForceApproveActorResponse, GetActorRequest, GetActorResponse, HoldBackPendingActorRequest, HoldBackPendingActorResponse, ListActorsRequest, ListActorsResponse, ListAuditEventsRequest, ListAuditEventsResponse, ListRolesRequest, ListRolesResponse, PingRequest, PingResponse, ProcessApprovalQueueRequest, ProcessApprovalQueueResponse, UnapproveActorRequest, UnapproveActorResponse } from "./moderation_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -132,6 +132,15 @@ export declare const ModerationService: {
       readonly name: "CreateCommentAuditEvent",
       readonly I: typeof CreateCommentAuditEventRequest,
       readonly O: typeof CreateCommentAuditEventResponse,
+      readonly kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc bff.v1.ModerationService.ListRoles
+     */
+    readonly listRoles: {
+      readonly name: "ListRoles",
+      readonly I: typeof ListRolesRequest,
+      readonly O: typeof ListRolesResponse,
       readonly kind: MethodKind.Unary,
     },
   }

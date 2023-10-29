@@ -526,3 +526,22 @@ func (m *ModerationServiceHandler) updateProfileAndFollow(ctx context.Context, a
 
 	return nil
 }
+
+func (m *ModerationServiceHandler) ListRoles(ctx context.Context, req *connect.Request[v1.ListRolesRequest]) (*connect.Response[v1.ListRolesResponse], error) {
+	_, err := m.authEngine.auth(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("authenticating: %w", err)
+	}
+
+	roles := map[string]*v1.Role{}
+
+	for name, permissions := range roleToPermissions {
+		roles[name] = &v1.Role{
+			Permissions: permissions,
+		}
+	}
+
+	return connect.NewResponse(&v1.ListRolesResponse{
+		Roles: roles,
+	}), nil
+}
