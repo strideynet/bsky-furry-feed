@@ -60,6 +60,8 @@ async function forceApprove() {
   await api.forceApproveActor({ actorDid: props.did, reason });
   $emit("update");
 }
+
+const currentActor = await useActor();
 </script>
 
 <template>
@@ -68,7 +70,7 @@ async function forceApprove() {
       <user-status-badge :status="status" />
     </span>
     <span class="ml-auto">&nbsp;</span>
-    <span v-if="props.status === undefined">
+    <span v-if="currentActor.isAdmin && props.status === undefined">
       <button
         class="rounded-lg py-1 px-2 bg-gray-200 text-black dark:bg-gray-600 dark:text-white"
         @click="createActor"
@@ -77,7 +79,11 @@ async function forceApprove() {
       </button>
     </span>
     <span
-      v-if="props.status !== undefined && props.status === ActorStatus.NONE"
+      v-if="
+        currentActor.isModOrHigher &&
+        props.status !== undefined &&
+        props.status === ActorStatus.NONE
+      "
     >
       <button
         class="rounded-lg py-1 px-2 text-white bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 disabled:bg-blue-300 disabled:dark:bg-blue-500"
@@ -87,13 +93,19 @@ async function forceApprove() {
       </button>
     </span>
     <span
-      v-if="props.status !== undefined && props.status !== ActorStatus.BANNED"
+      v-if="
+        currentActor.isAdmin &&
+        props.status !== undefined &&
+        props.status !== ActorStatus.BANNED
+      "
     >
       <button class="rounded-lg py-1 px-2 bg-red-700 text-white" @click="ban">
         Ban user
       </button>
     </span>
-    <span v-if="props.status === ActorStatus.APPROVED">
+    <span
+      v-if="currentActor.isModOrHigher && props.status === ActorStatus.APPROVED"
+    >
       <button
         class="rounded-lg py-1 px-2 bg-zinc-700 text-white"
         @click="remove"

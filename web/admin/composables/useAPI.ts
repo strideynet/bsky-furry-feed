@@ -1,6 +1,7 @@
-import { createPromiseClient } from "@bufbuild/connect";
+import { Transport, createPromiseClient } from "@bufbuild/connect";
 import { createConnectTransport } from "@bufbuild/connect-web";
 import { ModerationService } from "../../proto/bff/v1/moderation_service_connectweb";
+import { UserService } from "../../proto/bff/v1/user_service_connectweb";
 import { createRegistry } from "@bufbuild/protobuf";
 import {
   BanActorAuditPayload,
@@ -12,10 +13,10 @@ import {
   UnapproveActorAuditPayload,
 } from "../../proto/bff/v1/moderation_service_pb";
 
-export default async function () {
+export async function useAPITransport(): Promise<Transport> {
   const { apiUrl } = useRuntimeConfig().public;
   const user = await useUser();
-  const transport = createConnectTransport({
+  return createConnectTransport({
     baseUrl: apiUrl,
 
     fetch(input, data = {}) {
@@ -39,6 +40,14 @@ export default async function () {
       ),
     },
   });
+}
 
+export default async function () {
+  const transport = await useAPITransport();
   return createPromiseClient(ModerationService, transport);
+}
+
+export async function useUserAPI() {
+  const transport = await useAPITransport();
+  return createPromiseClient(UserService, transport);
 }
