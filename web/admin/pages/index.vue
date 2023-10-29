@@ -58,11 +58,11 @@ const queues = computed(() => ({
 
     return false;
   }),
-  "No avatar or bio": actors.value.filter((actor) => {
+  "Empty profiles": actors.value.filter((actor) => {
     const profile = didToProfile(actor.did);
     if (!profile) return false;
 
-    return !profile.avatar || !profile.description;
+    return !profile.avatar && !profile.description;
   }),
   "Held back": heldBack.value,
 }));
