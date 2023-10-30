@@ -26,7 +26,7 @@ export const NAV_OPTIONS = [
     text: 'Community Guidelines'
   },
   {
-    href: 'https://discord.gg/C59qZTuzU5',
+    href: '/discord',
     target: '_blank',
     text: 'Discord'
   }
