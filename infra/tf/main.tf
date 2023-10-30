@@ -138,6 +138,15 @@ resource "google_dns_record_set" "_atproto_furrylist" {
   rrdatas = ["did=did:plc:jdkvwye2lf4mingzk7qdebzc"]
 }
 
+resource "google_dns_record_set" "_atproto_team_furrylist" {
+  name         = "_atproto.team.${google_dns_managed_zone.furrylist.dns_name}"
+  managed_zone = google_dns_managed_zone.furrylist.name
+  type         = "TXT"
+  ttl          = 300
+
+  rrdatas = ["did=did:plc:coupudn5jpeqkxadbjzinxtk"]
+}
+
 resource "google_dns_record_set" "domain_ownership_furrylist" {
   name         = google_dns_managed_zone.furrylist.dns_name
   managed_zone = google_dns_managed_zone.furrylist.name
