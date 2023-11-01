@@ -14,13 +14,13 @@ SELECT
         FROM candidate_likes AS cl
         WHERE cl.subject_uri = cp.uri AND cl.deleted_at IS NULL
     )
-    / (EXTRACT(EPOCH FROM NOW() - cp.created_at) / (60 * 60) + 2)
+    / (EXTRACT(EPOCH FROM NOW() - cp.indexed_at) / (60 * 60) + 2)
     ^ 1.85 AS score,
     (SELECT seq FROM seq) AS generation_seq
 FROM candidate_posts AS cp
 WHERE
     cp.deleted_at IS NULL
-    AND cp.created_at >= sqlc.arg(after)::TIMESTAMPTZ
+    AND cp.indexed_at >= sqlc.arg(after)::TIMESTAMPTZ
 RETURNING (SELECT seq FROM seq);
 
 -- name: GetLatestScoreGeneration :one
