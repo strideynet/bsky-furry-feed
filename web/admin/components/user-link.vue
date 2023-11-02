@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { getProfile } from "~/lib/cached-bsky";
 
-const props = defineProps<{ did: string }>();
+const props = defineProps<{ did: string; hideAvatar?: boolean }>();
 
 const profile = await getProfile(props.did);
 </script>
@@ -12,6 +12,7 @@ const profile = await getProfile(props.did);
     :href="`/users/${profile?.did || did}`"
   >
     <shared-avatar
+      v-if="!hideAvatar"
       class="mr-1"
       :did="profile?.did"
       resize="20x20"
