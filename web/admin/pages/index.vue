@@ -88,7 +88,7 @@ const nextActor = async () => {
   heldBack.value = queue.actors.filter(isHeldBack);
   actorProfiles.value = await Promise.all(
     actors.value.map((a) => a.did).map(getProfile)
-  );
+  ).then((p) => p.filter(Boolean));
   selectRandomActor();
 };
 
