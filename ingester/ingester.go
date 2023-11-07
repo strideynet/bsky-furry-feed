@@ -82,14 +82,14 @@ type workerState struct {
 }
 
 func NewFirehoseIngester(
-	log *zap.Logger, store *store.PGXStore, crc *ActorCache, pdsHost string,
+	log *zap.Logger, store *store.PGXStore, crc *ActorCache, bgsHost string,
 ) *FirehoseIngester {
 	return &FirehoseIngester{
 		log:        log,
 		actorCache: crc,
 		store:      store,
 
-		subscribeURL:        pdsHost + "/xrpc/com.atproto.sync.subscribeRepos",
+		subscribeURL:        bgsHost + "/xrpc/com.atproto.sync.subscribeRepos",
 		workerCount:         8,
 		workItemTimeout:     time.Second * 30,
 		cursorFlushInterval: time.Second * 10,
