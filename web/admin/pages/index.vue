@@ -20,14 +20,18 @@ const queues = computed(() => ({
     const profile = didToProfile(actor.did);
     if (!profile?.description) return false;
 
-    if (profile.displayName?.includes("Θ∆")) {
+    // ∆ (increment operator) and Δ (delta)
+    // Θ (uppercase theta) and θ (lowercase theta)
+    const therian = /(Θ|θ)(∆|Δ)/;
+
+    if (profile.displayName?.match(therian)) {
       return true;
     }
 
     const terms = [
       "furry",
       "furries",
-      "Θ∆",
+      therian,
       "therian",
       /\bpup\b/,
       /\bfur\b/,
@@ -42,6 +46,7 @@ const queues = computed(() => ({
       /(f|m)urr?suit/,
       "otherkin",
       "protogen",
+      "fluffy",
     ];
 
     const description = profile.description.toLowerCase();
@@ -88,7 +93,7 @@ const nextActor = async () => {
   heldBack.value = queue.actors.filter(isHeldBack);
   actorProfiles.value = await Promise.all(
     actors.value.map((a) => a.did).map(getProfile)
-  );
+  ).then((p) => p.filter(Boolean));
   selectRandomActor();
 };
 
