@@ -183,7 +183,7 @@ func runE(log *zap.Logger) error {
 		})
 
 		fi := ingester.NewFirehoseIngester(
-			log.Named("firehose_ingester"), pgxStore, actorCache, "wss://bsky.social",
+			log.Named("firehose_ingester"), pgxStore, actorCache, "wss://bsky.network",
 		)
 		eg.Go(func() error {
 			return fi.Start(ctx)
