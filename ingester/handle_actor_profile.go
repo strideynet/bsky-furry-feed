@@ -6,14 +6,13 @@ import (
 	"time"
 
 	"github.com/bluesky-social/indigo/api/bsky"
-	"github.com/ipfs/go-cid"
 	"github.com/strideynet/bsky-furry-feed/store"
 )
 
 func (fi *FirehoseIngester) handleActorProfileUpdate(
 	ctx context.Context,
 	repoDID string,
-	commitCID cid.Cid,
+	repoRev string,
 	recordUri string,
 	createdAt time.Time,
 	data *bsky.ActorProfile,
@@ -44,7 +43,7 @@ func (fi *FirehoseIngester) handleActorProfileUpdate(
 		ctx,
 		store.CreateLatestActorProfileOpts{
 			ActorDID:    repoDID,
-			CommitCID:   commitCID.String(),
+			CommitCID:   repoRev,
 			CreatedAt:   createdAt,
 			IndexedAt:   time.Now(),
 			DisplayName: displayName,

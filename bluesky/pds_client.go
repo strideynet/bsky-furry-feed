@@ -1,7 +1,6 @@
 package bluesky
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -17,10 +16,10 @@ import (
 	indigoUtils "github.com/bluesky-social/indigo/util"
 	"github.com/bluesky-social/indigo/xrpc"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/ipfs/go-cid"
-	typegen "github.com/whyrusleeping/cbor-gen"
 )
 
+// DefaultPDSHost is now the vPDS - be cautious - making calls for user data who
+// aren't on the same PDS as the authenticated account may fail. Use BGS or AppView.
 const DefaultPDSHost = "https://bsky.social"
 
 type tokenInfo struct {
@@ -44,7 +43,7 @@ func tokenInfoFromAuthInfo(authInfo *xrpc.AuthInfo) (tokenInfo, error) {
 	}, nil
 }
 
-type Client struct {
+type PDSClient struct {
 	pdsHost string
 
 	tokenInfo   tokenInfo
@@ -69,8 +68,8 @@ func CredentialsFromEnv() (*Credentials, error) {
 	return &Credentials{Identifier: identifier, Password: password}, nil
 }
 
-func ClientFromCredentials(ctx context.Context, pdsHost string, credentials *Credentials) (*Client, error) {
-	c := &Client{
+func ClientFromCredentials(ctx context.Context, pdsHost string, credentials *Credentials) (*PDSClient, error) {
+	c := &PDSClient{
 		pdsHost: pdsHost,
 	}
 
@@ -104,7 +103,7 @@ func ClientFromCredentials(ctx context.Context, pdsHost string, credentials *Cre
 
 const UserAgent = "github.com/strideynet/bluesky-furry-feed"
 
-func (c *Client) baseXRPCClient() *xrpc.Client {
+func (c *PDSClient) baseXRPCClient() *xrpc.Client {
 	// TODO: Introduce a ClientConfig we can control these with
 	ua := UserAgent
 	return &xrpc.Client{
@@ -113,7 +112,7 @@ func (c *Client) baseXRPCClient() *xrpc.Client {
 	}
 }
 
-func (c *Client) xrpcClient(ctx context.Context) (*xrpc.Client, error) {
+func (c *PDSClient) xrpcClient(ctx context.Context) (*xrpc.Client, error) {
 	c.tokenInfoMu.Lock()
 	defer c.tokenInfoMu.Unlock()
 
@@ -133,7 +132,7 @@ func (c *Client) xrpcClient(ctx context.Context) (*xrpc.Client, error) {
 	return xc, nil
 }
 
-func (c *Client) refreshToken(ctx context.Context) error {
+func (c *PDSClient) refreshToken(ctx context.Context) error {
 	xc := c.baseXRPCClient()
 	xc.Auth = &xrpc.AuthInfo{
 		AccessJwt: c.tokenInfo.authInfo.RefreshJwt,
@@ -158,7 +157,7 @@ func (c *Client) refreshToken(ctx context.Context) error {
 	return nil
 }
 
-func (c *Client) ResolveHandle(ctx context.Context, handle string) (*atproto.IdentityResolveHandle_Output, error) {
+func (c *PDSClient) ResolveHandle(ctx context.Context, handle string) (*atproto.IdentityResolveHandle_Output, error) {
 	xc, err := c.xrpcClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get xrpc client: %w", err)
@@ -166,18 +165,8 @@ func (c *Client) ResolveHandle(ctx context.Context, handle string) (*atproto.Ide
 	return atproto.IdentityResolveHandle(ctx, xc, handle)
 }
 
-func (c *Client) GetFollowers(
-	ctx context.Context, actor string, cursor string, limit int64,
-) (*bsky.GraphGetFollowers_Output, error) {
-	xc, err := c.xrpcClient(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("get xrpc client: %w", err)
-	}
-	return bsky.GraphGetFollowers(ctx, xc, actor, cursor, limit)
-}
-
 // GetProfile fetches an actor's profile. actor can be a DID or a handle.
-func (c *Client) GetProfile(
+func (c *PDSClient) GetProfile(
 	ctx context.Context, actor string,
 ) (*bsky.ActorDefs_ProfileViewDetailed, error) {
 	xc, err := c.xrpcClient(ctx)
@@ -187,54 +176,9 @@ func (c *Client) GetProfile(
 	return bsky.ActorGetProfile(ctx, xc, actor)
 }
 
-func (c *Client) GetHead(
-	ctx context.Context, actorDID string,
-) (cid.Cid, error) {
-	xc, err := c.xrpcClient(ctx)
-	if err != nil {
-		return cid.Cid{}, fmt.Errorf("get xrpc client: %w", err)
-	}
-	resp, err := atproto.SyncGetHead(ctx, xc, actorDID)
-	if err != nil {
-		return cid.Cid{}, err
-	}
-	out, err := cid.Parse(resp.Root)
-	if err != nil {
-		return cid.Cid{}, err
-	}
-	return out, nil
-}
-
-func (c *Client) GetRecord(
-	ctx context.Context, collection string, commitCID cid.Cid, actorDID string, rkey string,
-) (typegen.CBORMarshaler, error) {
-	xc, err := c.xrpcClient(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("get xrpc client: %w", err)
-	}
-
-	// We can't use RepoGetRecord here, because RepoGetRecord gets the record by the record's CID and not the commit's CID.
-	blocks, err := atproto.SyncGetRecord(ctx, xc, collection, commitCID.String(), actorDID, rkey)
-	if err != nil {
-		return nil, err
-	}
-
-	rr, err := repo.ReadRepoFromCar(ctx, bytes.NewReader(blocks))
-	if err != nil {
-		return nil, err
-	}
-
-	_, record, err := rr.GetRecord(ctx, collection+"/"+rkey)
-	if err != nil {
-		return nil, err
-	}
-
-	return record, nil
-}
-
 // Follow creates an app.bsky.graph.follow for the user the client is
 // authenticated as.
-func (c *Client) Follow(
+func (c *PDSClient) Follow(
 	ctx context.Context, subjectDID string,
 ) error {
 	xc, err := c.xrpcClient(ctx)
@@ -271,7 +215,7 @@ func (c *Client) Follow(
 
 // Unfollow removes any app.bsky.graph.follow for the subject from the account
 // the client is authenticated as.
-func (c *Client) Unfollow(
+func (c *PDSClient) Unfollow(
 	ctx context.Context, subjectDID string,
 ) error {
 	profile, err := c.GetProfile(ctx, subjectDID)
@@ -297,7 +241,7 @@ func (c *Client) Unfollow(
 }
 
 // DeleteRecord deletes a record from a repository
-func (c *Client) DeleteRecord(
+func (c *PDSClient) DeleteRecord(
 	ctx context.Context, uri *indigoUtils.ParsedUri,
 ) error {
 	xc, err := c.xrpcClient(ctx)
@@ -316,7 +260,7 @@ func (c *Client) DeleteRecord(
 }
 
 // PurgeFeeds deletes all feeds associated with the authenticated user
-func (c *Client) PurgeFeeds(
+func (c *PDSClient) PurgeFeeds(
 	ctx context.Context,
 ) error {
 	xc, err := c.xrpcClient(ctx)
@@ -344,7 +288,7 @@ func (c *Client) PurgeFeeds(
 	return nil
 }
 
-// This exists because the go code gen is incorrect for swapRecord and misses
+// RepoPutRecord_Input This exists because the go code gen is incorrect for swapRecord and misses
 // an omitEmpty on SwapRecord.
 // putting feed record: putting record: XRPC ERROR 400: InvalidSwap: Record was at bafyreigkeuzjkpot7yzpseezz4hat2jmlobypfhtaaisxbdlwafwxp4ywa
 type RepoPutRecord_Input struct {
@@ -365,7 +309,7 @@ type RepoPutRecord_Input struct {
 }
 
 // PutRecord creates or updates a record in the actor's repository.
-func (c *Client) PutRecord(
+func (c *PDSClient) PutRecord(
 	ctx context.Context, collection, rkey string, record repo.CborMarshaler,
 ) error {
 	xc, err := c.xrpcClient(ctx)
@@ -387,7 +331,7 @@ func (c *Client) PutRecord(
 	return nil
 }
 
-func (c *Client) UploadBlob(
+func (c *PDSClient) UploadBlob(
 	ctx context.Context, blob io.Reader,
 ) (*util.LexBlob, error) {
 	xc, err := c.xrpcClient(ctx)

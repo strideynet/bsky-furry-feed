@@ -35,7 +35,7 @@ var environments = map[string]environment{
 }
 
 // TODO: Have a `login` and `logout` command that persists auth state to disk.
-func getBlueskyClient(ctx context.Context, e *environment) (*bluesky.Client, error) {
+func getBlueskyClient(ctx context.Context, e *environment) (*bluesky.PDSClient, error) {
 	creds, err := bluesky.CredentialsFromEnv()
 	if err != nil {
 		return nil, err

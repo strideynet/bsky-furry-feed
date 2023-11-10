@@ -21,7 +21,8 @@ import (
 type ModerationServiceHandler struct {
 	store      *store.PGXStore
 	log        *zap.Logger
-	client     *bluesky.Client
+	pdsClient  *bluesky.PDSClient
+	bgsClient  bluesky.BGSClient
 	authEngine *AuthEngine
 }
 
@@ -63,7 +64,7 @@ func (m *ModerationServiceHandler) BanActor(ctx context.Context, req *connect.Re
 		return nil, fmt.Errorf("creating audit event: %w", err)
 	}
 
-	if err := m.client.Unfollow(ctx, req.Msg.ActorDid); err != nil {
+	if err := m.pdsClient.Unfollow(ctx, req.Msg.ActorDid); err != nil {
 		return nil, fmt.Errorf("unfollowing actor: %w", err)
 	}
 
@@ -121,7 +122,7 @@ func (m *ModerationServiceHandler) UnapproveActor(ctx context.Context, req *conn
 		return nil, fmt.Errorf("creating audit event: %w", err)
 	}
 
-	if err := m.client.Unfollow(ctx, req.Msg.ActorDid); err != nil {
+	if err := m.pdsClient.Unfollow(ctx, req.Msg.ActorDid); err != nil {
 		return nil, fmt.Errorf("unfollowing actor: %w", err)
 	}
 
@@ -473,12 +474,7 @@ func (m *ModerationServiceHandler) ForceApproveActor(ctx context.Context, req *c
 }
 
 func (m *ModerationServiceHandler) updateProfileAndFollow(ctx context.Context, actorDID string, tx *store.PGXTX) error {
-	head, err := m.client.GetHead(ctx, actorDID)
-	if err != nil {
-		return fmt.Errorf("getting head: %w", err)
-	}
-
-	record, err := m.client.GetRecord(ctx, "app.bsky.actor.profile", head, actorDID, "self")
+	record, repoRev, err := m.bgsClient.SyncGetRecord(ctx, "app.bsky.actor.profile", actorDID, "self")
 	if err != nil {
 		if !errors.Is(err, mst.ErrNotFound) {
 			return fmt.Errorf("getting profile: %w", err)
@@ -511,7 +507,7 @@ func (m *ModerationServiceHandler) updateProfileAndFollow(ctx context.Context, a
 
 	if err := tx.CreateLatestActorProfile(ctx, store.CreateLatestActorProfileOpts{
 		ActorDID:    actorDID,
-		CommitCID:   head.String(),
+		CommitCID:   repoRev,
 		CreatedAt:   time.Now(), // NOTE: The Firehose reader uses the server time but we use the local time here. This may cause staleness if the firehose gives us an older timestamp but a newer update.
 		IndexedAt:   time.Now(),
 		DisplayName: displayName,
@@ -520,7 +516,7 @@ func (m *ModerationServiceHandler) updateProfileAndFollow(ctx context.Context, a
 		return fmt.Errorf("updating actor profile: %w", err)
 	}
 
-	if err := m.client.Follow(ctx, actorDID); err != nil {
+	if err := m.pdsClient.Follow(ctx, actorDID); err != nil {
 		return fmt.Errorf("following approved actor: %w", err)
 	}
 
