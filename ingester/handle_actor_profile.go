@@ -42,7 +42,8 @@ func (fi *FirehoseIngester) handleActorProfileUpdate(
 	err = fi.store.CreateLatestActorProfile(
 		ctx,
 		store.CreateLatestActorProfileOpts{
-			ActorDID:    repoDID,
+			ActorDID: repoDID,
+			// We use the repo rev in place of a commit CID now.
 			CommitCID:   repoRev,
 			CreatedAt:   createdAt,
 			IndexedAt:   time.Now(),
