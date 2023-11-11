@@ -2,11 +2,11 @@ package ingester
 
 import (
 	"context"
+	"github.com/bluesky-social/indigo/repo"
 	"testing"
 	"time"
 
 	"github.com/bluesky-social/indigo/api/bsky"
-	indigoTest "github.com/bluesky-social/indigo/testing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	bffv1pb "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
@@ -40,8 +40,7 @@ func TestFirehoseIngester_ActorProfiles(t *testing.T) {
 	{
 		displayName := "some furry"
 		description := "hewwo :3"
-
-		err = fi.handleActorProfileUpdate(ctx, approvedFurry.DID(), indigoTest.RandFakeCid(), "at://"+approvedFurry.DID()+"/app.bsky.actor.profile/self", time.UnixMilli(0), &bsky.ActorProfile{
+		err = fi.handleActorProfileUpdate(ctx, approvedFurry.DID(), repo.NextTID(), "at://"+approvedFurry.DID()+"/app.bsky.actor.profile/self", time.UnixMilli(0), &bsky.ActorProfile{
 			LexiconTypeID: "app.bsky.actor.profile",
 			DisplayName:   &displayName,
 			Description:   &description,
@@ -59,7 +58,7 @@ func TestFirehoseIngester_ActorProfiles(t *testing.T) {
 		displayName := "some other furry"
 		description := "hewwo >:3"
 
-		err = fi.handleActorProfileUpdate(ctx, approvedFurry.DID(), indigoTest.RandFakeCid(), "at://"+approvedFurry.DID()+"/app.bsky.actor.profile/self", time.UnixMilli(1), &bsky.ActorProfile{
+		err = fi.handleActorProfileUpdate(ctx, approvedFurry.DID(), repo.NextTID(), "at://"+approvedFurry.DID()+"/app.bsky.actor.profile/self", time.UnixMilli(1), &bsky.ActorProfile{
 			LexiconTypeID: "app.bsky.actor.profile",
 			DisplayName:   &displayName,
 			Description:   &description,
