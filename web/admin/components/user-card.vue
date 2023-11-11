@@ -41,7 +41,7 @@ await loadProfile();
 
 <template>
   <shared-card v-if="data" :class="{ loading }">
-    <user-queue-actions
+    <user-queue-banner
       v-if="status === ActorStatus.PENDING"
       :did="data.did"
       :name="data.displayName || data.handle.replace(/.bsky.social$/, '')"

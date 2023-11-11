@@ -133,7 +133,13 @@ function selectRandomActor() {
       </button>
     </div>
 
-    <div>
+    <held-back-list
+      v-if="currentQueue === 'Held back'"
+      :users="
+        heldBack.map((actor) => ({ ...actor, ...didToProfile(actor.did) } as Actor & ProfileViewDetailed))
+      "
+    />
+    <div v-else>
       <shared-card v-if="error" variant="error">{{ error }}</shared-card>
       <user-profile
         v-else-if="randomActor"
