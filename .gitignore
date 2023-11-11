@@ -24,3 +24,5 @@ go.work
 infra/secrets/
 .DS_Store
 .env
+
+scratch/

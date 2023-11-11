@@ -86,7 +86,7 @@ func New(
 	modSvcHandler := &ModerationServiceHandler{
 		store:      pgxStore,
 		log:        log,
-		client:     client,
+		pdsClient:  client,
 		authEngine: authEngine,
 	}
 	interceptors := connect.WithInterceptors(

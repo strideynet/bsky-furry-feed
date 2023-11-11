@@ -9,7 +9,7 @@ jobs:
     name: "Test Go"
     services:
       dind:
-        image: docker:23.0-rc-dind-rootless
+        image: docker:24.0.7-dind-rootless
         ports:
           - 2375:2375
     runs-on: ubuntu-latest

@@ -9,8 +9,6 @@ import (
 	"strconv"
 
 	"github.com/bluesky-social/indigo/util"
-	"github.com/ipfs/go-cid"
-
 	"net/http"
 	"sync"
 	"time"
@@ -276,8 +274,6 @@ func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncS
 	}()
 	span.SetAttributes(actorDIDAttr(evt.Repo))
 
-	commitCID := cid.Cid(evt.Commit)
-
 	time, err := bluesky.ParseTime(evt.Time)
 	if err != nil {
 		return fmt.Errorf("parsing timestamp: %w", err)
@@ -286,9 +282,9 @@ func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncS
 	if err != nil {
 		return fmt.Errorf("reading repo from car: %w", err)
 	}
+
 	for _, op := range evt.Ops {
 		uri := fmt.Sprintf("at://%s/%s", evt.Repo, op.Path)
-
 		switch repomgr.EventKind(op.Action) {
 		case repomgr.EvtKindCreateRecord:
 			recordCid, record, err := rr.GetRecord(ctx, op.Path)
@@ -326,7 +322,7 @@ func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncS
 			}
 
 			if err := fi.handleRecordUpdate(
-				ctx, evt.Repo, commitCID, uri, time, record,
+				ctx, evt.Repo, evt.Rev, uri, time, record,
 			); err != nil {
 				return fmt.Errorf("update (%s): handling record update: %w", uri, err)
 			}
@@ -472,7 +468,7 @@ func (fi *FirehoseIngester) handleRecordDelete(
 func (fi *FirehoseIngester) handleRecordUpdate(
 	ctx context.Context,
 	repoDID string,
-	commitCID cid.Cid,
+	repoRev string,
 	recordUri string,
 	updatedAt time.Time,
 	record typegen.CBORMarshaler,
@@ -496,7 +492,7 @@ func (fi *FirehoseIngester) handleRecordUpdate(
 
 	switch data := record.(type) {
 	case *bsky.ActorProfile:
-		err := fi.handleActorProfileUpdate(ctx, repoDID, commitCID, recordUri, updatedAt, data)
+		err := fi.handleActorProfileUpdate(ctx, repoDID, repoRev, recordUri, updatedAt, data)
 		if err != nil {
 			return fmt.Errorf("handling app.bsky.actor.profile update: %w", err)
 		}

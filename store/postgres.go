@@ -318,7 +318,9 @@ func (s *PGXStore) UpdateActor(ctx context.Context, opts UpdateActorOpts) (out *
 
 type CreateLatestActorProfileOpts struct {
 	// DID is the DID of the actor to update.
-	ActorDID    string
+	ActorDID string
+	// CommitCID is now used for the repo rev at the commit
+	// that set this version of the profile.
 	CommitCID   string
 	CreatedAt   time.Time
 	IndexedAt   time.Time

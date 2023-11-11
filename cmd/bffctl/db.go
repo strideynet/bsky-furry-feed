@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"strings"
 	"time"
 
@@ -152,10 +153,7 @@ func dbCandidateActorsBackfillProfiles(log *zap.Logger, env *environment) *cli.C
 			}
 			defer conn.Close(cctx.Context)
 
-			client, err := getBlueskyClient(cctx.Context, env)
-			if err != nil {
-				return err
-			}
+			bgsClient := bluesky.BGSClient{}
 
 			db := gen.New(conn)
 			repos, err := db.ListCandidateActorsRequiringProfileBackfill(cctx.Context)
@@ -163,13 +161,7 @@ func dbCandidateActorsBackfillProfiles(log *zap.Logger, env *environment) *cli.C
 				return err
 			}
 			for _, r := range repos {
-				// TODO: Does this need throttling?
-				head, err := client.GetHead(cctx.Context, r.DID)
-				if err != nil {
-					return fmt.Errorf("getting head: %w", err)
-				}
-
-				record, err := client.GetRecord(cctx.Context, "app.bsky.actor.profile", head, r.DID, "self")
+				record, repoRev, err := bgsClient.SyncGetRecord(cctx.Context, "app.bsky.actor.profile", r.DID, "self")
 				if err != nil {
 					if !errors.Is(err, mst.ErrNotFound) {
 						return fmt.Errorf("getting profile: %w", err)
@@ -201,8 +193,9 @@ func dbCandidateActorsBackfillProfiles(log *zap.Logger, env *environment) *cli.C
 				}
 
 				params := gen.CreateLatestActorProfileParams{
-					ActorDID:  r.DID,
-					CommitCID: head.String(),
+					ActorDID: r.DID,
+					// We use the repo rev in place of a commit CID now.
+					CommitCID: repoRev,
 					CreatedAt: pgtype.Timestamptz{
 						Valid: true,
 						// NOTE: The Firehose reader uses the server time but we use the local time here. This may cause staleness if the firehose gives us an older timestamp but a newer update.
