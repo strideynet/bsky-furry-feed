@@ -46,7 +46,7 @@ await refresh();
     <div v-else>
       <user-card
         class="mb-5"
-        :did="subject?.did || String($route.params.did)"
+        :did="subject?.did || props.did"
         :pending="pending"
         :variant="variant"
         @next="$emit('next')"
@@ -55,7 +55,7 @@ await refresh();
         ref="auditLog"
         :subject="subject"
         :hide-comment-box="variant === 'queue'"
-        :did="subject?.did || String($route.params.did)"
+        :did="subject?.did || props.did"
       />
     </div>
   </div>
