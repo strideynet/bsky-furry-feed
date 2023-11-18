@@ -3,12 +3,13 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"strings"
 	"time"
 
+	"github.com/strideynet/bsky-furry-feed/bluesky"
+
 	"github.com/bluesky-social/indigo/api/bsky"
-	"github.com/bluesky-social/indigo/mst"
+	"github.com/bluesky-social/indigo/xrpc"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/strideynet/bsky-furry-feed/store/gen"
@@ -163,7 +164,7 @@ func dbCandidateActorsBackfillProfiles(log *zap.Logger, env *environment) *cli.C
 			for _, r := range repos {
 				record, repoRev, err := bgsClient.SyncGetRecord(cctx.Context, "app.bsky.actor.profile", r.DID, "self")
 				if err != nil {
-					if !errors.Is(err, mst.ErrNotFound) {
+					if err2 := (&xrpc.Error{}); !errors.As(err, &err2) || err2.StatusCode != 404 {
 						return fmt.Errorf("getting profile: %w", err)
 					}
 					record = nil
@@ -213,6 +214,7 @@ func dbCandidateActorsBackfillProfiles(log *zap.Logger, env *environment) *cli.C
 						Valid:  true,
 						String: description,
 					},
+					SelfLabels: nil,
 				}
 				log.Info("backfilling candidate actor profile",
 					zap.Any("data", params),

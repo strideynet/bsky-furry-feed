@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/bluesky-social/indigo/api/bsky"
-	"github.com/bluesky-social/indigo/mst"
+	"github.com/bluesky-social/indigo/xrpc"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"golang.org/x/exp/slices"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -476,7 +476,7 @@ func (m *ModerationServiceHandler) ForceApproveActor(ctx context.Context, req *c
 func (m *ModerationServiceHandler) updateProfileAndFollow(ctx context.Context, actorDID string, tx *store.PGXTX) error {
 	record, repoRev, err := m.bgsClient.SyncGetRecord(ctx, "app.bsky.actor.profile", actorDID, "self")
 	if err != nil {
-		if !errors.Is(err, mst.ErrNotFound) {
+		if err2 := (&xrpc.Error{}); !errors.As(err, &err2) || err2.StatusCode != 404 {
 			return fmt.Errorf("getting profile: %w", err)
 		}
 		record = nil
