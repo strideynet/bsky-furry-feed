@@ -21,7 +21,7 @@ const background = computed(() =>
 </script>
 
 <template>
-  <span class="rounded-full py-0.5 px-2 bg-" :class="background">
+  <span class="rounded-full py-0.5 px-2" :class="background">
     {{ statusLabel }}
   </span>
 </template>

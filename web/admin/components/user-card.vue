@@ -1,7 +1,9 @@
 <script lang="ts" setup>
 import { ProfileViewDetailed } from "@atproto/api/dist/client/types/app/bsky/actor/defs";
-import { ActorStatus } from "../../proto/bff/v1/types_pb";
+import { Actor, ActorStatus } from "../../proto/bff/v1/types_pb";
 import { getProfile } from "~/lib/cached-bsky";
+import { newAgent } from "~/lib/auth";
+import { ViewImage } from "@atproto/api/dist/client/types/app/bsky/embed/images";
 
 const props = defineProps<{
   did: string;
@@ -13,14 +15,14 @@ const $emit = defineEmits(["next"]);
 const api = await useAPI();
 const showAvatarModal = ref(false);
 const loading = ref(false);
-const status = ref<ActorStatus>();
+const actor = ref<Actor>();
 const data = ref<ProfileViewDetailed>();
 const loadProfile = async () => {
   data.value = await getProfile(props.did);
-  const { actor } = await api
+  const response = await api
     .getActor({ did: data.value?.did || props.did })
     .catch(() => ({ actor: undefined }));
-  status.value = actor?.status;
+  actor.value = response?.actor;
 };
 
 async function next() {
@@ -36,91 +38,185 @@ watch(
   () => loadProfile()
 );
 
+function addSISuffix(number?: number) {
+  number = number || 0;
+
+  const suffixes = ["", "K", "M"];
+  const order = Math.floor(Math.log10(number) / 3);
+
+  for (let i = 0; i < order; i++) {
+    number = number / 1000;
+  }
+
+  return `${Math.round(number * 100) / 100}${suffixes[order] || ""}`;
+}
+
+const posts = await newAgent()
+  .getAuthorFeed({ actor: props.did })
+  .then((r) =>
+    r.data.feed
+      .filter((p) => !p.reply && p.post.author.did === props.did)
+      .map((p) => p.post)
+  );
+
 await loadProfile();
 </script>
 
 <template>
-  <shared-card v-if="data" :class="{ loading }">
+  <template v-if="data">
     <user-queue-banner
-      v-if="status === ActorStatus.PENDING"
+      v-if="actor?.status === ActorStatus.PENDING"
       :did="data.did"
       :name="data.displayName || data.handle.replace(/.bsky.social$/, '')"
       :pending="pending"
       @next="next"
       @loading="loading = true"
     />
-    <user-actions
-      v-if="variant === 'profile'"
-      :did="data.did"
-      :status="status"
-      @update="next"
-    />
-
-    <div class="flex gap-3 items-center mb-5">
-      <button
-        class="relative flex overflow-hidden rounded-full"
-        @click="showAvatarModal = true"
-      >
-        <shared-avatar
-          :did="data.did"
-          :has-avatar="Boolean(data.avatar)"
-          resize="72x72"
-          :size="72"
-        />
-        <span
-          class="opacity-0 hover:opacity-100 transition duration-300 w-full h-full absolute flex items-center bg-black bg-opacity-50 text-xs uppercase tracking-tight"
-        >
-          Click to zoom
-        </span>
-      </button>
-      <core-modal v-if="showAvatarModal" @close="showAvatarModal = false">
-        <div class="z-10">
-          <shared-avatar
-            class="w-auto h-auto max-h-[80vh] max-w-[80vw]"
-            :did="data.did"
-            :has-avatar="Boolean(data.avatar)"
-            resize="webp"
-            :size="512"
+    <div class="flex max-md:flex-col gap-3" :class="{ loading }">
+      <div class="mb-3 md:w-[50%] card-list h-min flex-1">
+        <user-actions :did="data.did" :status="actor?.status" @update="next" />
+        <shared-card>
+          <img
+            v-if="data.banner"
+            :src="`https://bsky-cdn.codingpa.ws/banner/${did}/450x150`"
+            class="w-full object-fit rounded-lg"
+            height="101"
+            width="304"
+            alt=""
           />
-        </div>
-      </core-modal>
-      <div class="flex flex-col">
-        <div class="text-lg">{{ data.displayName || data.handle }}</div>
-        <div class="meta">
-          <span class="meta-item">
-            <nuxt-link
-              class="underline hover:no-underline text-muted"
-              :href="`https://bsky.app/profile/${data.handle}`"
-              target="_blank"
-              >@{{ data.handle }}</nuxt-link
+        </shared-card>
+        <shared-card>
+          <div class="flex gap-3 items-center">
+            <button
+              class="relative flex overflow-hidden rounded-lg"
+              @click="showAvatarModal = true"
             >
+              <shared-avatar
+                :did="data.did"
+                :has-avatar="Boolean(data.avatar)"
+                not-rounded
+                resize="72x72"
+                :size="72"
+              />
+              <span
+                class="opacity-0 hover:opacity-100 transition duration-300 w-full h-full absolute flex items-center bg-black bg-opacity-50 text-xs uppercase tracking-tight"
+              >
+                Click to zoom
+              </span>
+            </button>
+            <core-modal v-if="showAvatarModal" @close="showAvatarModal = false">
+              <div class="z-10">
+                <shared-avatar
+                  class="w-auto h-auto max-h-[80vh] max-w-[80vw]"
+                  :did="data.did"
+                  :has-avatar="Boolean(data.avatar)"
+                  resize="webp"
+                  :size="512"
+                />
+              </div>
+            </core-modal>
+            <div class="flex flex-col">
+              <div v-if="data.displayName" class="text-lg">
+                {{ data.displayName }}
+              </div>
+              <div>
+                <nuxt-link
+                  class="underline hover:no-underline text-muted"
+                  :href="`https://bsky.app/profile/${data.handle}`"
+                  target="_blank"
+                >
+                  @{{ data.handle }}
+                </nuxt-link>
+              </div>
+            </div>
+          </div>
+        </shared-card>
+        <shared-card v-if="actor?.roles" class="flex items-center gap-1 hidden">
+          <icon-key class="text-muted" />
+          {{ actor.roles.join(", ") }}
+          <button
+            class="ml-auto text-sm rounded-lg py-0.5 px-1.5 border border-gray-300 dark:border-gray-700 hover:bg-zinc-700"
+          >
+            Edit
+          </button>
+        </shared-card>
+        <shared-card class="meta">
+          <div class="meta-item">
+            <user-status-badge class="text-sm" :status="actor?.status" />
+          </div>
+          <span
+            class="ml-auto meta-item"
+            :title="`${data?.followersCount || 0} followers`"
+          >
+            <icon-users class="text-muted" />
+            {{ addSISuffix(data?.followersCount) }}
           </span>
-          <span class="meta-item">
-            {{ data.followersCount }}
-            <span class="text-muted">followers</span>
+          <span class="meta-item" :title="`${data?.followsCount || 0} follows`">
+            <icon-user-check class="text-muted" />
+            {{ addSISuffix(data?.followsCount) }}
           </span>
-          <span class="meta-item">
-            {{ data.followsCount }}
-            <span class="text-muted">follows</span>
+          <span class="meta-item" :title="`${data?.postsCount || 0} posts`">
+            <icon-square-bubble class="text-muted" :size="18" />
+            {{ addSISuffix(data?.postsCount) }}
           </span>
-          <span class="meta-item">
-            {{ data.postsCount }}
-            <span class="text-muted">posts</span>
-          </span>
-        </div>
+        </shared-card>
+        <shared-card v-if="data.description">
+          <shared-bsky-description :description="data.description" />
+        </shared-card>
+      </div>
+      <div class="mb-3 md:w-[50%]">
+        <shared-card :class="{ loading }" no-padding>
+          <div class="px-4 py-3 border-b border-gray-300 dark:border-gray-700">
+            <h2>Recent posts</h2>
+          </div>
+          <div class="overflow-y-auto max-h-[500px]">
+            <div
+              v-for="post in posts"
+              :key="post.uri"
+              class="px-4 py-2 border-b border-gray-300 dark:border-gray-700"
+            >
+              <template v-if="post">
+                <div class="meta text-sm text-muted">
+                  <span class="meta-item">
+                    <shared-date :date="new Date(post.indexedAt)" />
+                  </span>
+                  <span class="meta-item flex items-center gap-0.5">
+                    <icon-heart class="text-muted" />
+                    {{ addSISuffix(post.likeCount || 0) }}
+                  </span>
+                  <span class="meta-item flex items-center gap-0.5">
+                    <icon-square-bubble class="text-muted" :size="14" />
+                    {{ addSISuffix(post.replyCount || 0) }}
+                  </span>
+                </div>
+                <div class="flex">
+                  <span class="flex-1">{{ (post.record as any)?.text }}</span>
+                  <span
+                    v-if="post.embed && 'images' in post.embed"
+                    class="w-[25%] h-100"
+                  >
+                    <img
+                      v-for="img in (post.embed.images as ViewImage[]).slice(0,1)"
+                      :key="img.thumb"
+                      class="object-cover h-100 rounded-lg"
+                      :src="img.thumb"
+                      :alt="img.alt"
+                    />
+                  </span>
+                </div>
+              </template>
+              <div v-else class="text-sm text-muted">
+                Error: post not found.
+              </div>
+            </div>
+          </div>
+        </shared-card>
       </div>
     </div>
-
-    <div>
-      <shared-bsky-description
-        v-if="data.description"
-        :description="data.description"
-      />
-    </div>
-  </shared-card>
+  </template>
   <div v-else>
     <user-queue-banner
-      v-if="status === ActorStatus.PENDING"
+      v-if="actor?.status === ActorStatus.PENDING"
       :did="props.did"
       :name="props.did"
       :pending="pending"
@@ -136,11 +232,20 @@ await loadProfile();
 </template>
 
 <style scoped>
-.meta .meta-item:not(:last-child)::after {
-  content: "·";
-  @apply px-1;
-  @apply inline-block;
-  text-decoration: none;
+.meta {
+  @apply flex items-center gap-3;
+}
+.meta-item {
+  @apply inline-flex items-center gap-1;
+}
+
+.card-list > :not(:last-of-type) {
+  @apply border-b-0;
+  @apply rounded-b-none;
+}
+
+.card-list > :not(:first-of-type) {
+  @apply rounded-t-none;
 }
 
 .loading {
