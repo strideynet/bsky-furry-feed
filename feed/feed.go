@@ -387,7 +387,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags: []string{
-				"furfest", "mff", "mff23", "mff2023",
+				"furfest", "furfest23", "furfest2023", "mff", "mff23", "mff2023",
 			},
 			DisallowedHashtags: defaultDisallowedHashtags,
 		},
