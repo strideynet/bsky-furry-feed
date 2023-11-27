@@ -4,6 +4,7 @@ const props = defineProps<{
   hasAvatar: boolean;
   resize?: "72x72" | "20x20" | "webp";
   size: number;
+  notRounded?: boolean;
 }>();
 
 const url = computed(() => {
@@ -20,7 +21,7 @@ const url = computed(() => {
 <template>
   <img
     v-if="did && hasAvatar"
-    class="rounded-full"
+    :class="{ 'rounded-full': !notRounded }"
     :src="url"
     :height="size"
     :width="size"
