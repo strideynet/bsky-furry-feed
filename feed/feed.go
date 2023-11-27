@@ -383,11 +383,11 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "con-mff",
 		DisplayName: "🐾 MFF 2023",
-		Description: "A feed for all things MFF! Use #mff, #mff23, or #mff2023 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "A feed for all things MFF! Use #furfest, #mff, #mff23, or #mff2023 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags: []string{
-				"mff", "mff23", "mff2023",
+				"furfest", "furfest23", "furfest2023", "mff", "mff23", "mff2023",
 			},
 			DisallowedHashtags: defaultDisallowedHashtags,
 		},
