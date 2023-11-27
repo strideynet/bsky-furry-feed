@@ -4,6 +4,7 @@ import { Actor, ActorStatus } from "../../proto/bff/v1/types_pb";
 import { getProfile } from "~/lib/cached-bsky";
 import { newAgent } from "~/lib/auth";
 import { ViewImage } from "@atproto/api/dist/client/types/app/bsky/embed/images";
+import { PostView } from "@atproto/api/dist/client/types/app/bsky/feed/defs";
 
 const props = defineProps<{
   did: string;
@@ -23,6 +24,14 @@ const loadProfile = async () => {
     .getActor({ did: data.value?.did || props.did })
     .catch(() => ({ actor: undefined }));
   actor.value = response?.actor;
+
+  posts.value = await newAgent()
+    .getAuthorFeed({ actor: props.did })
+    .then((r) =>
+      r.data.feed
+        .filter((p) => !p.reply && p.post.author.did === props.did)
+        .map((p) => p.post)
+    );
 };
 
 async function next() {
@@ -51,13 +60,7 @@ function addSISuffix(number?: number) {
   return `${Math.round(number * 100) / 100}${suffixes[order] || ""}`;
 }
 
-const posts = await newAgent()
-  .getAuthorFeed({ actor: props.did })
-  .then((r) =>
-    r.data.feed
-      .filter((p) => !p.reply && p.post.author.did === props.did)
-      .map((p) => p.post)
-  );
+const posts = ref<PostView[]>([]);
 
 await loadProfile();
 </script>
@@ -208,6 +211,12 @@ await loadProfile();
               <div v-else class="text-sm text-muted">
                 Error: post not found.
               </div>
+            </div>
+            <div
+              v-if="posts.length === 0"
+              class="text-muted px-4 py-2 border-gray-300 dark:border-gray-700"
+            >
+              No recent posts.
             </div>
           </div>
         </shared-card>
