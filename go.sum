@@ -85,6 +85,8 @@ github.com/bluesky-social/indigo v0.0.0-20230927045008-5a4f71b2536c h1:KLkg0A9xn
 github.com/bluesky-social/indigo v0.0.0-20230927045008-5a4f71b2536c/go.mod h1:xeZ7rqlwFUpv5iuzYwOXDo4PgNzYPl6J/DytBvQgVuE=
 github.com/bluesky-social/indigo v0.0.0-20231118181746-536f1dfaa0ce h1:oQZd7gZXk4ZT5NYeebHvXoPKGmTdzTDep/LBBhsD5Sg=
 github.com/bluesky-social/indigo v0.0.0-20231118181746-536f1dfaa0ce/go.mod h1:AJKpd9udjXoQJevUaguzN78kPUyZtInSEG7Ese/H8wA=
+github.com/bluesky-social/indigo v0.0.0-20231127031426-f8ba20dc7097 h1:gQO+4S4zZxQWD1YAc3cBLt5LPp3qRr2pX9crg6vZcGw=
+github.com/bluesky-social/indigo v0.0.0-20231127031426-f8ba20dc7097/go.mod h1:gjDnFnSzDEortnYWsrkl27mYi2XY2OyHNqU5z6aHBV0=
 github.com/brianvoe/gofakeit/v6 v6.20.2 h1:FLloufuC7NcbHqDzVQ42CG9AKryS1gAGCRt8nQRsW+Y=
 github.com/brianvoe/gofakeit/v6 v6.20.2/go.mod h1:Ow6qC71xtwm79anlwKRlWZW6zVq9D2XHE4QSSMP/rU8=
 github.com/carlmjohnson/versioninfo v0.22.5 h1:O00sjOLUAFxYQjlN/bzYTuZiS0y6fWDQjMRvwtKgwwc=

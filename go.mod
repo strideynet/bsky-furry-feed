@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/cloudsqlconn v1.2.4
 	connectrpc.com/connect v1.11.0
 	connectrpc.com/otelconnect v0.5.0
-	github.com/bluesky-social/indigo v0.0.0-20231118181746-536f1dfaa0ce
+	github.com/bluesky-social/indigo v0.0.0-20231127031426-f8ba20dc7097
 	github.com/docker/go-connections v0.4.0
 	github.com/golang-migrate/migrate/v4 v4.16.2
 	github.com/google/go-cmp v0.6.0
