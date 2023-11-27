@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
-	"github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/xrpc"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
@@ -25,7 +24,7 @@ func BSkyTokenValidator(pdsHost string) func(ctx context.Context, token string) 
 	// parse the JWT as they do not use public key signing for the JWT.
 	return func(ctx context.Context, token string) (did string, err error) {
 		ua := bluesky.UserAgent
-		res, err := atproto.ServerGetSession(ctx, &xrpc.Client{
+		res, err := getBlueskySession(ctx, &xrpc.Client{
 			Host:      pdsHost,
 			UserAgent: &ua,
 			Auth:      &xrpc.AuthInfo{AccessJwt: token},
@@ -35,6 +34,23 @@ func BSkyTokenValidator(pdsHost string) func(ctx context.Context, token string) 
 		}
 		return res.Did, nil
 	}
+}
+
+type ServerGetSession_Output struct {
+	Did            string  `json:"did" cborgen:"did"`
+	Email          *string `json:"email,omitempty" cborgen:"email,omitempty"`
+	EmailConfirmed *bool   `json:"emailConfirmed,omitempty" cborgen:"emailConfirmed,omitempty"`
+	Handle         string  `json:"handle" cborgen:"handle"`
+}
+
+// Workaround until Bluesky’s util.LexiconTypeDecoder for
+// DidDoc doesn’t always error with `unrecognized type: ""`
+func getBlueskySession(ctx context.Context, c *xrpc.Client) (*ServerGetSession_Output, error) {
+	var out ServerGetSession_Output
+	if err := c.Do(ctx, xrpc.Query, "", "com.atproto.server.getSession", nil, nil, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
 }
 
 // authenticatedUserPermissions are granted to any user who is authenticated.
