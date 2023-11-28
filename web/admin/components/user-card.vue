@@ -78,9 +78,8 @@ await loadProfile();
     <div class="flex max-md:flex-col gap-3" :class="{ loading }">
       <div class="mb-3 md:w-[50%] card-list h-min flex-1">
         <user-actions :did="data.did" :status="actor?.status" @update="next" />
-        <shared-card>
+        <shared-card v-if="data.banner">
           <img
-            v-if="data.banner"
             :src="`https://bsky-cdn.codingpa.ws/banner/${did}/450x150`"
             class="w-full object-fit rounded-lg"
             height="101"
