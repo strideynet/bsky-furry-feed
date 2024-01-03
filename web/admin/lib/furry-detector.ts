@@ -39,6 +39,11 @@ export function isProbablyFurry(profile?: ProfileViewMinimal): boolean {
     "otherkin",
     "protogen",
     "fluffy",
+    "dog",
+    "deer",
+    "cat",
+    "wolf",
+    "dragon"
   ];
 
   const description = profile.description.toLowerCase();
