@@ -437,6 +437,24 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		},
 	}))
 	r.Register(Meta{
+		ID:          "literature",
+		DisplayName: "🐾 Literature",
+		Description: "A feed for talking about and showing off furry literature. Use #FurFic, #FurLit or #FurryWriting to include a post in the feed. \n\nJoin the furry feeds by following @furryli.st",
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
+		generatorOpts: generatorOpts{
+			Hashtags: []string{
+				"furfic",
+				"furlit",
+				"furrylit",
+				"furryfic",
+				"furryfiction",
+				"furryliterature",
+				"furrywriting",
+			},
+			DisallowedHashtags: defaultDisallowedHashtags,
+		},
+	}))
+	r.Register(Meta{
 		ID:          "furry-test",
 		DisplayName: "🐾 Test 🚨🛠️",
 		Description: "Experimental version of the '🐾 Hot' feed.\ntest\ntest\n\ndouble break",
