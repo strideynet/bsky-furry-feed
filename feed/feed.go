@@ -387,8 +387,8 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		generatorOpts: generatorOpts{
 			Hashtags: []string{
 				"eurofurence", "ef",
-				"eurofurence2023", "eurofurence27", "ef", "ef2023", "ef27",
-				"eurofurence2024", "eurofurence28", "ef2023", "ef28",
+				"eurofurence2023", "eurofurence27", "ef2023", "ef27",
+				"eurofurence2024", "eurofurence28", "ef2024", "ef28",
 				// I typoed this like 5 times while making this feed so I'm adding these corrections
 				"euroference",
 			},
