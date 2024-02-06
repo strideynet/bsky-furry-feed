@@ -36,6 +36,9 @@ export function isProbablyFurry(profile?: ProfileViewMinimal): boolean {
     /scal(y|ie)/,
     /gay (fur|dog|cat|wolf)/,
     /(f|m)urr?suit/,
+    /gr(e|a)ymuzzle/,
+    "hyena",
+    /\byeen\b/,
     "otherkin",
     "protogen",
     "fluffy",
@@ -43,7 +46,7 @@ export function isProbablyFurry(profile?: ProfileViewMinimal): boolean {
     "deer",
     "cat",
     "wolf",
-    "dragon"
+    "dragon",
   ];
 
   const description = profile.description.toLowerCase();
