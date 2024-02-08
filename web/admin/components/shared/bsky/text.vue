@@ -7,7 +7,7 @@ defineProps<{ segment: RichTextSegment }>();
 <template>
   <nuxt-link
     v-if="segment.isLink()"
-    class="underline hover:no-underline text-blue-500"
+    class="underline hover:no-underline text-blue-500 break-all"
     :href="segment.link?.uri"
     target="_blank"
   >
