@@ -37,6 +37,8 @@ export function isProbablyFurry(profile?: ProfileViewMinimal): boolean {
     /gay (fur|dog|cat|wolf)/,
     /(f|m)urr?suit/,
     /gr(e|a)ymuzzle/,
+    /\b(co)?yote\b/,
+    "kitsune",
     "hyena",
     /\byeen\b/,
     "otherkin",
