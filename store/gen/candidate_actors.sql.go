@@ -16,6 +16,10 @@ INSERT INTO
 candidate_actors (did, created_at, is_artist, comment, status, roles)
 VALUES
 ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (did) DO UPDATE SET is_artist = excluded.is_artist,
+comment = excluded.comment,
+status = excluded.status,
+roles = excluded.roles
 RETURNING did, created_at, is_artist, comment, status, roles, current_profile_commit_cid, held_until
 `
 
@@ -113,7 +117,7 @@ FROM
 WHERE
     ap.actor_did = $1
 ORDER BY
-    created_at DESC
+    ap.created_at DESC
 `
 
 func (q *Queries) GetActorProfileHistory(ctx context.Context, actorDid string) ([]ActorProfile, error) {
@@ -220,12 +224,13 @@ SELECT did, created_at, is_artist, comment, status, roles, current_profile_commi
 FROM
     candidate_actors AS ca
 WHERE
-    (
+    ca.status != 'none'
+    AND (
         $1::actor_status IS NULL
         OR ca.status = $1
     )
 ORDER BY
-    did
+    ca.did
 `
 
 func (q *Queries) ListCandidateActors(ctx context.Context, status NullActorStatus) ([]CandidateActor, error) {
@@ -265,7 +270,7 @@ WHERE
     ca.status = 'approved'
     AND ca.current_profile_commit_cid IS NULL
 ORDER BY
-    did
+    ca.did
 `
 
 func (q *Queries) ListCandidateActorsRequiringProfileBackfill(ctx context.Context) ([]CandidateActor, error) {
@@ -295,6 +300,40 @@ func (q *Queries) ListCandidateActorsRequiringProfileBackfill(ctx context.Contex
 		return nil, err
 	}
 	return items, nil
+}
+
+const optInOrMarkActorPending = `-- name: OptInOrMarkActorPending :one
+UPDATE candidate_actors ca
+SET
+    status
+    = CASE WHEN ca.status = 'opted_out' THEN 'approved' WHEN ca.status = 'none' THEN 'pending' ELSE ca.status END
+WHERE
+    ca.did = $1
+RETURNING status
+`
+
+func (q *Queries) OptInOrMarkActorPending(ctx context.Context, did string) (ActorStatus, error) {
+	row := q.db.QueryRow(ctx, optInOrMarkActorPending, did)
+	var status ActorStatus
+	err := row.Scan(&status)
+	return status, err
+}
+
+const optOutOrForgetActor = `-- name: OptOutOrForgetActor :one
+UPDATE candidate_actors ca
+SET
+    status
+    = CASE WHEN ca.status = 'approved' THEN 'opted_out' WHEN ca.status = 'pending' THEN 'none' ELSE ca.status END
+WHERE
+    ca.did = $1
+RETURNING status
+`
+
+func (q *Queries) OptOutOrForgetActor(ctx context.Context, did string) (ActorStatus, error) {
+	row := q.db.QueryRow(ctx, optOutOrForgetActor, did)
+	var status ActorStatus
+	err := row.Scan(&status)
+	return status, err
 }
 
 const updateCandidateActor = `-- name: UpdateCandidateActor :one

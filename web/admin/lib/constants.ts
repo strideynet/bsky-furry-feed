@@ -6,4 +6,6 @@ export const ACTOR_STATUS_LABELS = {
   [ActorStatus.APPROVED]: "Approved",
   [ActorStatus.BANNED]: "Banned",
   [ActorStatus.NONE]: "None",
+  [ActorStatus.OPTED_OUT]: "Opted out",
+  [ActorStatus.REJECTED]: "Rejected",
 };
