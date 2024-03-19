@@ -259,7 +259,11 @@ func (fi *FirehoseIngester) Start(ctx context.Context) error {
 			},
 		}
 		scheduler := sequential.NewScheduler("main", callbacks.EventHandler)
-		return events.HandleRepoStream(ctx, con, scheduler)
+		if err := events.HandleRepoStream(ctx, con, scheduler); err != nil {
+			fi.log.Error("repo stream from relay has failed", zap.Error(err))
+			return fmt.Errorf("handling repo stream: %w", err)
+		}
+		return nil
 		// TODO: sometimes stream exits of own accord, we should attempt to
 		// reconnect and enter an "error state".
 	})
