@@ -447,6 +447,18 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		},
 	}))
 	r.Register(Meta{
+		ID:          "con-fwa",
+		DisplayName: "🐾 FWA 2024",
+		Description: "A feed for all things FWA! Use #fwa, #fwa24, #fwa2024, or #furryweekend to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
+		generatorOpts: generatorOpts{
+			Hashtags: []string{
+				"fwa", "fwa24", "fwa2024", "furryweekend",
+			},
+			DisallowedHashtags: defaultDisallowedHashtags,
+		},
+	}))
+	r.Register(Meta{
 		ID:          "merch",
 		DisplayName: "🐾 #FurSale",
 		Description: "Buy and sell furry merch on the FurSale feed. Use #fursale or #merch to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
