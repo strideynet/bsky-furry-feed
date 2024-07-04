@@ -37,6 +37,10 @@ spec:
             value: "1"
           - name: BFF_SCORE_MATERIALIZER_ENABLED
             value: "1"
+          - name: BFF_API_ENABLED
+            value: "1"
+          - name: BFF_HOSTNAME
+            value: feed.furryli.st
         envFrom:
           - secretRef:
               name: shared-env
@@ -61,3 +65,17 @@ spec:
   endpoints:
     - port: debug
       interval: 30s
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bff-api
+spec:
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 1337
+  selector:
+    app.kubernetes.io/name: ingester
+    app.kubernetes.io/part-of: bff
+  type: ClusterIP
