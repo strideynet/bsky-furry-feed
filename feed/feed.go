@@ -371,11 +371,11 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	}))
 	r.Register(Meta{
 		ID:          "con-denfur",
-		DisplayName: "🐾 DenFur 2023",
-		Description: "A feed for all things DenFur! Use #denfur or #denfur2023 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
+		DisplayName: "🐾 DenFur 2024",
+		Description: "A feed for all things DenFur! Use #denfur or #denfur2024 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
-			Hashtags:           []string{"denfur", "denfur2023"},
+			Hashtags:           []string{"denfur", "denfur2024"},
 			DisallowedHashtags: defaultDisallowedHashtags,
 		},
 	}))
