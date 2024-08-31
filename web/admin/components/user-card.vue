@@ -3,6 +3,7 @@ import { ProfileViewDetailed } from "@atproto/api/dist/client/types/app/bsky/act
 import { Actor, ActorStatus } from "../../proto/bff/v1/types_pb";
 import { getProfile } from "~/lib/cached-bsky";
 import { newAgent } from "~/lib/auth";
+import { addSISuffix } from "~/lib/util";
 import { ViewImage } from "@atproto/api/dist/client/types/app/bsky/embed/images";
 import { PostView } from "@atproto/api/dist/client/types/app/bsky/feed/defs";
 
@@ -46,19 +47,6 @@ watch(
   () => props.did,
   () => loadProfile()
 );
-
-function addSISuffix(number?: number) {
-  number = number || 0;
-
-  const suffixes = ["", "K", "M"];
-  const order = Math.floor(Math.log10(number) / 3);
-
-  for (let i = 0; i < order; i++) {
-    number = number / 1000;
-  }
-
-  return `${Math.round(number * 100) / 100}${suffixes[order] || ""}`;
-}
 
 const posts = ref<PostView[]>([]);
 
