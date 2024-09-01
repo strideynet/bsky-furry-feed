@@ -3,7 +3,7 @@ import { RichTextSegment } from "@atproto/api";
 
 defineProps<{ segment: RichTextSegment }>();
 
-const hovering = ref(true);
+const hovering = ref(false);
 
 function enter() {
   hovering.value = true;
