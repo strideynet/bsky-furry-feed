@@ -51,7 +51,7 @@ spec:
         resources:
           requests:
             memory: 512Mi # 512Mi is minimum
-            cpu: 250m # 250m is minimum in 250m increments
+            cpu: 500m # 250m is minimum in 250m increments
 ---
 apiVersion: monitoring.googleapis.com/v1
 kind: PodMonitoring
