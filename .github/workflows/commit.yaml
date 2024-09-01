@@ -38,6 +38,7 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.60
+          args: --timeout=5m
   check-sqlc:
     name: Check sqlc generation
     runs-on: ubuntu-latest
