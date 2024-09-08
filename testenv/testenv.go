@@ -3,11 +3,12 @@ package testenv
 import (
 	"context"
 	"fmt"
-	"github.com/docker/go-connections/nat"
-	"github.com/testcontainers/testcontainers-go/wait"
 	"reflect"
 	"testing"
 	"unsafe"
+
+	"github.com/docker/go-connections/nat"
+	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/bluesky-social/indigo/xrpc"
 	"github.com/stretchr/testify/require"
@@ -28,11 +29,11 @@ func init() {
 	ipfsLog.SetAllLoggers(ipfsLog.LevelDebug)
 }
 
-// black magic to set an unexported field on the TestBGS
-func setTrialHostOnBGS(tbgs *indigoTest.TestBGS, rawHost string) {
+// black magic to set an unexported field on the TestRelay
+func setTrialHostOnRelay(trelay *indigoTest.TestRelay, rawHost string) {
 	hosts := []string{rawHost}
 
-	trialHosts := reflect.ValueOf(tbgs).
+	trialHosts := reflect.ValueOf(trelay).
 		Elem().FieldByName("tr").
 		Elem().FieldByName("TrialHosts")
 
@@ -83,7 +84,7 @@ func StartDatabase(ctx context.Context, t *testing.T) (url string) {
 
 type Harness struct {
 	PDS   *indigoTest.TestPDS
-	BGS   *indigoTest.TestBGS
+	Relay *indigoTest.TestRelay
 	Log   *zap.Logger
 	Store *store.PGXStore
 }
@@ -99,9 +100,9 @@ func StartHarness(ctx context.Context, t *testing.T) *Harness {
 	pds.Run(t)
 	t.Cleanup(pds.Cleanup)
 
-	bgs := indigoTest.MustSetupBGS(t, didr)
-	bgs.Run(t)
-	setTrialHostOnBGS(bgs, pds.RawHost())
+	relay := indigoTest.MustSetupRelay(t, didr)
+	relay.Run(t)
+	setTrialHostOnRelay(relay, pds.RawHost())
 
 	pgxStore, err := store.ConnectPGXStore(
 		ctx,
@@ -112,7 +113,7 @@ func StartHarness(ctx context.Context, t *testing.T) *Harness {
 	t.Cleanup(pgxStore.Close)
 
 	return &Harness{
-		BGS:   bgs,
+		Relay: relay,
 		PDS:   pds,
 		Log:   log,
 		Store: pgxStore,
