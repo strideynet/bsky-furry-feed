@@ -54,7 +54,6 @@ await refresh();
       <user-audit-log
         ref="auditLog"
         :subject="subject"
-        :hide-comment-box="variant === 'queue'"
         :did="subject?.did || props.did"
       />
     </div>
