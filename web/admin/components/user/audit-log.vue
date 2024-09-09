@@ -8,7 +8,6 @@ const $emit = defineEmits<{
 const props = defineProps<{
   did: string;
   subject?: ProfileViewDetailed;
-  hideCommentBox?: boolean;
 }>();
 
 const auditEvents: Ref<AuditEvent[]> = ref([]);
@@ -67,8 +66,8 @@ await loadEvents();
     :key="action.id"
     :action="action"
   />
-  <p v-if="auditEvents.length === 0 && hideCommentBox" class="text-muted">
+  <p v-if="auditEvents.length === 0" class="text-muted">
     No comments or audit events.
   </p>
-  <shared-comment-box v-if="subject && !hideCommentBox" @comment="comment" />
+  <shared-comment-box v-if="subject" @comment="comment" />
 </template>

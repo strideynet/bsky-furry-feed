@@ -13,7 +13,7 @@ function comment() {
   <div class="flex gap-3 mt-5 mb-24 text-sm flex-col">
     <textarea
       v-model="text"
-      class="flex-1 py-2 px-2 rounded-lg border border-gray-300 text-black"
+      class="flex-1 py-2 px-2 rounded-lg border border-gray-300 bg-transparent"
       rows="4"
       placeholder="Type your comment..."
       type="text"
