@@ -359,6 +359,7 @@ func TestPreScoredGenerator(t *testing.T) {
 					Hashtags: []string{},
 					IsNSFW:   tristate.Maybe,
 					HasMedia: tristate.Maybe,
+					HasVideo: tristate.Maybe,
 				},
 			},
 			expectedPosts: []string{
@@ -370,6 +371,8 @@ func TestPreScoredGenerator(t *testing.T) {
 				nsfwLabelledPost,
 				aiArtPost,
 				pinnedPost,
+				videoPost,
+				nsfwVideoPost,
 			},
 		},
 		{
