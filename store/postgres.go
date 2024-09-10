@@ -442,6 +442,7 @@ type CreatePostOpts struct {
 	IndexedAt  time.Time
 	Hashtags   []string
 	HasMedia   bool
+	HasVideo   bool
 	Raw        *bsky.FeedPost
 	SelfLabels []string
 }
@@ -471,6 +472,10 @@ func (s *PGXStore) CreatePost(ctx context.Context, opts CreatePostOpts) (err err
 		HasMedia: pgtype.Bool{
 			Valid: true,
 			Bool:  opts.HasMedia,
+		},
+		HasVideo: pgtype.Bool{
+			Valid: true,
+			Bool:  opts.HasVideo,
 		},
 		Raw:        opts.Raw,
 		SelfLabels: opts.SelfLabels,

@@ -7,11 +7,12 @@ candidate_posts (
     indexed_at,
     hashtags,
     has_media,
+    has_video,
     raw,
     self_labels
 )
 VALUES
-($1, $2, $3, $4, $5, $6, $7, $8);
+($1, $2, $3, $4, $5, $6, $7, $8, $9);
 
 -- name: SoftDeleteCandidatePost :exec
 UPDATE

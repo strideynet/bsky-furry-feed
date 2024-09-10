@@ -115,6 +115,7 @@ type CandidatePost struct {
 	Hashtags   []string
 	HasMedia   pgtype.Bool
 	SelfLabels []string
+	HasVideo   pgtype.Bool
 }
 
 type FirehoseCommitCursor struct {

@@ -22,7 +22,7 @@ func postTextWithAlts(data *bsky.FeedPost) string {
 
 	buf.WriteString(data.Text)
 
-        // Collect alt texts when only images are embedded
+	// Collect alt texts when only images are embedded
 	if data.Embed != nil && data.Embed.EmbedImages != nil {
 		for _, image := range data.Embed.EmbedImages.Images {
 			if image.Alt == "" {
@@ -33,7 +33,7 @@ func postTextWithAlts(data *bsky.FeedPost) string {
 		}
 	}
 
-       // Collect alt texts when images and a post is embedded (e.g a quote post that also includes an image)
+	// Collect alt texts when images and a post is embedded (e.g a quote post that also includes an image)
 	if data.Embed != nil && data.Embed.EmbedRecordWithMedia != nil && data.Embed.EmbedRecordWithMedia.Media != nil && data.Embed.EmbedRecordWithMedia.Media.EmbedImages != nil {
 		for _, image := range data.Embed.EmbedRecordWithMedia.Media.EmbedImages.Images {
 			if image.Alt == "" {
@@ -50,6 +50,11 @@ func postTextWithAlts(data *bsky.FeedPost) string {
 func hasMedia(data *bsky.FeedPost) bool {
 	return data.Embed != nil && ((data.Embed.EmbedImages != nil && len(data.Embed.EmbedImages.Images) > 0) ||
 		(data.Embed.EmbedRecordWithMedia != nil && data.Embed.EmbedRecordWithMedia.Media != nil && data.Embed.EmbedRecordWithMedia.Media.EmbedImages != nil && len(data.Embed.EmbedRecordWithMedia.Media.EmbedImages.Images) > 0))
+}
+
+func hasVideo(data *bsky.FeedPost) bool {
+	return data.Embed != nil && ((data.Embed.EmbedVideo != nil && data.Embed.EmbedVideo.Video != nil) ||
+		(data.Embed.EmbedRecordWithMedia != nil && data.Embed.EmbedRecordWithMedia.Media != nil && data.Embed.EmbedRecordWithMedia.Media.EmbedVideo != nil && data.Embed.EmbedRecordWithMedia.Media.EmbedVideo.Video != nil))
 }
 
 func extractFacetsHashtags(facets []*bsky.RichtextFacet) []string {
@@ -133,6 +138,7 @@ func (fi *FirehoseIngester) handleFeedPostCreate(
 			Raw:        data,
 			Hashtags:   normalizeHashtags(extractHashtags(data), data.Langs),
 			HasMedia:   hasMedia(data),
+			HasVideo:   hasVideo(data),
 			SelfLabels: selfLabels,
 		},
 	)
