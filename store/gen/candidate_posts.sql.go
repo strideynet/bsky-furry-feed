@@ -87,29 +87,35 @@ WHERE
                 $3::BOOLEAN IS NULL
                 OR COALESCE(cp.has_media, FALSE) = $3
             )
-            -- Filter by NSFW status. If unspecified, do not filter.
+            -- Match has_video status. If unspecified, do not filter.
             AND (
                 $4::BOOLEAN IS NULL
+                OR COALESCE(cp.has_video, FALSE) = $4
+            )
+            -- Filter by NSFW status. If unspecified, do not filter.
+            AND (
+                $5::BOOLEAN IS NULL
                 OR (
                     (ARRAY['nsfw', 'mursuit', 'murrsuit', 'nsfwfurry', 'furrynsfw'] && cp.hashtags)
                     OR (ARRAY['porn', 'nudity', 'sexual'] && cp.self_labels)
-                ) = $4
+                ) = $5
             )
         )
         -- Pinned DID criteria.
-        OR cp.actor_did = ANY($5::TEXT [])
+        OR cp.actor_did = ANY($6::TEXT [])
     )
     -- Remove posts newer than the cursor timestamp
-    AND (cp.indexed_at < $6)
+    AND (cp.indexed_at < $7)
 ORDER BY
     cp.indexed_at DESC
-LIMIT $7
+LIMIT $8
 `
 
 type GetFurryNewFeedParams struct {
 	Hashtags           []string
 	DisallowedHashtags []string
 	HasMedia           pgtype.Bool
+	HasVideo           pgtype.Bool
 	IsNSFW             pgtype.Bool
 	PinnedDIDs         []string
 	CursorTimestamp    pgtype.Timestamptz
@@ -121,6 +127,7 @@ func (q *Queries) GetFurryNewFeed(ctx context.Context, arg GetFurryNewFeedParams
 		arg.Hashtags,
 		arg.DisallowedHashtags,
 		arg.HasMedia,
+		arg.HasVideo,
 		arg.IsNSFW,
 		arg.PinnedDIDs,
 		arg.CursorTimestamp,
@@ -214,22 +221,27 @@ WHERE
         $5::BOOLEAN IS NULL
         OR COALESCE(cp.has_media, FALSE) = $5
     )
-    -- Filter by NSFW status. If unspecified, do not filter.
+    -- Match has_video status. If unspecified, do not filter.
     AND (
         $6::BOOLEAN IS NULL
+        OR COALESCE(cp.has_video, FALSE) = $6
+    )
+    -- Filter by NSFW status. If unspecified, do not filter.
+    AND (
+        $7::BOOLEAN IS NULL
         OR (
             (ARRAY['nsfw', 'mursuit', 'murrsuit', 'nsfwfurry', 'furrynsfw'] && cp.hashtags)
             OR (ARRAY['porn', 'nudity', 'sexual'] && cp.self_labels)
-        ) = $6
+        ) = $7
     )
     AND cp.deleted_at IS NULL
     AND (
         ROW(ph.score, ph.uri)
-        < ROW(($7)::REAL, ($8)::TEXT)
+        < ROW(($8)::REAL, ($9)::TEXT)
     )
 ORDER BY
     ph.score DESC, ph.uri DESC
-LIMIT $9
+LIMIT $10
 `
 
 type ListScoredPostsParams struct {
@@ -238,6 +250,7 @@ type ListScoredPostsParams struct {
 	Hashtags           []string
 	DisallowedHashtags []string
 	HasMedia           pgtype.Bool
+	HasVideo           pgtype.Bool
 	IsNSFW             pgtype.Bool
 	AfterScore         float32
 	AfterURI           string
@@ -266,6 +279,7 @@ func (q *Queries) ListScoredPosts(ctx context.Context, arg ListScoredPostsParams
 		arg.Hashtags,
 		arg.DisallowedHashtags,
 		arg.HasMedia,
+		arg.HasVideo,
 		arg.IsNSFW,
 		arg.AfterScore,
 		arg.AfterURI,

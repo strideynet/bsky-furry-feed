@@ -53,6 +53,11 @@ WHERE
                 sqlc.narg(has_media)::BOOLEAN IS NULL
                 OR COALESCE(cp.has_media, FALSE) = sqlc.narg(has_media)
             )
+            -- Match has_video status. If unspecified, do not filter.
+            AND (
+                sqlc.narg(has_video)::BOOLEAN IS NULL
+                OR COALESCE(cp.has_video, FALSE) = sqlc.narg(has_video)
+            )
             -- Filter by NSFW status. If unspecified, do not filter.
             AND (
                 sqlc.narg(is_nsfw)::BOOLEAN IS NULL
@@ -108,6 +113,11 @@ WHERE
     AND (
         sqlc.narg(has_media)::BOOLEAN IS NULL
         OR COALESCE(cp.has_media, FALSE) = sqlc.narg(has_media)
+    )
+    -- Match has_video status. If unspecified, do not filter.
+    AND (
+        sqlc.narg(has_video)::BOOLEAN IS NULL
+        OR COALESCE(cp.has_video, FALSE) = sqlc.narg(has_video)
     )
     -- Filter by NSFW status. If unspecified, do not filter.
     AND (

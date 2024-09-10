@@ -243,6 +243,8 @@ func TestPreScoredGenerator(t *testing.T) {
 	nsfwLabelledPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "nsfw-labelled")
 	aiArtPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "ai")
 	pinnedPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "pinned-post")
+	videoPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "video")
+	nsfwVideoPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "nsfw-video")
 
 	for _, opts := range []store.CreatePostOpts{
 		{
@@ -252,6 +254,15 @@ func TestPreScoredGenerator(t *testing.T) {
 			IndexedAt: time.Time{},
 			Hashtags:  []string{"fursuit"},
 			HasMedia:  true,
+			Raw:       &bsky.FeedPost{},
+		},
+		{
+			URI:       videoPost,
+			ActorDID:  furry.DID(),
+			CreatedAt: time.Time{},
+			IndexedAt: time.Time{},
+			Hashtags:  []string{"furryart"},
+			HasVideo:  true,
 			Raw:       &bsky.FeedPost{},
 		},
 		{
@@ -297,6 +308,16 @@ func TestPreScoredGenerator(t *testing.T) {
 			IndexedAt:  time.Time{},
 			Hashtags:   []string{"art"},
 			HasMedia:   true,
+			Raw:        &bsky.FeedPost{},
+			SelfLabels: []string{"sexual"},
+		},
+		{
+			URI:        nsfwVideoPost,
+			ActorDID:   furry.DID(),
+			CreatedAt:  time.Time{},
+			IndexedAt:  time.Time{},
+			Hashtags:   []string{"art"},
+			HasVideo:   true,
 			Raw:        &bsky.FeedPost{},
 			SelfLabels: []string{"sexual"},
 		},
@@ -398,6 +419,29 @@ func TestPreScoredGenerator(t *testing.T) {
 				},
 			},
 			expectedPosts: []string{nsfwArtPost, nsfwLabelledPost},
+		},
+		{
+			name: "all videos",
+			opts: preScoredGeneratorOpts{
+				Alg: "classic",
+				generatorOpts: generatorOpts{
+					Hashtags: []string{},
+					HasMedia: tristate.True,
+				},
+			},
+			expectedPosts: []string{videoPost, nsfwVideoPost},
+		},
+		{
+			name: "tagged videos nsfw",
+			opts: preScoredGeneratorOpts{
+				Alg: "classic",
+				generatorOpts: generatorOpts{
+					Hashtags: []string{"art", "furryart"},
+					IsNSFW:   tristate.True,
+					HasMedia: tristate.True,
+				},
+			},
+			expectedPosts: []string{nsfwVideoPost},
 		},
 	} {
 		test := test
