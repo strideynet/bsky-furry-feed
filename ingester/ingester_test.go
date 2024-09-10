@@ -7,6 +7,7 @@ import (
 
 	"github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/api/bsky"
+	"github.com/bluesky-social/indigo/lex/util"
 	lexutil "github.com/bluesky-social/indigo/lex/util"
 	indigoTest "github.com/bluesky-social/indigo/testing"
 	"github.com/google/go-cmp/cmp"
@@ -130,7 +131,11 @@ func TestFirehoseIngester(t *testing.T) {
 				Text:          "i love to poast #fursuit #murrsuit #furryart #commsopen #nsfw #bigBurgers",
 				Embed: &bsky.FeedPost_Embed{
 					EmbedVideo: &bsky.EmbedVideo{
-						Video: &lexutil.LexBlob{},
+						Video: &lexutil.LexBlob{
+							Size:     6_000_000,
+							Ref:      util.LexLink(indigoTest.RandFakeCid()),
+							MimeType: "video/mp4",
+						},
 					},
 				},
 			},
