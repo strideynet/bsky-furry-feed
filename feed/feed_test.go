@@ -429,7 +429,7 @@ func TestPreScoredGenerator(t *testing.T) {
 				Alg: "classic",
 				generatorOpts: generatorOpts{
 					Hashtags: []string{},
-					HasMedia: tristate.True,
+					HasVideo: tristate.True,
 				},
 			},
 			expectedPosts: []string{videoPost, nsfwVideoPost},
@@ -441,7 +441,7 @@ func TestPreScoredGenerator(t *testing.T) {
 				generatorOpts: generatorOpts{
 					Hashtags: []string{"art", "furryart"},
 					IsNSFW:   tristate.True,
-					HasMedia: tristate.True,
+					HasVideo: tristate.True,
 				},
 			},
 			expectedPosts: []string{nsfwVideoPost},
