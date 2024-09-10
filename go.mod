@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/cloudsqlconn v1.5.2
 	connectrpc.com/connect v1.11.0
 	connectrpc.com/otelconnect v0.5.0
-	github.com/bluesky-social/indigo v0.0.0-20240831040502-6ac3da7f65dc
+	github.com/bluesky-social/indigo v0.0.0-20240908200721-58e6cb486877
 	github.com/docker/go-connections v0.4.0
 	github.com/golang-migrate/migrate/v4 v4.16.2
 	github.com/google/go-cmp v0.6.0
@@ -20,7 +20,7 @@ require (
 	github.com/testcontainers/testcontainers-go v0.21.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.21.0
 	github.com/urfave/cli/v2 v2.25.7
-	github.com/whyrusleeping/cbor-gen v0.1.3-0.20240731173018-74d74643234c
+	github.com/whyrusleeping/cbor-gen v0.1.3-0.20240904181319-8dc02b38228c
 	go.opentelemetry.io/contrib/detectors/gcp v1.21.1
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/otel v1.21.0
