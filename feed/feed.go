@@ -541,6 +541,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		Alg: "classic",
 		generatorOpts: generatorOpts{
 			DisallowedHashtags: defaultDisallowedHashtags,
+			HasMedia:           tristate.False,
 			HasVideo:           tristate.True,
 		},
 	}))
@@ -551,6 +552,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			DisallowedHashtags: defaultDisallowedHashtags,
+			HasMedia:           tristate.False,
 			HasVideo:           tristate.True,
 		},
 	}))
@@ -563,6 +565,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		Alg: "classic",
 		generatorOpts: generatorOpts{
 			DisallowedHashtags: defaultDisallowedHashtags,
+			HasMedia:           tristate.False,
 			HasVideo:           tristate.True,
 		},
 	}))
@@ -573,6 +576,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			DisallowedHashtags: defaultDisallowedHashtags,
+			HasMedia:           tristate.False,
 			HasVideo:           tristate.True,
 			IsNSFW:             tristate.True,
 		},
