@@ -177,6 +177,85 @@ func Test_hasMedia(t *testing.T) {
 	}
 }
 
+func Test_hasVideo(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		post *bsky.FeedPost
+		want bool
+	}{
+		{
+			name: "no video",
+			post: &bsky.FeedPost{
+				Text: "hewwo :3",
+			},
+			want: false,
+		},
+		{
+			name: "video",
+			post: &bsky.FeedPost{
+				Text: "hewwo :3",
+				Embed: &bsky.FeedPost_Embed{
+					EmbedVideo: &bsky.EmbedVideo{
+						Video: &util.LexBlob{
+							Size:     6_000_000,
+							Ref:      util.LexLink(indigoTest.RandFakeCid()),
+							MimeType: "video/mp4",
+						},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "video with quote",
+			post: &bsky.FeedPost{
+				Text: "hewwo :3",
+				Embed: &bsky.FeedPost_Embed{
+					EmbedRecordWithMedia: &bsky.EmbedRecordWithMedia{
+						Record: &bsky.EmbedRecord{
+							Record: &atproto.RepoStrongRef{
+								Cid: indigoTest.RandFakeCid().String(),
+								Uri: indigoTest.RandFakeAtUri("app.bsky.feed.post", ""),
+							},
+						},
+						Media: &bsky.EmbedRecordWithMedia_Media{
+							EmbedVideo: &bsky.EmbedVideo{
+								Video: &util.LexBlob{
+									Size:     6_000_000,
+									Ref:      util.LexLink(indigoTest.RandFakeCid()),
+									MimeType: "video/mp4",
+								},
+							},
+						},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "quote",
+			post: &bsky.FeedPost{
+				Text: "hewwo :3",
+				Embed: &bsky.FeedPost_Embed{
+					EmbedRecord: &bsky.EmbedRecord{
+						Record: &atproto.RepoStrongRef{
+							Cid: indigoTest.RandFakeCid().String(),
+							Uri: indigoTest.RandFakeAtUri("app.bsky.feed.post", ""),
+						},
+					},
+				},
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, hasVideo(tt.post))
+		})
+	}
+}
+
 func Test_postTextWithAlts(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

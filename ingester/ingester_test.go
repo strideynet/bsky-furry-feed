@@ -7,6 +7,7 @@ import (
 
 	"github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/api/bsky"
+	"github.com/bluesky-social/indigo/lex/util"
 	lexutil "github.com/bluesky-social/indigo/lex/util"
 	indigoTest "github.com/bluesky-social/indigo/testing"
 	"github.com/google/go-cmp/cmp"
@@ -114,11 +115,57 @@ func TestFirehoseIngester(t *testing.T) {
 					Bool:  false,
 					Valid: true,
 				},
+				HasVideo: pgtype.Bool{
+					Bool:  false,
+					Valid: true,
+				},
 				SelfLabels: []string{},
 			},
 		},
 		{
-			name: "media and hashtags",
+			name: "video and hashtags",
+			user: approvedFurry,
+			post: &bsky.FeedPost{
+				LexiconTypeID: "app.bsky.feed.post",
+				CreatedAt:     now.Format(time.RFC3339Nano),
+				Text:          "i love to poast #fursuit #murrsuit #furryart #commsopen #nsfw #bigBurgers",
+				Embed: &bsky.FeedPost_Embed{
+					EmbedVideo: &bsky.EmbedVideo{
+						Video: &lexutil.LexBlob{
+							Size:     6_000_000,
+							Ref:      util.LexLink(indigoTest.RandFakeCid()),
+							MimeType: "video/mp4",
+						},
+					},
+				},
+			},
+			wantPost: &gen.CandidatePost{
+				ActorDID: approvedFurry.DID(),
+				CreatedAt: pgtype.Timestamptz{
+					Time:  now,
+					Valid: true,
+				},
+				Hashtags: []string{
+					"fursuit",
+					"murrsuit",
+					"furryart",
+					"commsopen",
+					"nsfw",
+					"bigburgers",
+				},
+				HasMedia: pgtype.Bool{
+					Bool:  false,
+					Valid: true,
+				},
+				HasVideo: pgtype.Bool{
+					Bool:  true,
+					Valid: true,
+				},
+				SelfLabels: []string{},
+			},
+		},
+		{
+			name: "image and hashtags",
 			user: approvedFurry,
 			post: &bsky.FeedPost{
 				LexiconTypeID: "app.bsky.feed.post",
@@ -153,6 +200,10 @@ func TestFirehoseIngester(t *testing.T) {
 					Bool:  true,
 					Valid: true,
 				},
+				HasVideo: pgtype.Bool{
+					Bool:  false,
+					Valid: true,
+				},
 				SelfLabels: []string{},
 			},
 		},
@@ -175,6 +226,10 @@ func TestFirehoseIngester(t *testing.T) {
 					"seni", "ısırır", "isirır",
 				},
 				HasMedia: pgtype.Bool{
+					Bool:  false,
+					Valid: true,
+				},
+				HasVideo: pgtype.Bool{
 					Bool:  false,
 					Valid: true,
 				},
@@ -217,6 +272,10 @@ func TestFirehoseIngester(t *testing.T) {
 					Bool:  true,
 					Valid: true,
 				},
+				HasVideo: pgtype.Bool{
+					Bool:  false,
+					Valid: true,
+				},
 				SelfLabels: []string{},
 			},
 		},
@@ -245,6 +304,10 @@ func TestFirehoseIngester(t *testing.T) {
 				},
 				Hashtags: []string{},
 				HasMedia: pgtype.Bool{
+					Bool:  false,
+					Valid: true,
+				},
+				HasVideo: pgtype.Bool{
 					Bool:  false,
 					Valid: true,
 				},
@@ -296,6 +359,8 @@ func TestFirehoseIngester(t *testing.T) {
 							out,
 							// We can't know IndexedAt ahead of time.
 							cmpopts.IgnoreFields(gen.CandidatePost{}, "IndexedAt"),
+							// Can’t compare private fields in blob
+							cmpopts.IgnoreFields(lexutil.LexBlob{}, "Ref"),
 							cmpopts.SortSlices(func(a, b string) bool { return a < b }),
 						),
 					)

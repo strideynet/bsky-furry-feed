@@ -21,11 +21,12 @@ candidate_posts (
     indexed_at,
     hashtags,
     has_media,
+    has_video,
     raw,
     self_labels
 )
 VALUES
-($1, $2, $3, $4, $5, $6, $7, $8)
+($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 
 type CreateCandidatePostParams struct {
@@ -35,6 +36,7 @@ type CreateCandidatePostParams struct {
 	IndexedAt  pgtype.Timestamptz
 	Hashtags   []string
 	HasMedia   pgtype.Bool
+	HasVideo   pgtype.Bool
 	Raw        *bsky.FeedPost
 	SelfLabels []string
 }
@@ -47,6 +49,7 @@ func (q *Queries) CreateCandidatePost(ctx context.Context, arg CreateCandidatePo
 		arg.IndexedAt,
 		arg.Hashtags,
 		arg.HasMedia,
+		arg.HasVideo,
 		arg.Raw,
 		arg.SelfLabels,
 	)
@@ -54,7 +57,7 @@ func (q *Queries) CreateCandidatePost(ctx context.Context, arg CreateCandidatePo
 }
 
 const getFurryNewFeed = `-- name: GetFurryNewFeed :many
-SELECT cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_hidden, cp.deleted_at, cp.raw, cp.hashtags, cp.has_media, cp.self_labels
+SELECT cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_hidden, cp.deleted_at, cp.raw, cp.hashtags, cp.has_media, cp.self_labels, cp.has_video
 FROM
     candidate_posts AS cp
 INNER JOIN candidate_actors AS ca ON cp.actor_did = ca.did
@@ -141,6 +144,7 @@ func (q *Queries) GetFurryNewFeed(ctx context.Context, arg GetFurryNewFeedParams
 			&i.Hashtags,
 			&i.HasMedia,
 			&i.SelfLabels,
+			&i.HasVideo,
 		); err != nil {
 			return nil, err
 		}
@@ -153,7 +157,7 @@ func (q *Queries) GetFurryNewFeed(ctx context.Context, arg GetFurryNewFeedParams
 }
 
 const getPostByURI = `-- name: GetPostByURI :one
-SELECT uri, actor_did, created_at, indexed_at, is_hidden, deleted_at, raw, hashtags, has_media, self_labels
+SELECT uri, actor_did, created_at, indexed_at, is_hidden, deleted_at, raw, hashtags, has_media, self_labels, has_video
 FROM
     candidate_posts AS cp
 WHERE
@@ -175,13 +179,14 @@ func (q *Queries) GetPostByURI(ctx context.Context, uri string) (CandidatePost, 
 		&i.Hashtags,
 		&i.HasMedia,
 		&i.SelfLabels,
+		&i.HasVideo,
 	)
 	return i, err
 }
 
 const listScoredPosts = `-- name: ListScoredPosts :many
 SELECT
-    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_hidden, cp.deleted_at, cp.raw, cp.hashtags, cp.has_media, cp.self_labels,
+    cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_hidden, cp.deleted_at, cp.raw, cp.hashtags, cp.has_media, cp.self_labels, cp.has_video,
     ph.score
 FROM
     candidate_posts AS cp
@@ -250,6 +255,7 @@ type ListScoredPostsRow struct {
 	Hashtags   []string
 	HasMedia   pgtype.Bool
 	SelfLabels []string
+	HasVideo   pgtype.Bool
 	Score      float32
 }
 
@@ -283,6 +289,7 @@ func (q *Queries) ListScoredPosts(ctx context.Context, arg ListScoredPostsParams
 			&i.Hashtags,
 			&i.HasMedia,
 			&i.SelfLabels,
+			&i.HasVideo,
 			&i.Score,
 		); err != nil {
 			return nil, err
