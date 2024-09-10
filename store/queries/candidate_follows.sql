@@ -7,10 +7,11 @@ candidate_follows (
 VALUES
 ($1, $2, $3, $4, $5);
 
--- name: SoftDeleteCandidateFollow :exec
+-- name: SoftDeleteCandidateFollow :one
 UPDATE
 candidate_follows
 SET
     deleted_at = NOW()
 WHERE
-    uri = $1;
+    uri = $1
+RETURNING subject_did;
