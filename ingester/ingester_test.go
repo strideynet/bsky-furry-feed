@@ -130,11 +130,7 @@ func TestFirehoseIngester(t *testing.T) {
 				Text:          "i love to poast #fursuit #murrsuit #furryart #commsopen #nsfw #bigBurgers",
 				Embed: &bsky.FeedPost_Embed{
 					EmbedVideo: &bsky.EmbedVideo{
-						Video: &lexutil.LexBlob{
-							Size:     6_000_000,
-							Ref:      lexutil.LexLink(indigoTest.RandFakeCid()),
-							MimeType: "video/mp4",
-						},
+						Video: &lexutil.LexBlob{},
 					},
 				},
 			},
@@ -358,6 +354,8 @@ func TestFirehoseIngester(t *testing.T) {
 							out,
 							// We can't know IndexedAt ahead of time.
 							cmpopts.IgnoreFields(gen.CandidatePost{}, "IndexedAt"),
+							// Can’t compare private fields in blob
+							cmpopts.IgnoreFields(lexutil.LexBlob{}, "Ref"),
 							cmpopts.SortSlices(func(a, b string) bool { return a < b }),
 						),
 					)
