@@ -568,6 +568,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		generatorOpts: generatorOpts{
 			DisallowedHashtags: defaultDisallowedHashtags,
 			HasVideo:           tristate.True,
+			IsNSFW:             tristate.True,
 		},
 	}))
 	r.Register(Meta{
