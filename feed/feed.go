@@ -120,6 +120,7 @@ func chronologicalGenerator(opts chronologicalGeneratorOpts) GenerateFunc {
 			DisallowedHashtags: opts.DisallowedHashtags,
 			IsNSFW:             opts.IsNSFW,
 			HasMedia:           opts.HasMedia,
+			HasVideo:           opts.HasVideo,
 			PinnedDIDs:         opts.PinnedDIDs,
 			CursorTime:         cursorTime,
 		}
@@ -159,6 +160,7 @@ func preScoredGenerator(opts preScoredGeneratorOpts) GenerateFunc {
 			DisallowedHashtags: opts.DisallowedHashtags,
 			IsNSFW:             opts.IsNSFW,
 			HasMedia:           opts.HasMedia,
+			HasVideo:           opts.HasVideo,
 			Alg:                opts.Alg,
 		}
 		if cursor == "" {
@@ -565,7 +567,6 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		Alg: "classic",
 		generatorOpts: generatorOpts{
 			DisallowedHashtags: defaultDisallowedHashtags,
-			HasMedia:           tristate.False,
 			HasVideo:           tristate.True,
 		},
 	}))
@@ -576,7 +577,6 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			DisallowedHashtags: defaultDisallowedHashtags,
-			HasMedia:           tristate.False,
 			HasVideo:           tristate.True,
 			IsNSFW:             tristate.True,
 		},

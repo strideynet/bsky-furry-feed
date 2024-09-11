@@ -43,6 +43,8 @@ func TestChronologicalGenerator(t *testing.T) {
 	pinnedPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "pinned-post")
 	videoPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "video")
 	nsfwVideoPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "nsfw-video")
+	nsfwArtVideoPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "nsfw-art-video")
+	artVideoPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "art-video")
 
 	for _, opts := range []store.CreatePostOpts{
 		{
@@ -52,15 +54,6 @@ func TestChronologicalGenerator(t *testing.T) {
 			IndexedAt: time.Time{},
 			Hashtags:  []string{"fursuit"},
 			HasMedia:  true,
-			Raw:       &bsky.FeedPost{},
-		},
-		{
-			URI:       videoPost,
-			ActorDID:  furry.DID(),
-			CreatedAt: time.Time{},
-			IndexedAt: time.Time{},
-			Hashtags:  []string{"furryart"},
-			HasVideo:  true,
 			Raw:       &bsky.FeedPost{},
 		},
 		{
@@ -114,10 +107,38 @@ func TestChronologicalGenerator(t *testing.T) {
 			ActorDID:   furry.DID(),
 			CreatedAt:  time.Time{},
 			IndexedAt:  time.Time{},
-			Hashtags:   []string{"art"},
 			HasVideo:   true,
+			Hashtags:   []string{},
 			Raw:        &bsky.FeedPost{},
 			SelfLabels: []string{"sexual"},
+		},
+		{
+			URI:        nsfwArtVideoPost,
+			ActorDID:   furry.DID(),
+			CreatedAt:  time.Time{},
+			IndexedAt:  time.Time{},
+			HasVideo:   true,
+			Hashtags:   []string{"furryart"},
+			Raw:        &bsky.FeedPost{},
+			SelfLabels: []string{"sexual"},
+		},
+		{
+			URI:       videoPost,
+			ActorDID:  furry.DID(),
+			CreatedAt: time.Time{},
+			IndexedAt: time.Time{},
+			HasVideo:  true,
+			Hashtags:  []string{},
+			Raw:       &bsky.FeedPost{},
+		},
+		{
+			URI:       artVideoPost,
+			ActorDID:  furry.DID(),
+			CreatedAt: time.Time{},
+			IndexedAt: time.Time{},
+			HasVideo:  true,
+			Hashtags:  []string{"art"},
+			Raw:       &bsky.FeedPost{},
 		},
 		{
 			URI:       aiArtPost,
@@ -168,6 +189,8 @@ func TestChronologicalGenerator(t *testing.T) {
 				aiArtPost,
 				videoPost,
 				nsfwVideoPost,
+				artVideoPost,
+				nsfwArtVideoPost,
 			},
 		},
 		{
@@ -230,22 +253,19 @@ func TestChronologicalGenerator(t *testing.T) {
 				generatorOpts: generatorOpts{
 					Hashtags: []string{},
 					HasVideo: tristate.True,
-					HasMedia: tristate.False,
 				},
 			},
-			expectedPosts: []string{videoPost, nsfwVideoPost},
+			expectedPosts: []string{videoPost, nsfwVideoPost, artVideoPost, nsfwArtVideoPost},
 		},
 		{
-			name: "tagged videos nsfw",
+			name: "videos nsfw",
 			opts: chronologicalGeneratorOpts{
 				generatorOpts: generatorOpts{
-					Hashtags: []string{"art", "furryart"},
 					IsNSFW:   tristate.True,
 					HasVideo: tristate.True,
-					HasMedia: tristate.False,
 				},
 			},
-			expectedPosts: []string{nsfwVideoPost},
+			expectedPosts: []string{nsfwVideoPost, nsfwArtVideoPost},
 		},
 	} {
 		test := test
@@ -292,6 +312,8 @@ func TestPreScoredGenerator(t *testing.T) {
 	pinnedPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "pinned-post")
 	videoPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "video")
 	nsfwVideoPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "nsfw-video")
+	nsfwArtVideoPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "nsfw-art-video")
+	artVideoPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "art-video")
 
 	for _, opts := range []store.CreatePostOpts{
 		{
@@ -301,15 +323,6 @@ func TestPreScoredGenerator(t *testing.T) {
 			IndexedAt: time.Time{},
 			Hashtags:  []string{"fursuit"},
 			HasMedia:  true,
-			Raw:       &bsky.FeedPost{},
-		},
-		{
-			URI:       videoPost,
-			ActorDID:  furry.DID(),
-			CreatedAt: time.Time{},
-			IndexedAt: time.Time{},
-			Hashtags:  []string{"furryart"},
-			HasVideo:  true,
 			Raw:       &bsky.FeedPost{},
 		},
 		{
@@ -359,16 +372,6 @@ func TestPreScoredGenerator(t *testing.T) {
 			SelfLabels: []string{"sexual"},
 		},
 		{
-			URI:        nsfwVideoPost,
-			ActorDID:   furry.DID(),
-			CreatedAt:  time.Time{},
-			IndexedAt:  time.Time{},
-			Hashtags:   []string{"art"},
-			HasVideo:   true,
-			Raw:        &bsky.FeedPost{},
-			SelfLabels: []string{"sexual"},
-		},
-		{
 			URI:       aiArtPost,
 			ActorDID:  furry.DID(),
 			CreatedAt: time.Time{},
@@ -386,6 +389,44 @@ func TestPreScoredGenerator(t *testing.T) {
 			HasMedia:   true,
 			Raw:        &bsky.FeedPost{},
 			SelfLabels: []string{},
+		},
+		{
+			URI:        nsfwVideoPost,
+			ActorDID:   furry.DID(),
+			CreatedAt:  time.Time{},
+			IndexedAt:  time.Time{},
+			HasVideo:   true,
+			Hashtags:   []string{},
+			Raw:        &bsky.FeedPost{},
+			SelfLabels: []string{"sexual"},
+		},
+		{
+			URI:        nsfwArtVideoPost,
+			ActorDID:   furry.DID(),
+			CreatedAt:  time.Time{},
+			IndexedAt:  time.Time{},
+			HasVideo:   true,
+			Hashtags:   []string{"furryart"},
+			Raw:        &bsky.FeedPost{},
+			SelfLabels: []string{"sexual"},
+		},
+		{
+			URI:       videoPost,
+			ActorDID:  furry.DID(),
+			CreatedAt: time.Time{},
+			IndexedAt: time.Time{},
+			HasVideo:  true,
+			Hashtags:  []string{},
+			Raw:       &bsky.FeedPost{},
+		},
+		{
+			URI:       artVideoPost,
+			ActorDID:  furry.DID(),
+			CreatedAt: time.Time{},
+			IndexedAt: time.Time{},
+			HasVideo:  true,
+			Hashtags:  []string{"art"},
+			Raw:       &bsky.FeedPost{},
 		},
 	} {
 		require.NoError(t, harness.Store.CreatePost(ctx, opts))
@@ -420,6 +461,8 @@ func TestPreScoredGenerator(t *testing.T) {
 				pinnedPost,
 				videoPost,
 				nsfwVideoPost,
+				nsfwArtVideoPost,
+				artVideoPost,
 			},
 		},
 		{
@@ -477,23 +520,21 @@ func TestPreScoredGenerator(t *testing.T) {
 				generatorOpts: generatorOpts{
 					Hashtags: []string{},
 					HasVideo: tristate.True,
-					HasMedia: tristate.False,
 				},
 			},
-			expectedPosts: []string{videoPost, nsfwVideoPost},
+			expectedPosts: []string{videoPost, nsfwVideoPost, artVideoPost, nsfwArtVideoPost},
 		},
 		{
-			name: "tagged videos nsfw",
+			name: "nsfw videos",
 			opts: preScoredGeneratorOpts{
 				Alg: "classic",
 				generatorOpts: generatorOpts{
-					Hashtags: []string{"art", "furryart"},
+					Hashtags: []string{},
 					IsNSFW:   tristate.True,
 					HasVideo: tristate.True,
-					HasMedia: tristate.False,
 				},
 			},
-			expectedPosts: []string{nsfwVideoPost},
+			expectedPosts: []string{nsfwVideoPost, nsfwArtVideoPost},
 		},
 	} {
 		test := test
