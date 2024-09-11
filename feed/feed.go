@@ -96,6 +96,7 @@ type generatorOpts struct {
 	DisallowedHashtags []string
 	IsNSFW             tristate.Tristate
 	HasMedia           tristate.Tristate
+	HasVideo           tristate.Tristate
 }
 
 type chronologicalGeneratorOpts struct {
@@ -528,6 +529,56 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		Alg: "classic",
 		generatorOpts: generatorOpts{
 			DisallowedHashtags: defaultDisallowedHashtags,
+		},
+	}))
+
+	r.Register(Meta{
+		ID:          "video-hot",
+		DisplayName: "🐾 Hot videos",
+		Description: "Hottest video posts by furries across Bluesky. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
+		Priority:    100,
+	}, preScoredGenerator(preScoredGeneratorOpts{
+		Alg: "classic",
+		generatorOpts: generatorOpts{
+			DisallowedHashtags: defaultDisallowedHashtags,
+			HasMedia:           tristate.False,
+			HasVideo:           tristate.True,
+		},
+	}))
+	r.Register(Meta{
+		ID:          "video-new",
+		DisplayName: "🐾 New videos",
+		Description: "Latest video posts by furries across Bluesky. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
+		generatorOpts: generatorOpts{
+			DisallowedHashtags: defaultDisallowedHashtags,
+			HasMedia:           tristate.False,
+			HasVideo:           tristate.True,
+		},
+	}))
+	r.Register(Meta{
+		ID:          "video-hot-nsfw",
+		DisplayName: "🐾 Hot videos 🌙",
+		Description: "Hottest NSFW video posts by furries across Bluesky. Contains only NSFW content.\n\nJoin the furry feeds by following @furryli.st",
+		Priority:    100,
+	}, preScoredGenerator(preScoredGeneratorOpts{
+		Alg: "classic",
+		generatorOpts: generatorOpts{
+			DisallowedHashtags: defaultDisallowedHashtags,
+			HasMedia:           tristate.False,
+			HasVideo:           tristate.True,
+		},
+	}))
+	r.Register(Meta{
+		ID:          "video-new-nsfw",
+		DisplayName: "🐾 New videos 🌙",
+		Description: "Latest NSFW video posts by furries across Bluesky. Contains only NSFW content.\n\nJoin the furry feeds by following @furryli.st",
+	}, chronologicalGenerator(chronologicalGeneratorOpts{
+		generatorOpts: generatorOpts{
+			DisallowedHashtags: defaultDisallowedHashtags,
+			HasMedia:           tristate.False,
+			HasVideo:           tristate.True,
+			IsNSFW:             tristate.True,
 		},
 	}))
 

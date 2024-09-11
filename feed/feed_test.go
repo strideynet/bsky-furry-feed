@@ -41,6 +41,8 @@ func TestChronologicalGenerator(t *testing.T) {
 	nsfwLabelledPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "nsfw-labelled")
 	aiArtPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "ai")
 	pinnedPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "pinned-post")
+	videoPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "video")
+	nsfwVideoPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "nsfw-video")
 
 	for _, opts := range []store.CreatePostOpts{
 		{
@@ -50,6 +52,15 @@ func TestChronologicalGenerator(t *testing.T) {
 			IndexedAt: time.Time{},
 			Hashtags:  []string{"fursuit"},
 			HasMedia:  true,
+			Raw:       &bsky.FeedPost{},
+		},
+		{
+			URI:       videoPost,
+			ActorDID:  furry.DID(),
+			CreatedAt: time.Time{},
+			IndexedAt: time.Time{},
+			Hashtags:  []string{"furryart"},
+			HasVideo:  true,
 			Raw:       &bsky.FeedPost{},
 		},
 		{
@@ -99,6 +110,16 @@ func TestChronologicalGenerator(t *testing.T) {
 			SelfLabels: []string{"sexual"},
 		},
 		{
+			URI:        nsfwVideoPost,
+			ActorDID:   furry.DID(),
+			CreatedAt:  time.Time{},
+			IndexedAt:  time.Time{},
+			Hashtags:   []string{"art"},
+			HasVideo:   true,
+			Raw:        &bsky.FeedPost{},
+			SelfLabels: []string{"sexual"},
+		},
+		{
 			URI:       aiArtPost,
 			ActorDID:  furry.DID(),
 			CreatedAt: time.Time{},
@@ -133,6 +154,7 @@ func TestChronologicalGenerator(t *testing.T) {
 					Hashtags: []string{},
 					IsNSFW:   tristate.Maybe,
 					HasMedia: tristate.Maybe,
+					HasVideo: tristate.Maybe,
 				},
 			},
 			expectedPosts: []string{
@@ -144,6 +166,8 @@ func TestChronologicalGenerator(t *testing.T) {
 				nsfwLabelledPost,
 				pinnedPost,
 				aiArtPost,
+				videoPost,
+				nsfwVideoPost,
 			},
 		},
 		{
@@ -200,6 +224,29 @@ func TestChronologicalGenerator(t *testing.T) {
 			},
 			expectedPosts: []string{pinnedPost},
 		},
+		{
+			name: "all videos",
+			opts: chronologicalGeneratorOpts{
+				generatorOpts: generatorOpts{
+					Hashtags: []string{},
+					HasVideo: tristate.True,
+					HasMedia: tristate.False,
+				},
+			},
+			expectedPosts: []string{videoPost, nsfwVideoPost},
+		},
+		{
+			name: "tagged videos nsfw",
+			opts: chronologicalGeneratorOpts{
+				generatorOpts: generatorOpts{
+					Hashtags: []string{"art", "furryart"},
+					IsNSFW:   tristate.True,
+					HasVideo: tristate.True,
+					HasMedia: tristate.False,
+				},
+			},
+			expectedPosts: []string{nsfwVideoPost},
+		},
 	} {
 		test := test
 
@@ -243,6 +290,8 @@ func TestPreScoredGenerator(t *testing.T) {
 	nsfwLabelledPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "nsfw-labelled")
 	aiArtPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "ai")
 	pinnedPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "pinned-post")
+	videoPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "video")
+	nsfwVideoPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "nsfw-video")
 
 	for _, opts := range []store.CreatePostOpts{
 		{
@@ -252,6 +301,15 @@ func TestPreScoredGenerator(t *testing.T) {
 			IndexedAt: time.Time{},
 			Hashtags:  []string{"fursuit"},
 			HasMedia:  true,
+			Raw:       &bsky.FeedPost{},
+		},
+		{
+			URI:       videoPost,
+			ActorDID:  furry.DID(),
+			CreatedAt: time.Time{},
+			IndexedAt: time.Time{},
+			Hashtags:  []string{"furryart"},
+			HasVideo:  true,
 			Raw:       &bsky.FeedPost{},
 		},
 		{
@@ -301,6 +359,16 @@ func TestPreScoredGenerator(t *testing.T) {
 			SelfLabels: []string{"sexual"},
 		},
 		{
+			URI:        nsfwVideoPost,
+			ActorDID:   furry.DID(),
+			CreatedAt:  time.Time{},
+			IndexedAt:  time.Time{},
+			Hashtags:   []string{"art"},
+			HasVideo:   true,
+			Raw:        &bsky.FeedPost{},
+			SelfLabels: []string{"sexual"},
+		},
+		{
 			URI:       aiArtPost,
 			ActorDID:  furry.DID(),
 			CreatedAt: time.Time{},
@@ -338,6 +406,7 @@ func TestPreScoredGenerator(t *testing.T) {
 					Hashtags: []string{},
 					IsNSFW:   tristate.Maybe,
 					HasMedia: tristate.Maybe,
+					HasVideo: tristate.Maybe,
 				},
 			},
 			expectedPosts: []string{
@@ -349,6 +418,8 @@ func TestPreScoredGenerator(t *testing.T) {
 				nsfwLabelledPost,
 				aiArtPost,
 				pinnedPost,
+				videoPost,
+				nsfwVideoPost,
 			},
 		},
 		{
@@ -398,6 +469,31 @@ func TestPreScoredGenerator(t *testing.T) {
 				},
 			},
 			expectedPosts: []string{nsfwArtPost, nsfwLabelledPost},
+		},
+		{
+			name: "all videos",
+			opts: preScoredGeneratorOpts{
+				Alg: "classic",
+				generatorOpts: generatorOpts{
+					Hashtags: []string{},
+					HasVideo: tristate.True,
+					HasMedia: tristate.False,
+				},
+			},
+			expectedPosts: []string{videoPost, nsfwVideoPost},
+		},
+		{
+			name: "tagged videos nsfw",
+			opts: preScoredGeneratorOpts{
+				Alg: "classic",
+				generatorOpts: generatorOpts{
+					Hashtags: []string{"art", "furryart"},
+					IsNSFW:   tristate.True,
+					HasVideo: tristate.True,
+					HasMedia: tristate.False,
+				},
+			},
+			expectedPosts: []string{nsfwVideoPost},
 		},
 	} {
 		test := test

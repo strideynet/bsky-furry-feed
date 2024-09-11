@@ -565,6 +565,7 @@ type ListPostsForNewFeedOpts struct {
 	DisallowedHashtags []string
 	IsNSFW             tristate.Tristate
 	HasMedia           tristate.Tristate
+	HasVideo           tristate.Tristate
 	PinnedDIDs         []string
 	Limit              int
 }
@@ -592,6 +593,7 @@ func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNew
 		Hashtags:           opts.Hashtags,
 		DisallowedHashtags: opts.DisallowedHashtags,
 		HasMedia:           tristateToPgtypeBool(opts.HasMedia),
+		HasVideo:           tristateToPgtypeBool(opts.HasVideo),
 		IsNSFW:             tristateToPgtypeBool(opts.IsNSFW),
 		PinnedDIDs:         opts.PinnedDIDs,
 	}
@@ -632,6 +634,7 @@ type ListPostsForHotFeedOpts struct {
 	DisallowedHashtags []string
 	IsNSFW             tristate.Tristate
 	HasMedia           tristate.Tristate
+	HasVideo           tristate.Tristate
 	Limit              int
 }
 
@@ -647,6 +650,7 @@ func (s *PGXStore) ListScoredPosts(ctx context.Context, opts ListPostsForHotFeed
 		Hashtags:           opts.Hashtags,
 		DisallowedHashtags: opts.DisallowedHashtags,
 		HasMedia:           tristateToPgtypeBool(opts.HasMedia),
+		HasVideo:           tristateToPgtypeBool(opts.HasVideo),
 		IsNSFW:             tristateToPgtypeBool(opts.IsNSFW),
 		GenerationSeq:      opts.Cursor.GenerationSeq,
 		AfterScore:         opts.Cursor.AfterScore,
