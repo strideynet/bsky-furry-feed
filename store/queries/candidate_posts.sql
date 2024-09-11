@@ -74,6 +74,7 @@ WHERE
     )
     -- Remove posts newer than the cursor timestamp
     AND (cp.indexed_at < sqlc.arg(cursor_timestamp))
+    AND cp.indexed_at > NOW() - INTERVAL '7 day'
 ORDER BY
     cp.indexed_at DESC
 LIMIT sqlc.arg(_limit);
@@ -136,6 +137,7 @@ WHERE
         ROW(ph.score, ph.uri)
         < ROW((sqlc.arg(after_score))::REAL, (sqlc.arg(after_uri))::TEXT)
     )
+    AND cp.indexed_at > NOW() - INTERVAL '7 day'
 ORDER BY
     ph.score DESC, ph.uri DESC
 LIMIT sqlc.arg(_limit);

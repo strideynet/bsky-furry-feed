@@ -45,12 +45,21 @@ func TestGenerator(t *testing.T) {
 	nsfwVideoPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "nsfw-video")
 	nsfwArtVideoPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "nsfw-art-video")
 	artVideoPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "art-video")
+	oldPost := indigoTest.RandFakeAtUri("app.bsky.feed.post", "old-post")
+
+	now := time.Now()
 
 	for _, opts := range []store.CreatePostOpts{
 		{
 			URI:      fursuitPost,
 			Hashtags: []string{"fursuit"},
 			HasMedia: true,
+		},
+		{
+			URI:       oldPost,
+			ActorDID:  furry.DID(),
+			IndexedAt: now.Add(-time.Hour * 24 * 8),
+			HasMedia:  true,
 		},
 		{
 			URI:      murrsuitPost,
@@ -117,6 +126,9 @@ func TestGenerator(t *testing.T) {
 		}
 		if opts.Hashtags == nil {
 			opts.Hashtags = []string{}
+		}
+		if opts.IndexedAt.IsZero() {
+			opts.IndexedAt = now
 		}
 		require.NoError(t, harness.Store.CreatePost(ctx, opts))
 	}
