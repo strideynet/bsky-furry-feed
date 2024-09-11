@@ -525,7 +525,7 @@ func TestPreScoredGenerator(t *testing.T) {
 			expectedPosts: []string{videoPost, nsfwVideoPost, artVideoPost, nsfwArtVideoPost},
 		},
 		{
-			name: "tagged videos nsfw",
+			name: "nsfw videos",
 			opts: preScoredGeneratorOpts{
 				Alg: "classic",
 				generatorOpts: generatorOpts{
