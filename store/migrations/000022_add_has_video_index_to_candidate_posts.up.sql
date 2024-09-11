@@ -1,0 +1,1 @@
+create index candidate_posts_is_video_idx on public.candidate_posts (is_video);
