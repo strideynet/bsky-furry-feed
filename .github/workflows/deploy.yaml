@@ -69,3 +69,21 @@ jobs:
           manifests: |
             infra/k8s
           images: 'ghcr.io/strideynet/bsky-furry-feed/bffsrv:${{ github.ref_name }}'
+  deploy-feeds:
+    needs: [deploy-kubernetes]
+    name: Deploy Feeds
+    environment: production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.23"
+          cache: false
+      - name: Deploy feeds
+        env:
+          BFF_HOSTNAME: feed.furryli.st
+          BLUESKY_USERNAME: furryli.st
+          BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
+        run: go run ./cmd/bffctl/ -e production bsky publish-feeds

@@ -42,3 +42,8 @@ $ migrate -path store/migrations -database "postgres://noah@noahstride.co.uk@loc
 6. Apply manifests
 7. Monitor deployment
 8. Celebrate
+9. Reregister feed entries
+
+```sh
+$
+```
