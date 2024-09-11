@@ -1,1 +1,1 @@
-drop index candidate_posts_is_video_idx;
+DROP INDEX candidate_posts_is_video_idx;

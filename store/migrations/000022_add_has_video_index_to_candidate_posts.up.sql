@@ -1,1 +1,1 @@
-create index candidate_posts_is_video_idx on public.candidate_posts (has_video);
+CREATE INDEX candidate_posts_is_video_idx ON public.candidate_posts (has_video);
