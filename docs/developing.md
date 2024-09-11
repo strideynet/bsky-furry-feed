@@ -43,14 +43,6 @@ $ migrate -path store/migrations -database "postgres://bff:bff@localhost:5432/bf
 ...
 ```
 
-For migrating the production database with `cloud-sql-proxy`, you (i.e.
-probably Noah) run the following command:
-
-```sh
-$ migrate -path store/migrations -database "postgres://noah@noahstride.co.uk@localhost:15432/bff?sslmode=disable" up
-...
-```
-
 [clone]: https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository
 [docker]: https://docs.docker.com/engine/install/#server
 [docker-compose]: https://docs.docker.com/compose/

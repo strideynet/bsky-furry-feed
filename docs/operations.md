@@ -32,6 +32,11 @@ access to tables to cloudsqliamserviceaccount and cloudsqliamuser.
 1. Cut release on GitHub with tag
 2. Wait for docker image build to succeed
 3. If migration is necessary. If so, run it
+
+```sh
+$ migrate -path store/migrations -database "postgres://noah@noahstride.co.uk@localhost:15432/bff?sslmode=disable" up
+```
+
 4. If migration created tables, assign permissions to the correct groups
 5. Update k8s manifests
 6. Apply manifests
