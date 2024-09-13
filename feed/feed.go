@@ -568,6 +568,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		generatorOpts: generatorOpts{
 			DisallowedHashtags: defaultDisallowedHashtags,
 			HasVideo:           tristate.True,
+			HasMedia:           tristate.False,
 			IsNSFW:             tristate.True,
 		},
 	}))
@@ -579,6 +580,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		generatorOpts: generatorOpts{
 			DisallowedHashtags: defaultDisallowedHashtags,
 			HasVideo:           tristate.True,
+			HasMedia:           tristate.False,
 			IsNSFW:             tristate.True,
 		},
 	}))

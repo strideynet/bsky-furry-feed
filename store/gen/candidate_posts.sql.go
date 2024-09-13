@@ -82,15 +82,17 @@ WHERE
                 COALESCE($2::TEXT [], '{}') = '{}'
                 OR NOT $2::TEXT [] && cp.hashtags
             )
-            -- Match has_media status. If unspecified, do not filter.
             AND (
-                $3::BOOLEAN IS NULL
-                OR COALESCE(cp.has_media, FALSE) = $3
-            )
-            -- Match has_video status. If unspecified, do not filter.
-            AND (
-                $4::BOOLEAN IS NULL
-                OR COALESCE(cp.has_video, FALSE) = $4
+                -- Match has_media status. If unspecified, do not filter.
+                (
+                    $3::BOOLEAN IS NULL
+                    OR COALESCE(cp.has_media, FALSE) = $3
+                )
+                -- Match has_video status. If unspecified, do not filter.
+                OR (
+                    $4::BOOLEAN IS NULL
+                    OR COALESCE(cp.has_video, FALSE) = $4
+                )
             )
             -- Filter by NSFW status. If unspecified, do not filter.
             AND (
@@ -216,15 +218,17 @@ WHERE
         COALESCE($4::TEXT [], '{}') = '{}'
         OR NOT $4::TEXT [] && cp.hashtags
     )
-    -- Match has_media status. If unspecified, do not filter.
     AND (
-        $5::BOOLEAN IS NULL
-        OR COALESCE(cp.has_media, FALSE) = $5
-    )
-    -- Match has_video status. If unspecified, do not filter.
-    AND (
-        $6::BOOLEAN IS NULL
-        OR COALESCE(cp.has_video, FALSE) = $6
+        -- Match has_media status. If unspecified, do not filter.
+        (
+            $5::BOOLEAN IS NULL
+            OR COALESCE(cp.has_media, FALSE) = $5
+        )
+        -- Match has_video status. If unspecified, do not filter.
+        OR (
+            $6::BOOLEAN IS NULL
+            OR COALESCE(cp.has_video, FALSE) = $6
+        )
     )
     -- Filter by NSFW status. If unspecified, do not filter.
     AND (

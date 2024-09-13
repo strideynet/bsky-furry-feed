@@ -224,7 +224,7 @@ func TestChronologicalGenerator(t *testing.T) {
 					HasMedia:           tristate.True,
 				},
 			},
-			expectedPosts: []string{artPost, nsfwArtPost, nsfwLabelledPost},
+			expectedPosts: []string{artPost, nsfwArtPost, nsfwLabelledPost, artVideoPost, nsfwArtVideoPost},
 		},
 		{
 			name: "nsfw only art",
@@ -235,7 +235,7 @@ func TestChronologicalGenerator(t *testing.T) {
 					HasMedia: tristate.True,
 				},
 			},
-			expectedPosts: []string{nsfwArtPost, nsfwLabelledPost},
+			expectedPosts: []string{nsfwArtPost, nsfwLabelledPost, nsfwArtVideoPost},
 		},
 		{
 			name: "pinned post",
@@ -253,6 +253,7 @@ func TestChronologicalGenerator(t *testing.T) {
 				generatorOpts: generatorOpts{
 					Hashtags: []string{},
 					HasVideo: tristate.True,
+					HasMedia: tristate.False,
 				},
 			},
 			expectedPosts: []string{videoPost, nsfwVideoPost, artVideoPost, nsfwArtVideoPost},
@@ -263,6 +264,7 @@ func TestChronologicalGenerator(t *testing.T) {
 				generatorOpts: generatorOpts{
 					IsNSFW:   tristate.True,
 					HasVideo: tristate.True,
+					HasMedia: tristate.False,
 				},
 			},
 			expectedPosts: []string{nsfwVideoPost, nsfwArtVideoPost},
@@ -499,7 +501,7 @@ func TestPreScoredGenerator(t *testing.T) {
 					HasMedia:           tristate.True,
 				},
 			},
-			expectedPosts: []string{artPost, nsfwArtPost, nsfwLabelledPost},
+			expectedPosts: []string{artPost, nsfwArtPost, nsfwLabelledPost, artVideoPost, nsfwArtVideoPost},
 		},
 		{
 			name: "nsfw only art",
@@ -511,7 +513,7 @@ func TestPreScoredGenerator(t *testing.T) {
 					HasMedia: tristate.True,
 				},
 			},
-			expectedPosts: []string{nsfwArtPost, nsfwLabelledPost},
+			expectedPosts: []string{nsfwArtPost, nsfwLabelledPost, nsfwArtVideoPost},
 		},
 		{
 			name: "all videos",
@@ -520,6 +522,7 @@ func TestPreScoredGenerator(t *testing.T) {
 				generatorOpts: generatorOpts{
 					Hashtags: []string{},
 					HasVideo: tristate.True,
+					HasMedia: tristate.False,
 				},
 			},
 			expectedPosts: []string{videoPost, nsfwVideoPost, artVideoPost, nsfwArtVideoPost},
@@ -532,6 +535,7 @@ func TestPreScoredGenerator(t *testing.T) {
 					Hashtags: []string{},
 					IsNSFW:   tristate.True,
 					HasVideo: tristate.True,
+					HasMedia: tristate.False,
 				},
 			},
 			expectedPosts: []string{nsfwVideoPost, nsfwArtVideoPost},
