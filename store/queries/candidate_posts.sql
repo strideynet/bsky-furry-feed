@@ -48,15 +48,17 @@ WHERE
                 COALESCE(sqlc.narg(disallowed_hashtags)::TEXT [], '{}') = '{}'
                 OR NOT sqlc.narg(disallowed_hashtags)::TEXT [] && cp.hashtags
             )
-            -- Match has_media status. If unspecified, do not filter.
             AND (
-                sqlc.narg(has_media)::BOOLEAN IS NULL
-                OR COALESCE(cp.has_media, FALSE) = sqlc.narg(has_media)
-            )
-            -- Match has_video status. If unspecified, do not filter.
-            AND (
-                sqlc.narg(has_video)::BOOLEAN IS NULL
-                OR COALESCE(cp.has_video, FALSE) = sqlc.narg(has_video)
+                -- Match has_media status. If unspecified, do not filter.
+                (
+                    sqlc.narg(has_media)::BOOLEAN IS NULL
+                    OR COALESCE(cp.has_media, FALSE) = sqlc.narg(has_media)
+                )
+                -- Match has_video status. If unspecified, do not filter.
+                OR (
+                    sqlc.narg(has_video)::BOOLEAN IS NULL
+                    OR COALESCE(cp.has_video, FALSE) = sqlc.narg(has_video)
+                )
             )
             -- Filter by NSFW status. If unspecified, do not filter.
             AND (
@@ -109,15 +111,17 @@ WHERE
         COALESCE(sqlc.narg(disallowed_hashtags)::TEXT [], '{}') = '{}'
         OR NOT sqlc.narg(disallowed_hashtags)::TEXT [] && cp.hashtags
     )
-    -- Match has_media status. If unspecified, do not filter.
     AND (
-        sqlc.narg(has_media)::BOOLEAN IS NULL
-        OR COALESCE(cp.has_media, FALSE) = sqlc.narg(has_media)
-    )
-    -- Match has_video status. If unspecified, do not filter.
-    AND (
-        sqlc.narg(has_video)::BOOLEAN IS NULL
-        OR COALESCE(cp.has_video, FALSE) = sqlc.narg(has_video)
+        -- Match has_media status. If unspecified, do not filter.
+        (
+            sqlc.narg(has_media)::BOOLEAN IS NULL
+            OR COALESCE(cp.has_media, FALSE) = sqlc.narg(has_media)
+        )
+        -- Match has_video status. If unspecified, do not filter.
+        OR (
+            sqlc.narg(has_video)::BOOLEAN IS NULL
+            OR COALESCE(cp.has_video, FALSE) = sqlc.narg(has_video)
+        )
     )
     -- Filter by NSFW status. If unspecified, do not filter.
     AND (
