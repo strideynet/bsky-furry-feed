@@ -52,7 +52,7 @@ jobs:
           go-version: "1.23"
           cache: false
       - name: Install sqlc
-        run: go install github.com/kyleconroy/sqlc/cmd/sqlc@v1.19.0
+        run: go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.27.0
       - run: sqlc generate
       - name: Check that sqlc queries are up-to-date
         run: git diff --exit-code
