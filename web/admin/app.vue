@@ -26,7 +26,7 @@ async function login() {
   error.value = null;
 
   const isSignedIn = await auth
-    .login(identifier.value, password.value)
+    .login(identifier.value?.replace(/^@/, ""), password.value)
     .catch((error) => ({ error }));
 
   if (isSignedIn.error) {
