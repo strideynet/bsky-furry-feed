@@ -1,7 +1,8 @@
 import { ProfileViewDetailed } from "@atproto/api/dist/client/types/app/bsky/actor/defs";
 
 type ProfileViewMinimal = Pick<ProfileViewDetailed, "displayName"> &
-  Pick<ProfileViewDetailed, "description">;
+  Pick<ProfileViewDetailed, "description"> &
+  Pick<ProfileViewDetailed, "handle">;
 
 export function isProbablyFurry(profile?: ProfileViewMinimal): boolean {
   if (!profile) {
@@ -25,16 +26,17 @@ export function isProbablyFurry(profile?: ProfileViewMinimal): boolean {
     "furries",
     therian,
     "therian",
-    /\bpup\b/,
-    /\bfur\b/,
+    /\b[bp]up(py)?\b/,
+    /\bfurs?\b/,
     "anthro",
     "canine",
+    "feline",
     /bu?n+u*y/, // too good to not use
     "kemono",
     "furaffinity",
     "derg",
     /scal(y|ie)/,
-    /gay (fur|dog|cat|wolf)/,
+    /gay (fur|dog|cat|wolf|fox)/,
     /(f|m)urr?suit/,
     /gr(e|a)ymuzzle/,
     /\b(co)?yote\b/,
@@ -49,9 +51,27 @@ export function isProbablyFurry(profile?: ProfileViewMinimal): boolean {
     "cat",
     "wolf",
     "dragon",
+    /\bsnep\b/,
+    "critter",
+    "jackalope",
+    "tiger",
+    "otter",
+    "kobold",
+    "lion",
+    "squirrel",
+    /\bpaws?\b/,
+    /\bbirb\b/,
+    /\b(fur)?sona\b/,
+    "cartoon animal",
   ];
 
-  const description = profile.description.toLowerCase();
+  const description = [
+    profile.displayName || "",
+    profile.handle,
+    profile.description,
+  ]
+    .map((s) => s.toLowerCase())
+    .join(" ");
 
   for (const term of terms) {
     if (
