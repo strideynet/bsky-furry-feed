@@ -11,7 +11,7 @@ const heldBack = ref<Actor[]>([]);
 
 const actorProfiles = ref<ProfileViewDetailed[]>([]);
 const randomActor = ref<Actor>();
-const currentQueue = ref<keyof (typeof queues)["value"]>("All");
+const currentQueue = ref<keyof typeof queues["value"]>("All");
 
 const error = ref<string>();
 
@@ -26,7 +26,7 @@ const queues = computed(() => ({
     const profile = didToProfile(actor.did);
     if (!profile) return false;
 
-    return !profile.avatar && !profile.description;
+    return !profile.displayName && !profile.description && !profile.postsCount;
   }),
   "Held back": heldBack.value,
 }));
