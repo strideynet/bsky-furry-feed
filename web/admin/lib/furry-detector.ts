@@ -63,6 +63,7 @@ export function isProbablyFurry(profile?: ProfileViewMinimal): boolean {
     /\bbirb\b/,
     /\b(fur)?sona\b/,
     "cartoon animal",
+    "lynx",
   ];
 
   const description = [
