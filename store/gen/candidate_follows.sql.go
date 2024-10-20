@@ -40,16 +40,19 @@ func (q *Queries) CreateCandidateFollow(ctx context.Context, arg CreateCandidate
 	return err
 }
 
-const softDeleteCandidateFollow = `-- name: SoftDeleteCandidateFollow :exec
+const softDeleteCandidateFollow = `-- name: SoftDeleteCandidateFollow :one
 UPDATE
 candidate_follows
 SET
     deleted_at = NOW()
 WHERE
     uri = $1
+RETURNING subject_did
 `
 
-func (q *Queries) SoftDeleteCandidateFollow(ctx context.Context, uri string) error {
-	_, err := q.db.Exec(ctx, softDeleteCandidateFollow, uri)
-	return err
+func (q *Queries) SoftDeleteCandidateFollow(ctx context.Context, uri string) (string, error) {
+	row := q.db.QueryRow(ctx, softDeleteCandidateFollow, uri)
+	var subject_did string
+	err := row.Scan(&subject_did)
+	return subject_did, err
 }

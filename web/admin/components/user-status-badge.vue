@@ -16,6 +16,8 @@ const background = computed(() =>
         [ActorStatus.APPROVED]: "bg-green-700 text-white",
         [ActorStatus.BANNED]: "bg-red-700 text-white",
         [ActorStatus.NONE]: "bg-zinc-700 text-white",
+        [ActorStatus.REJECTED]: "bg-amber-700 text-white",
+        [ActorStatus.OPTED_OUT]: "bg-zinc-700 text-white",
       }[props.status]
 );
 </script>

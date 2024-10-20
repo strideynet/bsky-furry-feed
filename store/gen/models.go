@@ -19,6 +19,8 @@ const (
 	ActorStatusPending  ActorStatus = "pending"
 	ActorStatusApproved ActorStatus = "approved"
 	ActorStatusBanned   ActorStatus = "banned"
+	ActorStatusOptedOut ActorStatus = "opted_out"
+	ActorStatusRejected ActorStatus = "rejected"
 )
 
 func (e *ActorStatus) Scan(src interface{}) error {

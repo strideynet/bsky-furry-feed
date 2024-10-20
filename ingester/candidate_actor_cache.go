@@ -3,9 +3,10 @@ package ingester
 import (
 	"context"
 	"fmt"
-	"github.com/jonboulle/clockwork"
 	"sync"
 	"time"
+
+	"github.com/jonboulle/clockwork"
 
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store"
@@ -126,5 +127,46 @@ func (crc *ActorCache) CreatePendingCandidateActor(ctx context.Context, did stri
 	crc.mu.Lock()
 	defer crc.mu.Unlock()
 	crc.cached[ca.Did] = ca
+	return nil
+}
+
+func (crc *ActorCache) OptInOrMarkPending(ctx context.Context, did string) (err error) {
+	ctx, span := tracer.Start(ctx, "actor_cache.opt_in")
+	defer func() {
+		endSpan(span, err)
+	}()
+
+	status, err := crc.store.OptInOrMarkActorPending(ctx, did)
+	if err != nil {
+		return fmt.Errorf("opting in actor: %w", err)
+	}
+
+	crc.mu.Lock()
+	defer crc.mu.Unlock()
+	ca := crc.cached[did]
+	if ca != nil {
+		ca.Status = status
+	}
+
+	return nil
+}
+
+func (crc *ActorCache) OptOutOrForget(ctx context.Context, did string) (err error) {
+	ctx, span := tracer.Start(ctx, "actor_cache.opt_out")
+	defer func() {
+		endSpan(span, err)
+	}()
+
+	status, err := crc.store.OptOutOrForgetActor(ctx, did)
+	if err != nil {
+		return fmt.Errorf("opting out actor: %w", err)
+	}
+
+	crc.mu.Lock()
+	defer crc.mu.Unlock()
+	if status == v1.ActorStatus_ACTOR_STATUS_NONE {
+		delete(crc.cached, did)
+	}
+
 	return nil
 }
