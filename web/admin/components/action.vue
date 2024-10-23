@@ -9,6 +9,7 @@ import {
   ProcessApprovalQueueAuditPayload,
   UnapproveActorAuditPayload,
   HoldBackPendingActorAuditPayload,
+  AssignRolesAuditPayload,
 } from "../../proto/bff/v1/moderation_service_pb";
 
 const props = defineProps<{
@@ -36,6 +37,8 @@ const payload = computed(() => {
       return ForceApproveActorAuditPayload.fromBinary(value);
     case "bff.v1.HoldBackPendingActorAuditPayload":
       return HoldBackPendingActorAuditPayload.fromBinary(value);
+    case "bff.v1.AssignRolesAuditPayload":
+      return AssignRolesAuditPayload.fromBinary(value);
     default:
       console.warn(`Missing payload decoding: ${typeUrl}`);
   }
@@ -60,6 +63,8 @@ const type = computed(() => {
     return "force_approve";
   } else if (data instanceof HoldBackPendingActorAuditPayload) {
     return "hold_back";
+  } else if (data instanceof AssignRolesAuditPayload) {
+    return "assign_roles";
   }
 });
 
@@ -83,6 +88,10 @@ const actionText = computed(() => {
       return props.lookupUser ? "force-approved" : "force-approved this user.";
     case "hold_back":
       return props.lookupUser ? "held back" : "held back this user.";
+    case "assign_roles":
+      return props.lookupUser
+        ? "assigned roles"
+        : "assigned roles to this user.";
   }
 });
 
@@ -91,6 +100,14 @@ const comment = computed(() => {
 
   if (data instanceof CommentAuditPayload) {
     return data.comment;
+  } else if (data instanceof AssignRolesAuditPayload) {
+    const mapRoles = (roles: string[]) =>
+      roles.map((r) => r.replace(/^./, (r) => r.toUpperCase())).join(", ") ||
+      "<span class='text-muted'>None</span>";
+
+    return `**Before**: ${mapRoles(data.rolesBefore)}\n\n**After**: ${mapRoles(
+      data.rolesAfter
+    )}`;
   } else if (
     data instanceof UnapproveActorAuditPayload ||
     data instanceof BanActorAuditPayload ||
@@ -127,6 +144,10 @@ const comment = computed(() => {
       />
       <icon-clock
         v-else-if="type === 'hold_back'"
+        class="text-gray-600 dark:text-gray-200"
+      />
+      <icon-key
+        v-else-if="type === 'assign_roles'"
         class="text-gray-600 dark:text-gray-200"
       />
     </div>

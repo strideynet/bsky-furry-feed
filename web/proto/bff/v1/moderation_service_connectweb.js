@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { BanActorRequest, BanActorResponse, CreateActorRequest, CreateActorResponse, CreateCommentAuditEventRequest, CreateCommentAuditEventResponse, ForceApproveActorRequest, ForceApproveActorResponse, GetActorRequest, GetActorResponse, HoldBackPendingActorRequest, HoldBackPendingActorResponse, ListActorsRequest, ListActorsResponse, ListAuditEventsRequest, ListAuditEventsResponse, ListRolesRequest, ListRolesResponse, PingRequest, PingResponse, ProcessApprovalQueueRequest, ProcessApprovalQueueResponse, UnapproveActorRequest, UnapproveActorResponse } from "./moderation_service_pb.js";
+import { AssignRolesRequest, AssignRolesResponse, BanActorRequest, BanActorResponse, CreateActorRequest, CreateActorResponse, CreateCommentAuditEventRequest, CreateCommentAuditEventResponse, ForceApproveActorRequest, ForceApproveActorResponse, GetActorRequest, GetActorResponse, HoldBackPendingActorRequest, HoldBackPendingActorResponse, ListActorsRequest, ListActorsResponse, ListAuditEventsRequest, ListAuditEventsResponse, ListRolesRequest, ListRolesResponse, PingRequest, PingResponse, ProcessApprovalQueueRequest, ProcessApprovalQueueResponse, UnapproveActorRequest, UnapproveActorResponse } from "./moderation_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -141,6 +141,15 @@ export const ModerationService = {
       name: "ListRoles",
       I: ListRolesRequest,
       O: ListRolesResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc bff.v1.ModerationService.AssignRoles
+     */
+    assignRoles: {
+      name: "AssignRoles",
+      I: AssignRolesRequest,
+      O: AssignRolesResponse,
       kind: MethodKind.Unary,
     },
   }

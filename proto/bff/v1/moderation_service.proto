@@ -39,6 +39,7 @@ service ModerationService {
   rpc ListAuditEvents(ListAuditEventsRequest) returns (ListAuditEventsResponse) {}
   rpc CreateCommentAuditEvent(CreateCommentAuditEventRequest) returns (CreateCommentAuditEventResponse) {}
   rpc ListRoles(ListRolesRequest) returns (ListRolesResponse) {}
+  rpc AssignRoles(AssignRolesRequest) returns (AssignRolesResponse) {}
 }
 
 message Post {
@@ -194,4 +195,15 @@ message ListRolesResponse {
 
 message Role {
   repeated string permissions = 1;
+}
+
+message AssignRolesRequest {
+  string actor_did = 1;
+  repeated string roles = 2;
+}
+message AssignRolesResponse {
+}
+message AssignRolesAuditPayload {
+  repeated string roles_before = 1;
+  repeated string roles_after = 2;
 }

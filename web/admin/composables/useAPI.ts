@@ -4,6 +4,7 @@ import { ModerationService } from "../../proto/bff/v1/moderation_service_connect
 import { UserService } from "../../proto/bff/v1/user_service_connectweb";
 import { createRegistry } from "@bufbuild/protobuf";
 import {
+  AssignRolesAuditPayload,
   BanActorAuditPayload,
   CommentAuditPayload,
   CreateActorAuditPayload,
@@ -36,7 +37,8 @@ export async function useAPITransport(): Promise<Transport> {
         ProcessApprovalQueueAuditPayload,
         UnapproveActorAuditPayload,
         ForceApproveActorAuditPayload,
-        HoldBackPendingActorAuditPayload
+        HoldBackPendingActorAuditPayload,
+        AssignRolesAuditPayload
       ),
     },
   });

@@ -380,3 +380,33 @@ export const Role = proto3.makeMessageType(
   ],
 );
 
+/**
+ * @generated from message bff.v1.AssignRolesRequest
+ */
+export const AssignRolesRequest = proto3.makeMessageType(
+  "bff.v1.AssignRolesRequest",
+  () => [
+    { no: 1, name: "actor_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "roles", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ],
+);
+
+/**
+ * @generated from message bff.v1.AssignRolesResponse
+ */
+export const AssignRolesResponse = proto3.makeMessageType(
+  "bff.v1.AssignRolesResponse",
+  [],
+);
+
+/**
+ * @generated from message bff.v1.AssignRolesAuditPayload
+ */
+export const AssignRolesAuditPayload = proto3.makeMessageType(
+  "bff.v1.AssignRolesAuditPayload",
+  () => [
+    { no: 1, name: "roles_before", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 2, name: "roles_after", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ],
+);
+

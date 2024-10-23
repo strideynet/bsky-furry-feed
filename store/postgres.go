@@ -277,6 +277,7 @@ type UpdateActorOpts struct {
 	UpdateStatus   v1.ActorStatus
 	UpdateIsArtist bool
 	UpdateComment  string
+	UpdateRoles    []string
 }
 
 func (s *PGXStore) UpdateActor(ctx context.Context, opts UpdateActorOpts) (out *v1.Actor, err error) {
@@ -303,6 +304,7 @@ func (s *PGXStore) UpdateActor(ctx context.Context, opts UpdateActorOpts) (out *
 			Valid:  true,
 			String: opts.UpdateComment,
 		},
+		Roles: opts.UpdateRoles,
 	}
 	created, err := s.queries.UpdateCandidateActor(ctx, queryParams)
 	if err != nil {

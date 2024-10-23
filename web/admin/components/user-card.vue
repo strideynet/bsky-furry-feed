@@ -14,9 +14,11 @@ const props = defineProps<{
 }>();
 const $emit = defineEmits(["next"]);
 
+const currentActor = await useActor();
 const api = await useAPI();
 const showAvatarModal = ref(false);
 const loading = ref(false);
+const showRolesModal = ref(false);
 const actor = ref<Actor>();
 const data = ref<ProfileViewDetailed>();
 const loadProfile = async () => {
@@ -41,6 +43,13 @@ async function next() {
   }
   loading.value = false;
   $emit("next");
+}
+
+async function handleRoleUpdate() {
+  showRolesModal.value = false;
+  loading.value = true;
+  await loadProfile();
+  loading.value = false;
 }
 
 watch(
@@ -121,14 +130,35 @@ await loadProfile();
             </div>
           </div>
         </shared-card>
-        <shared-card v-if="actor?.roles" class="flex items-center gap-1 hidden">
+        <shared-card
+          v-if="actor?.roles.length || (actor && currentActor.isAdmin)"
+          class="flex items-center gap-1"
+        >
           <icon-key class="text-muted" />
-          {{ actor.roles.join(", ") }}
+          <span
+            v-for="role in actor.roles"
+            :key="role"
+            class="text-sm capitalize bg-gray-600 rounded-lg px-1 py-0.5 text-white"
+          >
+            {{ role }}
+          </span>
+          <span v-if="actor.roles.length === 0" class="text-muted"
+            >No roles assigned.</span
+          >
           <button
+            v-if="currentActor.isAdmin"
             class="ml-auto text-sm rounded-lg py-0.5 px-1.5 border border-gray-300 dark:border-gray-700 hover:bg-zinc-700"
+            :disabled="loading"
+            @click="showRolesModal = true"
           >
             Edit
           </button>
+          <user-role-edit-modal
+            v-if="showRolesModal"
+            :actor="actor"
+            @cancel="showRolesModal = false"
+            @update="handleRoleUpdate"
+          />
         </shared-card>
         <shared-card class="meta">
           <div class="meta-item">
