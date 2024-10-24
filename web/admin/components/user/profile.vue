@@ -49,20 +49,20 @@ await refresh();
 
 <template>
   <div>
+    <user-card
+      class="mb-5"
+      :did="subject?.did || props.did"
+      :pending="pending"
+      :variant="variant"
+      @next="handleNext"
+    />
     <shared-card v-if="error" variant="error">{{ error }}</shared-card>
-    <div v-else>
-      <user-card
-        class="mb-5"
-        :did="subject?.did || props.did"
-        :pending="pending"
-        :variant="variant"
-        @next="handleNext"
-      />
-      <user-audit-log
-        ref="auditLog"
-        :subject="subject"
-        :did="subject?.did || props.did"
-      />
-    </div>
+    <user-audit-log
+      v-else
+      ref="auditLog"
+      :subject="subject"
+      :did="subject?.did || props.did"
+      @error="error = $event"
+    />
   </div>
 </template>
