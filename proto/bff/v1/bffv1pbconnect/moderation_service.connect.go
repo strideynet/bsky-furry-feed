@@ -68,6 +68,9 @@ const (
 	// ModerationServiceListRolesProcedure is the fully-qualified name of the ModerationService's
 	// ListRoles RPC.
 	ModerationServiceListRolesProcedure = "/bff.v1.ModerationService/ListRoles"
+	// ModerationServiceAssignRolesProcedure is the fully-qualified name of the ModerationService's
+	// AssignRoles RPC.
+	ModerationServiceAssignRolesProcedure = "/bff.v1.ModerationService/AssignRoles"
 )
 
 // ModerationServiceClient is a client for the bff.v1.ModerationService service.
@@ -98,6 +101,7 @@ type ModerationServiceClient interface {
 	ListAuditEvents(context.Context, *connect.Request[v1.ListAuditEventsRequest]) (*connect.Response[v1.ListAuditEventsResponse], error)
 	CreateCommentAuditEvent(context.Context, *connect.Request[v1.CreateCommentAuditEventRequest]) (*connect.Response[v1.CreateCommentAuditEventResponse], error)
 	ListRoles(context.Context, *connect.Request[v1.ListRolesRequest]) (*connect.Response[v1.ListRolesResponse], error)
+	AssignRoles(context.Context, *connect.Request[v1.AssignRolesRequest]) (*connect.Response[v1.AssignRolesResponse], error)
 }
 
 // NewModerationServiceClient constructs a client for the bff.v1.ModerationService service. By
@@ -170,6 +174,11 @@ func NewModerationServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			baseURL+ModerationServiceListRolesProcedure,
 			opts...,
 		),
+		assignRoles: connect.NewClient[v1.AssignRolesRequest, v1.AssignRolesResponse](
+			httpClient,
+			baseURL+ModerationServiceAssignRolesProcedure,
+			opts...,
+		),
 	}
 }
 
@@ -187,6 +196,7 @@ type moderationServiceClient struct {
 	listAuditEvents         *connect.Client[v1.ListAuditEventsRequest, v1.ListAuditEventsResponse]
 	createCommentAuditEvent *connect.Client[v1.CreateCommentAuditEventRequest, v1.CreateCommentAuditEventResponse]
 	listRoles               *connect.Client[v1.ListRolesRequest, v1.ListRolesResponse]
+	assignRoles             *connect.Client[v1.AssignRolesRequest, v1.AssignRolesResponse]
 }
 
 // Ping calls bff.v1.ModerationService.Ping.
@@ -249,6 +259,11 @@ func (c *moderationServiceClient) ListRoles(ctx context.Context, req *connect.Re
 	return c.listRoles.CallUnary(ctx, req)
 }
 
+// AssignRoles calls bff.v1.ModerationService.AssignRoles.
+func (c *moderationServiceClient) AssignRoles(ctx context.Context, req *connect.Request[v1.AssignRolesRequest]) (*connect.Response[v1.AssignRolesResponse], error) {
+	return c.assignRoles.CallUnary(ctx, req)
+}
+
 // ModerationServiceHandler is an implementation of the bff.v1.ModerationService service.
 type ModerationServiceHandler interface {
 	// Ping is a test RPC that checks that the user is authenticated and then
@@ -277,6 +292,7 @@ type ModerationServiceHandler interface {
 	ListAuditEvents(context.Context, *connect.Request[v1.ListAuditEventsRequest]) (*connect.Response[v1.ListAuditEventsResponse], error)
 	CreateCommentAuditEvent(context.Context, *connect.Request[v1.CreateCommentAuditEventRequest]) (*connect.Response[v1.CreateCommentAuditEventResponse], error)
 	ListRoles(context.Context, *connect.Request[v1.ListRolesRequest]) (*connect.Response[v1.ListRolesResponse], error)
+	AssignRoles(context.Context, *connect.Request[v1.AssignRolesRequest]) (*connect.Response[v1.AssignRolesResponse], error)
 }
 
 // NewModerationServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -345,6 +361,11 @@ func NewModerationServiceHandler(svc ModerationServiceHandler, opts ...connect.H
 		svc.ListRoles,
 		opts...,
 	)
+	moderationServiceAssignRolesHandler := connect.NewUnaryHandler(
+		ModerationServiceAssignRolesProcedure,
+		svc.AssignRoles,
+		opts...,
+	)
 	return "/bff.v1.ModerationService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ModerationServicePingProcedure:
@@ -371,6 +392,8 @@ func NewModerationServiceHandler(svc ModerationServiceHandler, opts ...connect.H
 			moderationServiceCreateCommentAuditEventHandler.ServeHTTP(w, r)
 		case ModerationServiceListRolesProcedure:
 			moderationServiceListRolesHandler.ServeHTTP(w, r)
+		case ModerationServiceAssignRolesProcedure:
+			moderationServiceAssignRolesHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -426,4 +449,8 @@ func (UnimplementedModerationServiceHandler) CreateCommentAuditEvent(context.Con
 
 func (UnimplementedModerationServiceHandler) ListRoles(context.Context, *connect.Request[v1.ListRolesRequest]) (*connect.Response[v1.ListRolesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("bff.v1.ModerationService.ListRoles is not implemented"))
+}
+
+func (UnimplementedModerationServiceHandler) AssignRoles(context.Context, *connect.Request[v1.AssignRolesRequest]) (*connect.Response[v1.AssignRolesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("bff.v1.ModerationService.AssignRoles is not implemented"))
 }

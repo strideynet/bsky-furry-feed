@@ -970,3 +970,80 @@ export declare class Role extends Message<Role> {
   static equals(a: Role | PlainMessage<Role> | undefined, b: Role | PlainMessage<Role> | undefined): boolean;
 }
 
+/**
+ * @generated from message bff.v1.AssignRolesRequest
+ */
+export declare class AssignRolesRequest extends Message<AssignRolesRequest> {
+  /**
+   * @generated from field: string actor_did = 1;
+   */
+  actorDid: string;
+
+  /**
+   * @generated from field: repeated string roles = 2;
+   */
+  roles: string[];
+
+  constructor(data?: PartialMessage<AssignRolesRequest>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "bff.v1.AssignRolesRequest";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AssignRolesRequest;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AssignRolesRequest;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AssignRolesRequest;
+
+  static equals(a: AssignRolesRequest | PlainMessage<AssignRolesRequest> | undefined, b: AssignRolesRequest | PlainMessage<AssignRolesRequest> | undefined): boolean;
+}
+
+/**
+ * @generated from message bff.v1.AssignRolesResponse
+ */
+export declare class AssignRolesResponse extends Message<AssignRolesResponse> {
+  constructor(data?: PartialMessage<AssignRolesResponse>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "bff.v1.AssignRolesResponse";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AssignRolesResponse;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AssignRolesResponse;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AssignRolesResponse;
+
+  static equals(a: AssignRolesResponse | PlainMessage<AssignRolesResponse> | undefined, b: AssignRolesResponse | PlainMessage<AssignRolesResponse> | undefined): boolean;
+}
+
+/**
+ * @generated from message bff.v1.AssignRolesAuditPayload
+ */
+export declare class AssignRolesAuditPayload extends Message<AssignRolesAuditPayload> {
+  /**
+   * @generated from field: repeated string roles_before = 1;
+   */
+  rolesBefore: string[];
+
+  /**
+   * @generated from field: repeated string roles_after = 2;
+   */
+  rolesAfter: string[];
+
+  constructor(data?: PartialMessage<AssignRolesAuditPayload>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "bff.v1.AssignRolesAuditPayload";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AssignRolesAuditPayload;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AssignRolesAuditPayload;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AssignRolesAuditPayload;
+
+  static equals(a: AssignRolesAuditPayload | PlainMessage<AssignRolesAuditPayload> | undefined, b: AssignRolesAuditPayload | PlainMessage<AssignRolesAuditPayload> | undefined): boolean;
+}
+

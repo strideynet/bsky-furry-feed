@@ -78,6 +78,7 @@ var moderatorPermissions = append([]string{
 var adminPermissions = append([]string{
 	"/bff.v1.ModerationService/BanActor",
 	"/bff.v1.ModerationService/CreateActor",
+	"/bff.v1.ModerationService/AssignRoles",
 }, moderatorPermissions...)
 
 var roleToPermissions = map[string][]string{

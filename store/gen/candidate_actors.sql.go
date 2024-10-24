@@ -302,9 +302,10 @@ UPDATE candidate_actors ca
 SET
     status = COALESCE($1, ca.status),
     is_artist = COALESCE($2, ca.is_artist),
-    comment = COALESCE($3, ca.comment)
+    comment = COALESCE($3, ca.comment),
+    roles = COALESCE($4, ca.roles)
 WHERE
-    did = $4
+    did = $5
 RETURNING did, created_at, is_artist, comment, status, roles, current_profile_commit_cid, held_until
 `
 
@@ -312,6 +313,7 @@ type UpdateCandidateActorParams struct {
 	Status   NullActorStatus
 	IsArtist pgtype.Bool
 	Comment  pgtype.Text
+	Roles    []string
 	DID      string
 }
 
@@ -320,6 +322,7 @@ func (q *Queries) UpdateCandidateActor(ctx context.Context, arg UpdateCandidateA
 		arg.Status,
 		arg.IsArtist,
 		arg.Comment,
+		arg.Roles,
 		arg.DID,
 	)
 	var i CandidateActor

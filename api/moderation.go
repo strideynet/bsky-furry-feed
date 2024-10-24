@@ -541,3 +541,66 @@ func (m *ModerationServiceHandler) ListRoles(ctx context.Context, req *connect.R
 		Roles: roles,
 	}), nil
 }
+
+func (m *ModerationServiceHandler) AssignRoles(ctx context.Context, req *connect.Request[v1.AssignRolesRequest]) (*connect.Response[v1.AssignRolesResponse], error) {
+	authCtx, err := m.authEngine.auth(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("authenticating: %w", err)
+	}
+
+	actorDID := req.Msg.ActorDid
+	if actorDID == "" {
+		return nil, fmt.Errorf("validating did: missing")
+	}
+
+	tx, err := m.store.TX(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("starting transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	actor, err := tx.GetActorByDID(ctx, actorDID)
+	if err != nil {
+		return nil, fmt.Errorf("fetching actor: %w", err)
+	}
+
+	if req.Msg.Roles == nil {
+		req.Msg.Roles = []string{}
+	}
+
+	slices.Sort(req.Msg.Roles)
+	slices.Sort(actor.Roles)
+
+	if slices.Equal(req.Msg.Roles, actor.Roles) {
+		return nil, fmt.Errorf("roles are unchanged")
+	}
+
+	_, err = tx.UpdateActor(ctx, store.UpdateActorOpts{
+		DID:            actor.Did,
+		UpdateStatus:   actor.Status,
+		UpdateIsArtist: actor.IsArtist,
+		UpdateComment:  actor.Comment,
+		UpdateRoles:    req.Msg.Roles,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("updating actor: %w", err)
+	}
+
+	_, err = tx.CreateAuditEvent(ctx, store.CreateAuditEventOpts{
+		Payload: &v1.AssignRolesAuditPayload{
+			RolesBefore: actor.Roles,
+			RolesAfter:  req.Msg.Roles,
+		},
+		ActorDID:   authCtx.DID,
+		SubjectDID: actorDID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("creating audit event: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("committing transaction: %w", err)
+	}
+
+	return connect.NewResponse(&v1.AssignRolesResponse{}), nil
+}
