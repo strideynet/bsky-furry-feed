@@ -7,7 +7,7 @@ const props = defineProps<{
   pending?: number;
   variant: "profile" | "queue";
 }>();
-defineEmits<{
+const $emit = defineEmits<{
   (event: "next"): void;
 }>();
 
@@ -32,6 +32,13 @@ async function refresh() {
   await auditLog.value?.refresh();
 }
 
+function handleNext() {
+  $emit("next");
+  if (props.variant === "profile") {
+    refresh();
+  }
+}
+
 watch(
   () => props.did,
   () => refresh()
@@ -49,7 +56,7 @@ await refresh();
         :did="subject?.did || props.did"
         :pending="pending"
         :variant="variant"
-        @next="$emit('next')"
+        @next="handleNext"
       />
       <user-audit-log
         ref="auditLog"
