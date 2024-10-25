@@ -22,7 +22,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <shared-card no-padding class="absolute bottom-2.5 w-[200px] bg-slate-800">
+  <shared-card no-padding class="absolute bottom-2.5 w-[270px] bg-slate-800">
     <div v-if="loading" class="py-1.5 px-2">Loading...</div>
     <template v-else>
       <div
@@ -36,7 +36,7 @@ onMounted(async () => {
           not-rounded
           class="rounded-lg"
         />
-        <div>
+        <div class="flex flex-col min-w-0">
           <div class="truncate">{{ profile.displayName }}</div>
           <div class="text-muted truncate">@{{ profile.handle }}</div>
         </div>
