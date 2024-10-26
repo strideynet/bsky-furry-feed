@@ -23,10 +23,15 @@ WHERE
     uri = $1;
 
 -- name: GetFurryNewFeed :many
+WITH args AS (
+    SELECT sqlc.narg(allowed_embeds)::TEXT [] AS allowed_embeds
+)
+
 SELECT cp.*
 FROM
     candidate_posts AS cp
 INNER JOIN candidate_actors AS ca ON cp.actor_did = ca.did
+NATURAL JOIN args
 WHERE
     -- Only include posts by approved actors
     ca.status = 'approved'
@@ -49,15 +54,19 @@ WHERE
                 OR NOT sqlc.narg(disallowed_hashtags)::TEXT [] && cp.hashtags
             )
             AND (
-                -- Match has_media status. If unspecified, do not filter.
-                (
-                    sqlc.narg(has_media)::BOOLEAN IS NULL
-                    OR COALESCE(cp.has_media, FALSE) = sqlc.narg(has_media)
-                )
-                -- Match has_video status. If unspecified, do not filter.
+                CARDINALITY(args.allowed_embeds) = 0
                 OR (
-                    sqlc.narg(has_video)::BOOLEAN IS NULL
-                    OR COALESCE(cp.has_video, FALSE) = sqlc.narg(has_video)
+                    'none' = ANY(args.allowed_embeds)
+                    AND COALESCE(cp.has_media, FALSE) = FALSE
+                    AND COALESCE(cp.has_video, FALSE) = FALSE
+                )
+                OR (
+                    'image' = ANY(args.allowed_embeds)
+                    AND COALESCE(cp.has_media, FALSE) = TRUE
+                )
+                OR (
+                    'video' = ANY(args.allowed_embeds)
+                    AND COALESCE(cp.has_video, FALSE) = TRUE
                 )
             )
             -- Filter by NSFW status. If unspecified, do not filter.
@@ -88,6 +97,10 @@ WHERE
 LIMIT 1;
 
 -- name: ListScoredPosts :many
+WITH args AS (
+    SELECT sqlc.narg(allowed_embeds)::TEXT [] AS allowed_embeds
+)
+
 SELECT
     cp.*,
     ph.score
@@ -98,6 +111,7 @@ INNER JOIN post_scores AS ph
     ON
         cp.uri = ph.uri AND ph.alg = sqlc.arg(alg)
         AND ph.generation_seq = sqlc.arg(generation_seq)
+NATURAL JOIN args
 WHERE
     cp.is_hidden = FALSE
     AND ca.status = 'approved'
@@ -113,15 +127,19 @@ WHERE
         OR NOT sqlc.narg(disallowed_hashtags)::TEXT [] && cp.hashtags
     )
     AND (
-        -- Match has_media status. If unspecified, do not filter.
-        (
-            sqlc.narg(has_media)::BOOLEAN IS NULL
-            OR COALESCE(cp.has_media, FALSE) = sqlc.narg(has_media)
-        )
-        -- Match has_video status. If unspecified, do not filter.
+        CARDINALITY(args.allowed_embeds) = 0
         OR (
-            sqlc.narg(has_video)::BOOLEAN IS NULL
-            OR COALESCE(cp.has_video, FALSE) = sqlc.narg(has_video)
+            'none' = ANY(args.allowed_embeds)
+            AND COALESCE(cp.has_media, FALSE) = FALSE
+            AND COALESCE(cp.has_video, FALSE) = FALSE
+        )
+        OR (
+            'image' = ANY(args.allowed_embeds)
+            AND COALESCE(cp.has_media, FALSE) = TRUE
+        )
+        OR (
+            'video' = ANY(args.allowed_embeds)
+            AND COALESCE(cp.has_video, FALSE) = TRUE
         )
     )
     -- Filter by NSFW status. If unspecified, do not filter.
