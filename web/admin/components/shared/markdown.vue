@@ -34,4 +34,13 @@ const renderedMarkdown = computed(() => {
 .markdown >>> table {
   @apply hidden;
 }
+
+.markdown >>> blockquote {
+  @apply pl-2 border-l-4 border-gray-400 dark:border-gray-700;
+}
+
+.markdown >>> p:not(:last-child),
+.markdown >>> blockquote:not(:last-child) {
+  @apply mb-2;
+}
 </style>
