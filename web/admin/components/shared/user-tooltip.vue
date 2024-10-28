@@ -15,8 +15,8 @@ const actor = ref<Actor>();
 onMounted(async () => {
   profile.value = await getProfile(props.did);
   const api = await useAPI();
-  const resp = await api.getActor({ did: props.did });
-  actor.value = resp.actor;
+  const resp = await api.getActor({ did: props.did }).catch(() => null);
+  actor.value = resp?.actor;
   loading.value = false;
 });
 </script>
