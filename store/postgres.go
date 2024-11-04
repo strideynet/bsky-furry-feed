@@ -566,8 +566,7 @@ type ListPostsForNewFeedOpts struct {
 	Hashtags           []string
 	DisallowedHashtags []string
 	IsNSFW             tristate.Tristate
-	HasMedia           tristate.Tristate
-	HasVideo           tristate.Tristate
+	AllowedEmbeds      []string
 	PinnedDIDs         []string
 	Limit              int
 }
@@ -586,7 +585,6 @@ func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNew
 	defer func() {
 		endSpan(span, err)
 	}()
-
 	queryParams := gen.GetFurryNewFeedParams{
 		CursorTimestamp: pgtype.Timestamptz{
 			Valid: true,
@@ -594,8 +592,7 @@ func (s *PGXStore) ListPostsForNewFeed(ctx context.Context, opts ListPostsForNew
 		},
 		Hashtags:           opts.Hashtags,
 		DisallowedHashtags: opts.DisallowedHashtags,
-		HasMedia:           tristateToPgtypeBool(opts.HasMedia),
-		HasVideo:           tristateToPgtypeBool(opts.HasVideo),
+		AllowedEmbeds:      opts.AllowedEmbeds,
 		IsNSFW:             tristateToPgtypeBool(opts.IsNSFW),
 		PinnedDIDs:         opts.PinnedDIDs,
 	}
@@ -635,8 +632,7 @@ type ListPostsForHotFeedOpts struct {
 	Hashtags           []string
 	DisallowedHashtags []string
 	IsNSFW             tristate.Tristate
-	HasMedia           tristate.Tristate
-	HasVideo           tristate.Tristate
+	AllowedEmbeds      []string
 	Limit              int
 }
 
@@ -651,8 +647,7 @@ func (s *PGXStore) ListScoredPosts(ctx context.Context, opts ListPostsForHotFeed
 		Alg:                opts.Alg,
 		Hashtags:           opts.Hashtags,
 		DisallowedHashtags: opts.DisallowedHashtags,
-		HasMedia:           tristateToPgtypeBool(opts.HasMedia),
-		HasVideo:           tristateToPgtypeBool(opts.HasVideo),
+		AllowedEmbeds:      opts.AllowedEmbeds,
 		IsNSFW:             tristateToPgtypeBool(opts.IsNSFW),
 		GenerationSeq:      opts.Cursor.GenerationSeq,
 		AfterScore:         opts.Cursor.AfterScore,

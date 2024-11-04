@@ -95,14 +95,24 @@ type generatorOpts struct {
 	Hashtags           []string
 	DisallowedHashtags []string
 	IsNSFW             tristate.Tristate
-	HasMedia           tristate.Tristate
-	HasVideo           tristate.Tristate
+	AllowedEmbeds      []EmbedType
 }
 
 type chronologicalGeneratorOpts struct {
 	generatorOpts
 	PinnedDIDs []string
 }
+
+type EmbedType string
+
+const (
+	EmbedNone  EmbedType = "none"
+	EmbedImage EmbedType = "image"
+	EmbedVideo EmbedType = "video"
+)
+
+var allowImageAndVideo = []EmbedType{EmbedImage, EmbedVideo}
+var allowVideoOnly = []EmbedType{EmbedVideo}
 
 func chronologicalGenerator(opts chronologicalGeneratorOpts) GenerateFunc {
 	return func(ctx context.Context, pgxStore *store.PGXStore, cursor string, limit int) ([]Post, error) {
@@ -114,13 +124,16 @@ func chronologicalGenerator(opts chronologicalGeneratorOpts) GenerateFunc {
 			}
 			cursorTime = parsedTime
 		}
+		allowedEmbeds := []string{}
+		for _, embed := range opts.AllowedEmbeds {
+			allowedEmbeds = append(allowedEmbeds, string(embed))
+		}
 		params := store.ListPostsForNewFeedOpts{
 			Limit:              limit,
 			Hashtags:           opts.Hashtags,
 			DisallowedHashtags: opts.DisallowedHashtags,
 			IsNSFW:             opts.IsNSFW,
-			HasMedia:           opts.HasMedia,
-			HasVideo:           opts.HasVideo,
+			AllowedEmbeds:      allowedEmbeds,
 			PinnedDIDs:         opts.PinnedDIDs,
 			CursorTime:         cursorTime,
 		}
@@ -154,13 +167,16 @@ func preScoredGenerator(opts preScoredGeneratorOpts) GenerateFunc {
 			AfterScore    float32 `json:"after_score"`
 			AfterURI      string  `json:"after_uri"`
 		}
+		allowedEmbeds := []string{}
+		for _, embed := range opts.AllowedEmbeds {
+			allowedEmbeds = append(allowedEmbeds, string(embed))
+		}
 		params := store.ListPostsForHotFeedOpts{
 			Limit:              limit,
 			Hashtags:           opts.Hashtags,
 			DisallowedHashtags: opts.DisallowedHashtags,
 			IsNSFW:             opts.IsNSFW,
-			HasMedia:           opts.HasMedia,
-			HasVideo:           opts.HasVideo,
+			AllowedEmbeds:      allowedEmbeds,
 			Alg:                opts.Alg,
 		}
 		if cursor == "" {
@@ -260,7 +276,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		generatorOpts: generatorOpts{
 			Hashtags:           []string{"fursuit", "fursuitfriday"},
 			DisallowedHashtags: defaultDisallowedHashtags,
-			HasMedia:           tristate.True,
+			AllowedEmbeds:      allowImageAndVideo,
 		},
 	},
 	))
@@ -272,7 +288,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		generatorOpts: generatorOpts{
 			Hashtags:           []string{"fursuit", "fursuitfriday", "murrsuit", "mursuit"},
 			DisallowedHashtags: defaultDisallowedHashtags,
-			HasMedia:           tristate.True,
+			AllowedEmbeds:      allowImageAndVideo,
 			IsNSFW:             tristate.True,
 		},
 	},
@@ -285,7 +301,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		generatorOpts: generatorOpts{
 			Hashtags:           []string{"fursuit", "fursuitfriday"},
 			DisallowedHashtags: defaultDisallowedHashtags,
-			HasMedia:           tristate.True,
+			AllowedEmbeds:      allowImageAndVideo,
 			IsNSFW:             tristate.False,
 		},
 	},
@@ -299,7 +315,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		generatorOpts: generatorOpts{
 			Hashtags:           furryArtHashtags,
 			DisallowedHashtags: defaultDisallowedHashtags,
-			HasMedia:           tristate.True,
+			AllowedEmbeds:      allowImageAndVideo,
 		},
 	},
 	))
@@ -311,7 +327,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		generatorOpts: generatorOpts{
 			Hashtags:           furryArtHashtags,
 			DisallowedHashtags: defaultDisallowedHashtags,
-			HasMedia:           tristate.True,
+			AllowedEmbeds:      allowImageAndVideo,
 			IsNSFW:             tristate.False,
 		},
 	}))
@@ -323,7 +339,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		generatorOpts: generatorOpts{
 			Hashtags:           furryArtHashtags,
 			DisallowedHashtags: defaultDisallowedHashtags,
-			HasMedia:           tristate.True,
+			AllowedEmbeds:      allowImageAndVideo,
 			IsNSFW:             tristate.True,
 		},
 	}))
@@ -336,7 +352,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		generatorOpts: generatorOpts{
 			Hashtags:           furryArtHashtags,
 			DisallowedHashtags: defaultDisallowedHashtags,
-			HasMedia:           tristate.True,
+			AllowedEmbeds:      allowImageAndVideo,
 		},
 	}))
 	r.Register(Meta{
@@ -348,7 +364,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		generatorOpts: generatorOpts{
 			Hashtags:           furryArtHashtags,
 			DisallowedHashtags: defaultDisallowedHashtags,
-			HasMedia:           tristate.True,
+			AllowedEmbeds:      allowImageAndVideo,
 			IsNSFW:             tristate.True,
 		},
 	}))
@@ -359,6 +375,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			DisallowedHashtags: defaultDisallowedHashtags,
+			AllowedEmbeds:      allowImageAndVideo,
 			IsNSFW:             tristate.True,
 		},
 	}))
@@ -543,8 +560,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		Alg: "classic",
 		generatorOpts: generatorOpts{
 			DisallowedHashtags: defaultDisallowedHashtags,
-			HasMedia:           tristate.False,
-			HasVideo:           tristate.True,
+			AllowedEmbeds:      allowVideoOnly,
 		},
 	}))
 	r.Register(Meta{
@@ -554,8 +570,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			DisallowedHashtags: defaultDisallowedHashtags,
-			HasMedia:           tristate.False,
-			HasVideo:           tristate.True,
+			AllowedEmbeds:      allowVideoOnly,
 		},
 	}))
 	r.Register(Meta{
@@ -567,8 +582,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		Alg: "classic",
 		generatorOpts: generatorOpts{
 			DisallowedHashtags: defaultDisallowedHashtags,
-			HasVideo:           tristate.True,
-			HasMedia:           tristate.False,
+			AllowedEmbeds:      allowVideoOnly,
 			IsNSFW:             tristate.True,
 		},
 	}))
@@ -579,8 +593,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			DisallowedHashtags: defaultDisallowedHashtags,
-			HasVideo:           tristate.True,
-			HasMedia:           tristate.False,
+			AllowedEmbeds:      allowVideoOnly,
 			IsNSFW:             tristate.True,
 		},
 	}))

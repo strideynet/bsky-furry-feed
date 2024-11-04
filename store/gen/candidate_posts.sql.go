@@ -57,10 +57,15 @@ func (q *Queries) CreateCandidatePost(ctx context.Context, arg CreateCandidatePo
 }
 
 const getFurryNewFeed = `-- name: GetFurryNewFeed :many
+WITH args AS (
+    SELECT $7::TEXT [] AS allowed_embeds
+)
+
 SELECT cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_hidden, cp.deleted_at, cp.raw, cp.hashtags, cp.has_media, cp.self_labels, cp.has_video
 FROM
     candidate_posts AS cp
 INNER JOIN candidate_actors AS ca ON cp.actor_did = ca.did
+NATURAL JOIN args
 WHERE
     -- Only include posts by approved actors
     ca.status = 'approved'
@@ -83,58 +88,60 @@ WHERE
                 OR NOT $2::TEXT [] && cp.hashtags
             )
             AND (
-                -- Match has_media status. If unspecified, do not filter.
-                (
-                    $3::BOOLEAN IS NULL
-                    OR COALESCE(cp.has_media, FALSE) = $3
-                )
-                -- Match has_video status. If unspecified, do not filter.
+                CARDINALITY(args.allowed_embeds) = 0
                 OR (
-                    $4::BOOLEAN IS NULL
-                    OR COALESCE(cp.has_video, FALSE) = $4
+                    'none' = ANY(args.allowed_embeds)
+                    AND COALESCE(cp.has_media, FALSE) = FALSE
+                    AND COALESCE(cp.has_video, FALSE) = FALSE
+                )
+                OR (
+                    'image' = ANY(args.allowed_embeds)
+                    AND COALESCE(cp.has_media, FALSE) = TRUE
+                )
+                OR (
+                    'video' = ANY(args.allowed_embeds)
+                    AND COALESCE(cp.has_video, FALSE) = TRUE
                 )
             )
             -- Filter by NSFW status. If unspecified, do not filter.
             AND (
-                $5::BOOLEAN IS NULL
+                $3::BOOLEAN IS NULL
                 OR (
                     (ARRAY['nsfw', 'mursuit', 'murrsuit', 'nsfwfurry', 'furrynsfw'] && cp.hashtags)
                     OR (ARRAY['porn', 'nudity', 'sexual'] && cp.self_labels)
-                ) = $5
+                ) = $3
             )
         )
         -- Pinned DID criteria.
-        OR cp.actor_did = ANY($6::TEXT [])
+        OR cp.actor_did = ANY($4::TEXT [])
     )
     -- Remove posts newer than the cursor timestamp
-    AND (cp.indexed_at < $7)
+    AND (cp.indexed_at < $5)
     AND cp.indexed_at > NOW() - INTERVAL '7 day'
 ORDER BY
     cp.indexed_at DESC
-LIMIT $8
+LIMIT $6
 `
 
 type GetFurryNewFeedParams struct {
 	Hashtags           []string
 	DisallowedHashtags []string
-	HasMedia           pgtype.Bool
-	HasVideo           pgtype.Bool
 	IsNSFW             pgtype.Bool
 	PinnedDIDs         []string
 	CursorTimestamp    pgtype.Timestamptz
 	Limit              int32
+	AllowedEmbeds      []string
 }
 
 func (q *Queries) GetFurryNewFeed(ctx context.Context, arg GetFurryNewFeedParams) ([]CandidatePost, error) {
 	rows, err := q.db.Query(ctx, getFurryNewFeed,
 		arg.Hashtags,
 		arg.DisallowedHashtags,
-		arg.HasMedia,
-		arg.HasVideo,
 		arg.IsNSFW,
 		arg.PinnedDIDs,
 		arg.CursorTimestamp,
 		arg.Limit,
+		arg.AllowedEmbeds,
 	)
 	if err != nil {
 		return nil, err
@@ -195,6 +202,10 @@ func (q *Queries) GetPostByURI(ctx context.Context, uri string) (CandidatePost, 
 }
 
 const listScoredPosts = `-- name: ListScoredPosts :many
+WITH args AS (
+    SELECT $9::TEXT [] AS allowed_embeds
+)
+
 SELECT
     cp.uri, cp.actor_did, cp.created_at, cp.indexed_at, cp.is_hidden, cp.deleted_at, cp.raw, cp.hashtags, cp.has_media, cp.self_labels, cp.has_video,
     ph.score
@@ -205,6 +216,7 @@ INNER JOIN post_scores AS ph
     ON
         cp.uri = ph.uri AND ph.alg = $1
         AND ph.generation_seq = $2
+NATURAL JOIN args
 WHERE
     cp.is_hidden = FALSE
     AND ca.status = 'approved'
@@ -220,34 +232,38 @@ WHERE
         OR NOT $4::TEXT [] && cp.hashtags
     )
     AND (
-        -- Match has_media status. If unspecified, do not filter.
-        (
-            $5::BOOLEAN IS NULL
-            OR COALESCE(cp.has_media, FALSE) = $5
-        )
-        -- Match has_video status. If unspecified, do not filter.
+        CARDINALITY(args.allowed_embeds) = 0
         OR (
-            $6::BOOLEAN IS NULL
-            OR COALESCE(cp.has_video, FALSE) = $6
+            'none' = ANY(args.allowed_embeds)
+            AND COALESCE(cp.has_media, FALSE) = FALSE
+            AND COALESCE(cp.has_video, FALSE) = FALSE
+        )
+        OR (
+            'image' = ANY(args.allowed_embeds)
+            AND COALESCE(cp.has_media, FALSE) = TRUE
+        )
+        OR (
+            'video' = ANY(args.allowed_embeds)
+            AND COALESCE(cp.has_video, FALSE) = TRUE
         )
     )
     -- Filter by NSFW status. If unspecified, do not filter.
     AND (
-        $7::BOOLEAN IS NULL
+        $5::BOOLEAN IS NULL
         OR (
             (ARRAY['nsfw', 'mursuit', 'murrsuit', 'nsfwfurry', 'furrynsfw'] && cp.hashtags)
             OR (ARRAY['porn', 'nudity', 'sexual'] && cp.self_labels)
-        ) = $7
+        ) = $5
     )
     AND cp.deleted_at IS NULL
     AND (
         ROW(ph.score, ph.uri)
-        < ROW(($8)::REAL, ($9)::TEXT)
+        < ROW(($6)::REAL, ($7)::TEXT)
     )
     AND cp.indexed_at > NOW() - INTERVAL '7 day'
 ORDER BY
     ph.score DESC, ph.uri DESC
-LIMIT $10
+LIMIT $8
 `
 
 type ListScoredPostsParams struct {
@@ -255,12 +271,11 @@ type ListScoredPostsParams struct {
 	GenerationSeq      int64
 	Hashtags           []string
 	DisallowedHashtags []string
-	HasMedia           pgtype.Bool
-	HasVideo           pgtype.Bool
 	IsNSFW             pgtype.Bool
 	AfterScore         float32
 	AfterURI           string
 	Limit              int32
+	AllowedEmbeds      []string
 }
 
 type ListScoredPostsRow struct {
@@ -284,12 +299,11 @@ func (q *Queries) ListScoredPosts(ctx context.Context, arg ListScoredPostsParams
 		arg.GenerationSeq,
 		arg.Hashtags,
 		arg.DisallowedHashtags,
-		arg.HasMedia,
-		arg.HasVideo,
 		arg.IsNSFW,
 		arg.AfterScore,
 		arg.AfterURI,
 		arg.Limit,
+		arg.AllowedEmbeds,
 	)
 	if err != nil {
 		return nil, err
