@@ -48,7 +48,7 @@ export function isProbablyFurry(profile?: ProfileViewMinimal): boolean {
     "fluffy",
     "dog",
     "deer",
-    "cat",
+    /cat\b/,
     "wolf",
     "dragon",
     /\bsnep\b/,
