@@ -147,6 +147,13 @@ func (fi *FirehoseIngester) Start(ctx context.Context) (err error) {
 				continue
 			}
 
+			if cursor <= initCursor {
+				// attempt to avoid a scenario where a crash loop sends the
+				// cursor further and further into the past.
+				fi.log.Warn("not setting cursor to avoid regression")
+				continue
+			}
+
 			if err := fi.store.SetJetstreamCursor(ctx, cursor); err != nil {
 				return fmt.Errorf("saving cursor: %w", err)
 			}
