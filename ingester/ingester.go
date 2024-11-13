@@ -5,12 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"strconv"
+	"sync/atomic"
 
-	"github.com/bluesky-social/indigo/events/schedulers/sequential"
-
-	"net/http"
-	"sync"
 	"time"
 
 	"github.com/bluesky-social/indigo/util"
@@ -24,12 +20,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/api/bsky"
-	"github.com/bluesky-social/indigo/events"
-	"github.com/gorilla/websocket"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
@@ -40,25 +31,10 @@ import (
 // the feedIngester which has a different sampling rate.
 var tracer = otel.Tracer("github.com/strideynet/bsky-furry-feed/ingester")
 
-var workItemsProcessed = promauto.NewSummaryVec(prometheus.SummaryOpts{
-	Name: "bff_ingester_work_item_duration_seconds",
-	Help: "The total number of work items handled by the ingester worker pool.",
-}, []string{"type"})
-
 type actorCacher interface {
 	GetByDID(did string) *v1.Actor
 	CreatePendingCandidateActor(ctx context.Context, did string) (err error)
 }
-
-var workerCursors = promauto.NewGaugeVec(prometheus.GaugeOpts{
-	Name: "bff_ingester_worker_cursors",
-	Help: "The current cursor a worker is at.",
-}, []string{"worker"})
-
-var flushedWorkerCursor = promauto.NewGauge(prometheus.GaugeOpts{
-	Name: "bff_ingester_flushed_worker_cursor",
-	Help: "The current cursor flushed to persistent storage.",
-})
 
 type FirehoseIngester struct {
 	// dependencies
@@ -67,221 +43,39 @@ type FirehoseIngester struct {
 	store      *store.PGXStore
 
 	// configuration
-	subscribeURL        string
+	jetstreamURL        string
 	workerCount         int
 	workItemTimeout     time.Duration
 	cursorFlushInterval time.Duration
 }
 
-// TODO: Eventually make this a worker struct.
-// TODO: Capture a worker "status" e.g idle/working
-type workerState struct {
-	mu               sync.Mutex
-	lastProcessedSeq int64
-}
-
 func NewFirehoseIngester(
-	log *zap.Logger, store *store.PGXStore, crc *ActorCache, bgsHost string,
+	log *zap.Logger, store *store.PGXStore, crc *ActorCache,
 ) *FirehoseIngester {
 	return &FirehoseIngester{
 		log:        log,
 		actorCache: crc,
 		store:      store,
 
-		subscribeURL:        bgsHost + "/xrpc/com.atproto.sync.subscribeRepos",
+		jetstreamURL:        "wss://jetstream1.us-east.bsky.network/subscribe",
 		workerCount:         8,
 		workItemTimeout:     time.Second * 30,
 		cursorFlushInterval: time.Second * 10,
 	}
 }
 
-func (fi *FirehoseIngester) Start(ctx context.Context) error {
+func (fi *FirehoseIngester) Start(ctx context.Context) (err error) {
 	eg, ctx := errgroup.WithContext(ctx)
-
-	// Unbuffered channel so that the websocket will stop reading if the workers
-	// are not ready. In future, we may want to consider some reasonable
-	// buffering to account for short spikes in event rates.
-	evtChan := make(chan *atproto.SyncSubscribeRepos_Commit)
-
-	workerStates := make([]*workerState, fi.workerCount)
-	flushCommitCursor := func(ctx context.Context) error {
-		// Determine the lowest last processed seq of all the workers. We want
-		// to persist the lowest last processed seq to ensure we never miss
-		// data, but this may cause some reprocessing.
-		var lowestLastSeq int64 = -1
-		for _, w := range workerStates {
-			w.mu.Lock()
-			lastSeq := w.lastProcessedSeq
-			w.mu.Unlock()
-			// Worker hasn't processed it's first commit yet, so we ignore it.
-			if lastSeq == -1 {
-				continue
-			}
-			if lowestLastSeq == -1 || lastSeq < lowestLastSeq {
-				lowestLastSeq = lastSeq
-			}
-		}
-
-		if lowestLastSeq == -1 {
-			return fmt.Errorf("no workers reported work, cannot persist cursor")
-		}
-
-		if err := fi.store.SetFirehoseCommitCursor(ctx, lowestLastSeq); err != nil {
-			return fmt.Errorf("saving cursor: %w", err)
-		}
-		fi.log.Info("successfully flushed cursor", zap.Int64("cursor", lowestLastSeq))
-		flushedWorkerCursor.Set(float64(lowestLastSeq))
-		return nil
-	}
-	defer func() {
-		// Flush the commit cursor one final time on shutdown.
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
-		if err := flushCommitCursor(ctx); err != nil {
-			fi.log.Error(
-				"failed to flush final firehose commit cursor",
-				zap.Error(err),
-			)
-		}
-	}()
-
-	eg.Go(func() error {
-		workerWg := sync.WaitGroup{}
-
-		for i := 0; i < fi.workerCount; i++ {
-			i := i
-			state := &workerState{
-				lastProcessedSeq: -1,
-			}
-			workerStates[i] = state
-
-			workerWg.Add(1)
-			go func() {
-				defer workerWg.Done()
-				for {
-					select {
-					case <-ctx.Done():
-						fi.log.Warn("worker exiting", zap.Int("worker", i))
-						return
-					case evt := <-evtChan:
-						// record start time so we can collect
-						start := time.Now()
-						// 30 seconds max to deal with any work item. This
-						// prevents a worker hanging.
-						ctx, cancel := context.WithTimeout(
-							ctx, fi.workItemTimeout,
-						)
-						if err := fi.handleCommit(ctx, evt); err != nil {
-							fi.log.Error(
-								"failed to handle repo commit",
-								zap.Error(err),
-							)
-						}
-
-						state.mu.Lock()
-						if evt.Seq <= state.lastProcessedSeq {
-							fi.log.Error(
-								"cursor went backwards or was repeated",
-								zap.Int64("seq", evt.Seq),
-								zap.Int64("cursor", state.lastProcessedSeq),
-							)
-						}
-						state.lastProcessedSeq = evt.Seq
-						state.mu.Unlock()
-
-						workerCursors.WithLabelValues(strconv.Itoa(i)).Set(float64(evt.Seq))
-						workItemsProcessed.
-							WithLabelValues("repo_commit").
-							Observe(time.Since(start).Seconds())
-						cancel()
-					}
-				}
-			}()
-		}
-		workerWg.Wait()
-		return nil
-	})
-
-	eg.Go(func() error {
-		ctx, cancel := context.WithCancel(ctx)
-		defer cancel()
-
-		for {
-			select {
-			case <-ctx.Done():
-				fi.log.Warn("cursor flushing worker exiting")
-				return nil
-			case <-time.After(fi.cursorFlushInterval):
-			}
-
-			if err := flushCommitCursor(ctx); err != nil {
-				fi.log.Error(
-					"failed to flush firehose commit cursor",
-					zap.Error(err),
-				)
-			}
-		}
-	})
-
-	eg.Go(func() error {
-		ctx, cancel := context.WithCancel(ctx)
-		defer cancel()
-
-		cursor, err := fi.store.GetFirehoseCommitCursor(ctx)
-		if err != nil {
-			return fmt.Errorf("get commit cursor: %w", err)
-		}
-		fi.log.Info("starting ingestion", zap.Int64("cursor", cursor))
-
-		subscribeURL := fi.subscribeURL
-		if cursor != -1 {
-			subscribeURL += "?cursor=" + strconv.FormatInt(cursor, 10)
-		}
-
-		con, _, err := websocket.DefaultDialer.DialContext(
-			ctx, subscribeURL, http.Header{},
-		)
-		if err != nil {
-			return fmt.Errorf("dialing websocket: %w", err)
-		}
-
-		// TODO: Indigo now offers a native parallel consumer pool, we should
-		// consider switching to it - but only if we can
-		callbacks := &events.RepoStreamCallbacks{
-			RepoCommit: func(evt *atproto.SyncSubscribeRepos_Commit) error {
-				select {
-				case <-ctx.Done():
-					// Ensure we don't get stuck waiting for a worker even if
-					// the connection has shutdown.
-					return nil
-				case evtChan <- evt:
-				}
-				return nil
-			},
-		}
-		scheduler := sequential.NewScheduler("main", callbacks.EventHandler)
-		if err := events.HandleRepoStream(ctx, con, scheduler); err != nil {
-			fi.log.Error("repo stream from relay has failed", zap.Error(err))
-			return fmt.Errorf("handling repo stream: %w", err)
-		}
-		return nil
-		// TODO: sometimes stream exits of own accord, we should attempt to
-		// reconnect and enter an "error state".
-	})
-
-	return eg.Wait()
-}
-
-func (fi *FirehoseIngester) StartJetstreamConsumption(ctx context.Context) (err error) {
-	eg, ctx := errgroup.WithContext(ctx)
+	slogLog := slog.Default() // TODO: Switch from Zap to Slog
 
 	jsCfg := jsclient.DefaultClientConfig()
-	// TODO: Setup config
+	jsCfg.WebsocketURL = fi.jetstreamURL
 
+	var activeCursor atomic.Int64
 	sched := jsparallel.NewScheduler(
 		fi.workerCount,
 		"jetstream",
-		slog.Default(), // TODO: Switch from Zap to Slog,
+		slogLog,
 		func(ctx context.Context, e *models.Event) error {
 			ctx, cancel := context.WithTimeout(ctx, fi.workItemTimeout)
 			defer cancel()
@@ -300,28 +94,68 @@ func (fi *FirehoseIngester) StartJetstreamConsumption(ctx context.Context) (err 
 				return fmt.Errorf("handling commit: %w", err)
 			}
 
-			// Persist cursor
+			activeCursor.Store(e.TimeUS)
+			return nil
 		},
 	)
 
 	jsClient, err := jsclient.NewClient(
-		jsCfg, slog.Default(), sched,
+		jsCfg, slogLog, sched,
 	)
 	if err != nil {
 		return fmt.Errorf("creating jetstream client: %w", err)
 	}
 
-	// fetch cursor and set back 15 minutes, or default to now.
+	initCursor, err := fi.store.GetJetstreamCursor(ctx)
+	if err != nil {
+		return fmt.Errorf("get jetstream cursor: %w", err)
+	}
+	if initCursor == -1 {
+		initCursor = time.Now().UnixMicro()
+	}
+	// Step back 10 minutes to allow recovery
+	initCursor = time.UnixMicro(initCursor).Add(-10 * time.Minute).UnixMicro()
+
+	fi.log.Info(
+		"starting ingestion",
+		zap.Int64("cursor", initCursor),
+		zap.Time("cursor_time", time.UnixMicro(initCursor)),
+	)
 
 	eg.Go(func() error {
-		if err := jsClient.ConnectAndRead(ctx, nil); err != nil {
+		if err := jsClient.ConnectAndRead(ctx, &initCursor); err != nil {
 			return fmt.Errorf("reading jetstream: %w", err)
 		}
 		return nil
 	})
 
 	eg.Go(func() error {
-		// TODO: Update persisted cursor....
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		for {
+			select {
+			case <-ctx.Done():
+				fi.log.Warn("cursor flushing worker exiting")
+				return nil
+			case <-time.After(fi.cursorFlushInterval):
+			}
+
+			cursor := activeCursor.Load()
+			if cursor == 0 {
+				fi.log.Warn("no cursor value to persist")
+				continue
+			}
+
+			if err := fi.store.SetJetstreamCursor(ctx, cursor); err != nil {
+				return fmt.Errorf("saving cursor: %w", err)
+			}
+			fi.log.Info(
+				"successfully flushed cursor",
+				zap.Int64("cursor", cursor),
+				zap.Time("cursor_time", time.UnixMicro(cursor)),
+			)
+		}
 	})
 
 	return eg.Wait()
