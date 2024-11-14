@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/bluesky-social/indigo/util"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	jsclient "github.com/bluesky-social/jetstream/pkg/client"
 	jsparallel "github.com/bluesky-social/jetstream/pkg/client/schedulers/parallel"
@@ -31,6 +33,16 @@ import (
 // tracer is the BFF wide tracer. This is different to the tracer used in
 // the feedIngester which has a different sampling rate.
 var tracer = otel.Tracer("github.com/strideynet/bsky-furry-feed/ingester")
+
+var workItemsProcessed = promauto.NewSummaryVec(prometheus.SummaryOpts{
+	Name: "bff_ingester_work_item_duration_seconds",
+	Help: "The total number of work items handled by the ingester worker pool.",
+}, []string{"type"})
+
+var flushedWorkerCursor = promauto.NewGauge(prometheus.GaugeOpts{
+	Name: "bff_ingester_flushed_worker_cursor",
+	Help: "The current cursor flushed to persistent storage.",
+})
 
 type actorCacher interface {
 	GetByDID(did string) *v1.Actor
@@ -78,6 +90,7 @@ func (fi *FirehoseIngester) Start(ctx context.Context) (err error) {
 		"jetstream",
 		slogLog,
 		func(ctx context.Context, e *models.Event) error {
+			start := time.Now()
 			ctx, cancel := context.WithTimeout(ctx, fi.workItemTimeout)
 			defer cancel()
 
@@ -96,6 +109,9 @@ func (fi *FirehoseIngester) Start(ctx context.Context) (err error) {
 			}
 
 			activeCursor.Store(e.TimeUS)
+			workItemsProcessed.
+				WithLabelValues("repo_commit").
+				Observe(time.Since(start).Seconds())
 			return nil
 		},
 	)
@@ -162,6 +178,7 @@ func (fi *FirehoseIngester) Start(ctx context.Context) (err error) {
 			zap.Int64("cursor", cursor),
 			zap.String("cursor_time", time.UnixMicro(cursor).String()),
 		)
+		flushedWorkerCursor.Set(float64(cursor))
 	}
 
 	eg.Go(func() error {
