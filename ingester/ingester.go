@@ -248,7 +248,7 @@ func (fi *FirehoseIngester) handleRecordCreate(
 		}
 		data := &bsky.GraphFollow{}
 		if err := json.Unmarshal(record, data); err != nil {
-			return fmt.Errorf("unmarshalling record: %w", err)
+			return fmt.Errorf("unmarshalling app.bsky.graph.follow: %w", err)
 		}
 		// If it's an unknown actor, and they've interacted, add em to
 		// the candidate actor store with pending status. Otherwise, ignore
@@ -279,7 +279,7 @@ func (fi *FirehoseIngester) handleRecordCreate(
 	case "app.bsky.feed.post":
 		data := &bsky.FeedPost{}
 		if err := json.Unmarshal(record, data); err != nil {
-			return fmt.Errorf("unmarshalling record: %w", err)
+			return fmt.Errorf("unmarshalling app.bsky.feed.post: %w", err)
 		}
 		err := fi.handleFeedPostCreate(ctx, repoDID, recordUri, data)
 		if err != nil {
@@ -288,7 +288,7 @@ func (fi *FirehoseIngester) handleRecordCreate(
 	case "app.bsky.feed.like":
 		data := &bsky.FeedLike{}
 		if err := json.Unmarshal(record, data); err != nil {
-			return fmt.Errorf("unmarshalling record: %w", err)
+			return fmt.Errorf("unmarshalling app.bsky.feed.like: %w", err)
 		}
 		err := fi.handleFeedLikeCreate(ctx, repoDID, recordUri, data)
 		if err != nil {
@@ -297,7 +297,7 @@ func (fi *FirehoseIngester) handleRecordCreate(
 	case "app.bsky.graph.follow":
 		data := &bsky.GraphFollow{}
 		if err := json.Unmarshal(record, data); err != nil {
-			return fmt.Errorf("unmarshalling record: %w", err)
+			return fmt.Errorf("unmarshalling app.bsky.graph.follow: %w", err)
 		}
 		err := fi.handleGraphFollowCreate(ctx, repoDID, recordUri, data)
 		if err != nil {
@@ -386,7 +386,7 @@ func (fi *FirehoseIngester) handleRecordUpdate(
 	case "app.bsky.actor.profile":
 		data := &bsky.ActorProfile{}
 		if err := json.Unmarshal(record, data); err != nil {
-			return fmt.Errorf("unmarshalling record: %w", err)
+			return fmt.Errorf("unmarshalling app.bsky.actor.profile: %w", err)
 		}
 		err := fi.handleActorProfileUpdate(ctx, repoDID, repoRev, recordUri, updatedAt, data)
 		if err != nil {
