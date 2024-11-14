@@ -152,8 +152,6 @@ func (fi *FirehoseIngester) Start(ctx context.Context) (err error) {
 				fi.log.Error("jetstream client encountered an error, restarting", zap.Error(err))
 			}
 		}
-
-		return nil
 	})
 
 	flushCursor := func(ctx context.Context) {
