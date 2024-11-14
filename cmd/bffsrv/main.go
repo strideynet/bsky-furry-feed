@@ -123,15 +123,15 @@ func runE(log *zap.Logger) error {
 	defer cancel()
 
 	log.Info("setting up services")
-	//shutdownTrace, err := setupTracing(
-	//	ctx,
-	//	"http://localhost:14268/api/traces",
-	//	mode,
-	//)
-	//if err != nil {
-	//	return fmt.Errorf("creating tracer providers: %w", err)
-	//}
-	//defer shutdownTrace()
+	shutdownTrace, err := setupTracing(
+		ctx,
+		"http://localhost:14268/api/traces",
+		mode,
+	)
+	if err != nil {
+		return fmt.Errorf("creating tracer providers: %w", err)
+	}
+	defer shutdownTrace()
 
 	var poolConnector store.PoolConnector
 	switch mode {
