@@ -1,35 +1,30 @@
 package ingester
 
 import (
-	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/bluesky-social/indigo/events/schedulers/sequential"
-	"strconv"
+	"log/slog"
+	"sync/atomic"
 
-	"github.com/bluesky-social/indigo/util"
-	"net/http"
-	"sync"
 	"time"
 
-	"github.com/strideynet/bsky-furry-feed/bluesky"
+	"github.com/bluesky-social/indigo/util"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+
+	jsclient "github.com/bluesky-social/jetstream/pkg/client"
+	jsparallel "github.com/bluesky-social/jetstream/pkg/client/schedulers/parallel"
+	"github.com/bluesky-social/jetstream/pkg/models"
+
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/api/bsky"
-	"github.com/bluesky-social/indigo/events"
-	lexutil "github.com/bluesky-social/indigo/lex/util"
-	"github.com/bluesky-social/indigo/repo"
-	"github.com/bluesky-social/indigo/repomgr"
-	"github.com/gorilla/websocket"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/strideynet/bsky-furry-feed/store"
-	typegen "github.com/whyrusleeping/cbor-gen"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -44,20 +39,15 @@ var workItemsProcessed = promauto.NewSummaryVec(prometheus.SummaryOpts{
 	Help: "The total number of work items handled by the ingester worker pool.",
 }, []string{"type"})
 
-type actorCacher interface {
-	GetByDID(did string) *v1.Actor
-	CreatePendingCandidateActor(ctx context.Context, did string) (err error)
-}
-
-var workerCursors = promauto.NewGaugeVec(prometheus.GaugeOpts{
-	Name: "bff_ingester_worker_cursors",
-	Help: "The current cursor a worker is at.",
-}, []string{"worker"})
-
 var flushedWorkerCursor = promauto.NewGauge(prometheus.GaugeOpts{
 	Name: "bff_ingester_flushed_worker_cursor",
 	Help: "The current cursor flushed to persistent storage.",
 })
+
+type actorCacher interface {
+	GetByDID(did string) *v1.Actor
+	CreatePendingCandidateActor(ctx context.Context, did string) (err error)
+}
 
 type FirehoseIngester struct {
 	// dependencies
@@ -66,140 +56,128 @@ type FirehoseIngester struct {
 	store      *store.PGXStore
 
 	// configuration
-	subscribeURL        string
+	jetstreamURL        string
 	workerCount         int
 	workItemTimeout     time.Duration
 	cursorFlushInterval time.Duration
 }
 
-// TODO: Eventually make this a worker struct.
-// TODO: Capture a worker "status" e.g idle/working
-type workerState struct {
-	mu               sync.Mutex
-	lastProcessedSeq int64
-}
-
 func NewFirehoseIngester(
-	log *zap.Logger, store *store.PGXStore, crc *ActorCache, bgsHost string,
+	log *zap.Logger, store *store.PGXStore, crc *ActorCache,
 ) *FirehoseIngester {
 	return &FirehoseIngester{
 		log:        log,
 		actorCache: crc,
 		store:      store,
 
-		subscribeURL:        bgsHost + "/xrpc/com.atproto.sync.subscribeRepos",
-		workerCount:         8,
+		jetstreamURL:        "wss://jetstream2.us-east.bsky.network/subscribe",
+		workerCount:         20,
 		workItemTimeout:     time.Second * 30,
 		cursorFlushInterval: time.Second * 10,
 	}
 }
 
-func (fi *FirehoseIngester) Start(ctx context.Context) error {
+func (fi *FirehoseIngester) Start(ctx context.Context) (err error) {
 	eg, ctx := errgroup.WithContext(ctx)
+	slogLog := slog.Default() // TODO: Switch from Zap to Slog
 
-	// Unbuffered channel so that the websocket will stop reading if the workers
-	// are not ready. In future, we may want to consider some reasonable
-	// buffering to account for short spikes in event rates.
-	evtChan := make(chan *atproto.SyncSubscribeRepos_Commit)
+	jsCfg := jsclient.DefaultClientConfig()
+	jsCfg.WebsocketURL = fi.jetstreamURL
 
-	workerStates := make([]*workerState, fi.workerCount)
-	flushCommitCursor := func(ctx context.Context) error {
-		// Determine the lowest last processed seq of all the workers. We want
-		// to persist the lowest last processed seq to ensure we never miss
-		// data, but this may cause some reprocessing.
-		var lowestLastSeq int64 = -1
-		for _, w := range workerStates {
-			w.mu.Lock()
-			lastSeq := w.lastProcessedSeq
-			w.mu.Unlock()
-			// Worker hasn't processed it's first commit yet, so we ignore it.
-			if lastSeq == -1 {
-				continue
+	var activeCursor atomic.Int64
+	sched := jsparallel.NewScheduler(
+		fi.workerCount,
+		"jetstream",
+		slogLog,
+		func(ctx context.Context, e *models.Event) error {
+			start := time.Now()
+			ctx, cancel := context.WithTimeout(ctx, fi.workItemTimeout)
+			defer cancel()
+
+			// Ignore events other than commit.
+			if e.Commit == nil {
+				return nil
 			}
-			if lowestLastSeq == -1 || lastSeq < lowestLastSeq {
-				lowestLastSeq = lastSeq
+
+			if err := fi.handleCommit(ctx, e); err != nil {
+				fi.log.Error(
+					"failed to handle commit",
+					zap.Error(err),
+					zap.Any("evt", e),
+				)
+				return fmt.Errorf("handling commit: %w", err)
 			}
-		}
 
-		if lowestLastSeq == -1 {
-			return fmt.Errorf("no workers reported work, cannot persist cursor")
-		}
+			activeCursor.Store(e.TimeUS)
+			workItemsProcessed.
+				WithLabelValues("repo_commit").
+				Observe(time.Since(start).Seconds())
+			return nil
+		},
+	)
 
-		if err := fi.store.SetFirehoseCommitCursor(ctx, lowestLastSeq); err != nil {
-			return fmt.Errorf("saving cursor: %w", err)
-		}
-		fi.log.Info("successfully flushed cursor", zap.Int64("cursor", lowestLastSeq))
-		flushedWorkerCursor.Set(float64(lowestLastSeq))
-		return nil
+	jsClient, err := jsclient.NewClient(
+		jsCfg, slogLog, sched,
+	)
+	if err != nil {
+		return fmt.Errorf("creating jetstream client: %w", err)
 	}
-	defer func() {
-		// Flush the commit cursor one final time on shutdown.
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
-		if err := flushCommitCursor(ctx); err != nil {
-			fi.log.Error(
-				"failed to flush final firehose commit cursor",
-				zap.Error(err),
-			)
-		}
-	}()
+
+	initCursor, err := fi.store.GetJetstreamCursor(ctx)
+	if err != nil {
+		return fmt.Errorf("get jetstream cursor: %w", err)
+	}
+	if initCursor == -1 {
+		initCursor = time.Now().UnixMicro()
+	}
+	// Step back a few minutes to allow recovery
+	initCursor = time.UnixMicro(initCursor).Add(-5 * time.Minute).UnixMicro()
 
 	eg.Go(func() error {
-		workerWg := sync.WaitGroup{}
-
-		for i := 0; i < fi.workerCount; i++ {
-			i := i
-			state := &workerState{
-				lastProcessedSeq: -1,
+		for {
+			cursor := activeCursor.Load()
+			if cursor == 0 {
+				cursor = initCursor
 			}
-			workerStates[i] = state
 
-			workerWg.Add(1)
-			go func() {
-				defer workerWg.Done()
-				for {
-					select {
-					case <-ctx.Done():
-						fi.log.Warn("worker exiting", zap.Int("worker", i))
-						return
-					case evt := <-evtChan:
-						// record start time so we can collect
-						start := time.Now()
-						// 30 seconds max to deal with any work item. This
-						// prevents a worker hanging.
-						ctx, cancel := context.WithTimeout(
-							ctx, fi.workItemTimeout,
-						)
-						if err := fi.handleCommit(ctx, evt); err != nil {
-							fi.log.Error(
-								"failed to handle repo commit",
-								zap.Error(err),
-							)
-						}
-
-						state.mu.Lock()
-						if evt.Seq <= state.lastProcessedSeq {
-							fi.log.Error(
-								"cursor went backwards or was repeated",
-								zap.Int64("seq", evt.Seq),
-								zap.Int64("cursor", state.lastProcessedSeq),
-							)
-						}
-						state.lastProcessedSeq = evt.Seq
-						state.mu.Unlock()
-
-						workerCursors.WithLabelValues(strconv.Itoa(i)).Set(float64(evt.Seq))
-						workItemsProcessed.
-							WithLabelValues("repo_commit").
-							Observe(time.Since(start).Seconds())
-						cancel()
-					}
+			fi.log.Info(
+				"starting ingestion",
+				zap.Int64("cursor", cursor),
+				zap.String("cursor_time", time.UnixMicro(cursor).String()),
+			)
+			if err := jsClient.ConnectAndRead(ctx, &cursor); err != nil {
+				if errors.Is(err, context.Canceled) {
+					return nil
 				}
-			}()
+				fi.log.Error("jetstream client encountered an error, restarting", zap.Error(err))
+			}
 		}
-		workerWg.Wait()
-		return nil
 	})
+
+	flushCursor := func(ctx context.Context) {
+		cursor := activeCursor.Load()
+		if cursor == 0 {
+			fi.log.Warn("no cursor value to persist")
+			return
+		}
+		if cursor <= initCursor {
+			// attempt to avoid a scenario where a crash loop sends the
+			// cursor further and further into the past.
+			fi.log.Warn("not setting cursor to avoid regression")
+			return
+		}
+		if err := fi.store.SetJetstreamCursor(ctx, cursor); err != nil {
+			fi.log.Warn("failed to flush cursor", zap.Error(err))
+			return
+		}
+
+		fi.log.Info(
+			"successfully flushed cursor",
+			zap.Int64("cursor", cursor),
+			zap.String("cursor_time", time.UnixMicro(cursor).String()),
+		)
+		flushedWorkerCursor.Set(float64(cursor))
+	}
 
 	eg.Go(func() error {
 		ctx, cancel := context.WithCancel(ctx)
@@ -213,144 +191,70 @@ func (fi *FirehoseIngester) Start(ctx context.Context) error {
 			case <-time.After(fi.cursorFlushInterval):
 			}
 
-			if err := flushCommitCursor(ctx); err != nil {
-				fi.log.Error(
-					"failed to flush firehose commit cursor",
-					zap.Error(err),
-				)
-			}
+			flushCursor(ctx)
 		}
 	})
 
-	eg.Go(func() error {
-		ctx, cancel := context.WithCancel(ctx)
-		defer cancel()
+	err = eg.Wait()
 
-		cursor, err := fi.store.GetFirehoseCommitCursor(ctx)
-		if err != nil {
-			return fmt.Errorf("get commit cursor: %w", err)
-		}
-		fi.log.Info("starting ingestion", zap.Int64("cursor", cursor))
+	// Perform a final cursor flush.
+	fi.log.Info("performing final flush of cursor")
+	exitCtx, cancelExitCtx := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancelExitCtx()
+	flushCursor(exitCtx)
 
-		subscribeURL := fi.subscribeURL
-		if cursor != -1 {
-			subscribeURL += "?cursor=" + strconv.FormatInt(cursor, 10)
-		}
-
-		con, _, err := websocket.DefaultDialer.DialContext(
-			ctx, subscribeURL, http.Header{},
-		)
-		if err != nil {
-			return fmt.Errorf("dialing websocket: %w", err)
-		}
-
-		// TODO: Indigo now offers a native parallel consumer pool, we should
-		// consider switching to it - but only if we can
-		callbacks := &events.RepoStreamCallbacks{
-			RepoCommit: func(evt *atproto.SyncSubscribeRepos_Commit) error {
-				select {
-				case <-ctx.Done():
-					// Ensure we don't get stuck waiting for a worker even if
-					// the connection has shutdown.
-					return nil
-				case evtChan <- evt:
-				}
-				return nil
-			},
-		}
-		scheduler := sequential.NewScheduler("main", callbacks.EventHandler)
-		if err := events.HandleRepoStream(ctx, con, scheduler); err != nil {
-			fi.log.Error("repo stream from relay has failed", zap.Error(err))
-			return fmt.Errorf("handling repo stream: %w", err)
-		}
-		return nil
-		// TODO: sometimes stream exits of own accord, we should attempt to
-		// reconnect and enter an "error state".
-	})
-
-	return eg.Wait()
+	return err
 }
 
-func (fi *FirehoseIngester) handleCommit(ctx context.Context, evt *atproto.SyncSubscribeRepos_Commit) (err error) {
+func (fi *FirehoseIngester) handleCommit(
+	ctx context.Context, evt *models.Event,
+) (err error) {
 	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_commit")
 	defer func() {
 		endSpan(span, err)
 	}()
-	span.SetAttributes(actorDIDAttr(evt.Repo))
+	span.SetAttributes(actorDIDAttr(evt.Did))
 
-	time, err := bluesky.ParseTime(evt.Time)
-	if err != nil {
-		return fmt.Errorf("parsing timestamp: %w", err)
-	}
-	rr, err := repo.ReadRepoFromCar(ctx, bytes.NewReader(evt.Blocks))
-	if err != nil {
-		return fmt.Errorf("reading repo from car: %w", err)
-	}
+	evtTime := time.UnixMicro(evt.TimeUS)
+	uri := fmt.Sprintf(
+		"at://%s/%s/%s",
+		evt.Did, evt.Commit.Collection, evt.Commit.RKey,
+	)
 
-	for _, op := range evt.Ops {
-		uri := fmt.Sprintf("at://%s/%s", evt.Repo, op.Path)
-		switch repomgr.EventKind(op.Action) {
-		case repomgr.EvtKindCreateRecord:
-			recordCid, record, err := rr.GetRecord(ctx, op.Path)
-			if err != nil {
-				if errors.Is(err, lexutil.ErrUnrecognizedType) {
-					continue
-				}
-				return fmt.Errorf("create (%s): getting record for op: %w", uri, err)
-			}
-
-			// Ensure there isn't a mismatch between the reference and the found
-			// object.
-			if lexutil.LexLink(recordCid) != *op.Cid {
-				return fmt.Errorf("create (%s): mismatch in record and op cid: %s != %s", uri, recordCid, *op.Cid)
-			}
-
-			if err := fi.handleRecordCreate(
-				ctx, evt.Repo, uri, record,
-			); err != nil {
-				return fmt.Errorf("create (%s): handling record create: %w", uri, err)
-			}
-		case repomgr.EvtKindUpdateRecord:
-			recordCid, record, err := rr.GetRecord(ctx, op.Path)
-			if err != nil {
-				if errors.Is(err, lexutil.ErrUnrecognizedType) {
-					continue
-				}
-				return fmt.Errorf("update (%s): getting record for op: %w", uri, err)
-			}
-
-			// Ensure there isn't a mismatch between the reference and the found
-			// object.
-			if lexutil.LexLink(recordCid) != *op.Cid {
-				return fmt.Errorf("update (%s): mismatch in record and op cid: %s != %s", uri, recordCid, *op.Cid)
-			}
-
-			if err := fi.handleRecordUpdate(
-				ctx, evt.Repo, evt.Rev, uri, time, record,
-			); err != nil {
-				return fmt.Errorf("update (%s): handling record update: %w", uri, err)
-			}
-		case repomgr.EvtKindDeleteRecord:
-			if err := fi.handleRecordDelete(
-				ctx, evt.Repo, uri,
-			); err != nil {
-				return fmt.Errorf("handling record delete: %w", err)
-			}
+	switch evt.Commit.Operation {
+	case models.CommitOperationCreate:
+		if err := fi.handleRecordCreate(
+			ctx,
+			evt.Did,
+			uri,
+			evt.Commit.Collection,
+			evt.Commit.Record,
+		); err != nil {
+			return fmt.Errorf("create (%s): handling record create: %w", uri, err)
 		}
+	case models.CommitOperationUpdate:
+		if err := fi.handleRecordUpdate(
+			ctx,
+			evt.Did,
+			evt.Commit.Rev,
+			uri,
+			evtTime,
+			evt.Commit.Collection,
+			evt.Commit.Record,
+		); err != nil {
+			return fmt.Errorf("update (%s): handling record update: %w", uri, err)
+		}
+	case models.CommitOperationDelete:
+		if err := fi.handleRecordDelete(
+			ctx, evt.Did, uri,
+		); err != nil {
+			return fmt.Errorf("handling record delete: %w", err)
+		}
+	default:
+		fi.log.Warn("unknown commit operation", zap.String("kind", evt.Kind))
 	}
 
 	return nil
-}
-
-func (fi *FirehoseIngester) isFurryFeedFollow(record typegen.CBORMarshaler) bool {
-	follow, ok := record.(*bsky.GraphFollow)
-	if !ok {
-		return false
-	}
-
-	// TODO: Make this not hard coded
-	// https://bsky.app/profile/furryli.st
-	return follow.Subject == "did:plc:jdkvwye2lf4mingzk7qdebzc"
 }
 
 func endSpan(span trace.Span, err error) {
@@ -365,7 +269,8 @@ func (fi *FirehoseIngester) handleRecordCreate(
 	ctx context.Context,
 	repoDID string,
 	recordUri string,
-	record typegen.CBORMarshaler,
+	recordCollection string,
+	record json.RawMessage,
 ) (err error) {
 	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_record_create")
 	defer func() {
@@ -375,17 +280,25 @@ func (fi *FirehoseIngester) handleRecordCreate(
 
 	actor := fi.actorCache.GetByDID(repoDID)
 	if actor == nil {
-		feedFollow := fi.isFurryFeedFollow(record)
+		// Check if it's a follow of the furry feed
+		if recordCollection != "app.bsky.graph.follow" {
+			return nil
+		}
+		data := &bsky.GraphFollow{}
+		if err := json.Unmarshal(record, data); err != nil {
+			return fmt.Errorf("unmarshalling app.bsky.graph.follow: %w", err)
+		}
 		// If it's an unknown actor, and they've interacted, add em to
 		// the candidate actor store with pending status. Otherwise, ignore
 		// them.
-		if !(feedFollow) {
+		// TODO: Make this not hard coded
+		// https://bsky.app/profile/furryli.st
+		if data.Subject != "did:plc:jdkvwye2lf4mingzk7qdebzc" {
 			return nil
 		}
 		fi.log.Info(
 			"unknown actor interacted, adding to db as pending",
 			zap.String("did", repoDID),
-			zap.Bool("feed_follow", feedFollow),
 		)
 		if err := fi.actorCache.CreatePendingCandidateActor(ctx, repoDID); err != nil {
 			return fmt.Errorf("creating pending candidate actor: %w", err)
@@ -400,18 +313,30 @@ func (fi *FirehoseIngester) handleRecordCreate(
 		return nil
 	}
 
-	switch data := record.(type) {
-	case *bsky.FeedPost:
+	switch recordCollection {
+	case "app.bsky.feed.post":
+		data := &bsky.FeedPost{}
+		if err := json.Unmarshal(record, data); err != nil {
+			return fmt.Errorf("unmarshalling app.bsky.feed.post: %w", err)
+		}
 		err := fi.handleFeedPostCreate(ctx, repoDID, recordUri, data)
 		if err != nil {
 			return fmt.Errorf("handling app.bsky.feed.post create: %w", err)
 		}
-	case *bsky.FeedLike:
+	case "app.bsky.feed.like":
+		data := &bsky.FeedLike{}
+		if err := json.Unmarshal(record, data); err != nil {
+			return fmt.Errorf("unmarshalling app.bsky.feed.like: %w", err)
+		}
 		err := fi.handleFeedLikeCreate(ctx, repoDID, recordUri, data)
 		if err != nil {
 			return fmt.Errorf("handling app.bsky.feed.like: %w", err)
 		}
-	case *bsky.GraphFollow:
+	case "app.bsky.graph.follow":
+		data := &bsky.GraphFollow{}
+		if err := json.Unmarshal(record, data); err != nil {
+			return fmt.Errorf("unmarshalling app.bsky.graph.follow: %w", err)
+		}
 		err := fi.handleGraphFollowCreate(ctx, repoDID, recordUri, data)
 		if err != nil {
 			return fmt.Errorf("handling app.bsky.graph.follow: %w", err)
@@ -475,7 +400,8 @@ func (fi *FirehoseIngester) handleRecordUpdate(
 	repoRev string,
 	recordUri string,
 	updatedAt time.Time,
-	record typegen.CBORMarshaler,
+	recordCollection string,
+	record json.RawMessage,
 ) (err error) {
 	ctx, span := tracer.Start(ctx, "firehose_ingester.handle_record_update")
 	defer func() {
@@ -494,8 +420,12 @@ func (fi *FirehoseIngester) handleRecordUpdate(
 		return nil
 	}
 
-	switch data := record.(type) {
-	case *bsky.ActorProfile:
+	switch recordCollection {
+	case "app.bsky.actor.profile":
+		data := &bsky.ActorProfile{}
+		if err := json.Unmarshal(record, data); err != nil {
+			return fmt.Errorf("unmarshalling app.bsky.actor.profile: %w", err)
+		}
 		err := fi.handleActorProfileUpdate(ctx, repoDID, repoRev, recordUri, updatedAt, data)
 		if err != nil {
 			return fmt.Errorf("handling app.bsky.actor.profile update: %w", err)

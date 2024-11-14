@@ -122,6 +122,10 @@ type FirehoseCommitCursor struct {
 	Cursor int64
 }
 
+type JetstreamCursor struct {
+	Cursor int64
+}
+
 type PostScore struct {
 	URI           string
 	Alg           string
