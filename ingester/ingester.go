@@ -3,6 +3,7 @@ package ingester
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync/atomic"
@@ -57,8 +58,8 @@ func NewFirehoseIngester(
 		actorCache: crc,
 		store:      store,
 
-		jetstreamURL:        "wss://jetstream1.us-east.bsky.network/subscribe",
-		workerCount:         8,
+		jetstreamURL:        "wss://jetstream2.us-east.bsky.network/subscribe",
+		workerCount:         20,
 		workItemTimeout:     time.Second * 30,
 		cursorFlushInterval: time.Second * 10,
 	}
@@ -113,21 +114,55 @@ func (fi *FirehoseIngester) Start(ctx context.Context) (err error) {
 	if initCursor == -1 {
 		initCursor = time.Now().UnixMicro()
 	}
-	// Step back 10 minutes to allow recovery
-	initCursor = time.UnixMicro(initCursor).Add(-10 * time.Minute).UnixMicro()
-
-	fi.log.Info(
-		"starting ingestion",
-		zap.Int64("cursor", initCursor),
-		zap.Time("cursor_time", time.UnixMicro(initCursor)),
-	)
+	// Step back a few minutes to allow recovery
+	initCursor = time.UnixMicro(initCursor).Add(-5 * time.Minute).UnixMicro()
 
 	eg.Go(func() error {
-		if err := jsClient.ConnectAndRead(ctx, &initCursor); err != nil {
-			return fmt.Errorf("reading jetstream: %w", err)
+		for {
+			cursor := activeCursor.Load()
+			if cursor == 0 {
+				cursor = initCursor
+			}
+
+			fi.log.Info(
+				"starting ingestion",
+				zap.Int64("cursor", cursor),
+				zap.String("cursor_time", time.UnixMicro(cursor).String()),
+			)
+			if err := jsClient.ConnectAndRead(ctx, &cursor); err != nil {
+				if errors.Is(err, context.Canceled) {
+					return nil
+				}
+				fi.log.Error("jetstream client encountered an error, restarting", zap.Error(err))
+			}
 		}
+
 		return nil
 	})
+
+	flushCursor := func(ctx context.Context) {
+		cursor := activeCursor.Load()
+		if cursor == 0 {
+			fi.log.Warn("no cursor value to persist")
+			return
+		}
+		if cursor <= initCursor {
+			// attempt to avoid a scenario where a crash loop sends the
+			// cursor further and further into the past.
+			fi.log.Warn("not setting cursor to avoid regression")
+			return
+		}
+		if err := fi.store.SetJetstreamCursor(ctx, cursor); err != nil {
+			fi.log.Warn("failed to flush cursor", zap.Error(err))
+			return
+		}
+
+		fi.log.Info(
+			"successfully flushed cursor",
+			zap.Int64("cursor", cursor),
+			zap.String("cursor_time", time.UnixMicro(cursor).String()),
+		)
+	}
 
 	eg.Go(func() error {
 		ctx, cancel := context.WithCancel(ctx)
@@ -141,31 +176,19 @@ func (fi *FirehoseIngester) Start(ctx context.Context) (err error) {
 			case <-time.After(fi.cursorFlushInterval):
 			}
 
-			cursor := activeCursor.Load()
-			if cursor == 0 {
-				fi.log.Warn("no cursor value to persist")
-				continue
-			}
-
-			if cursor <= initCursor {
-				// attempt to avoid a scenario where a crash loop sends the
-				// cursor further and further into the past.
-				fi.log.Warn("not setting cursor to avoid regression")
-				continue
-			}
-
-			if err := fi.store.SetJetstreamCursor(ctx, cursor); err != nil {
-				return fmt.Errorf("saving cursor: %w", err)
-			}
-			fi.log.Info(
-				"successfully flushed cursor",
-				zap.Int64("cursor", cursor),
-				zap.Time("cursor_time", time.UnixMicro(cursor)),
-			)
+			flushCursor(ctx)
 		}
 	})
 
-	return eg.Wait()
+	err = eg.Wait()
+
+	// Perform a final cursor flush.
+	fi.log.Info("performing final flush of cursor")
+	exitCtx, cancelExitCtx := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancelExitCtx()
+	flushCursor(exitCtx)
+
+	return err
 }
 
 func (fi *FirehoseIngester) handleCommit(
