@@ -240,7 +240,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "furry-hot",
 		DisplayName: "🐾 Hot",
-		Description: "Hottest posts by furries across Bluesky. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nHottest posts by furries across Bluesky. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
 		Priority:    100,
 	}, preScoredGenerator(preScoredGeneratorOpts{
 		Alg: "classic",
@@ -251,7 +251,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "hot-nsfw",
 		DisplayName: "🐾 Hot 🌙",
-		Description: "Hottest NSFW posts by furries across Bluesky. Contains only NSFW content.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nHottest NSFW posts by furries across Bluesky. Contains only NSFW content.\n\nJoin the furry feeds by following @furryli.st",
 		Priority:    100,
 	}, preScoredGenerator(preScoredGeneratorOpts{
 		Alg: "classic",
@@ -265,13 +265,13 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "furry-new",
 		DisplayName: "🐾 New",
-		Description: "Posts by furries across Bluesky. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nPosts by furries across Bluesky. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
 		Priority:    101,
 	}, chronologicalGenerator(chronologicalGeneratorOpts{}))
 	r.Register(Meta{
 		ID:          "furry-fursuit",
 		DisplayName: "🐾 Fursuits",
-		Description: "Posts by furries with #fursuit.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nPosts by furries with #fursuit.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags:           []string{"fursuit", "fursuitfriday"},
@@ -283,7 +283,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "fursuit-nsfw",
 		DisplayName: "🐾 Murrsuits 🌙",
-		Description: "Posts by furries that have an image and #murrsuit or #fursuit.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nPosts by furries that have an image and #murrsuit or #fursuit.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags:           []string{"fursuit", "fursuitfriday", "murrsuit", "mursuit"},
@@ -296,7 +296,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "fursuit-clean",
 		DisplayName: "🐾 Fursuits 🧼",
-		Description: "Posts by furries with #fursuit that haven't been marked NSFW.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nPosts by furries with #fursuit that haven't been marked NSFW.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags:           []string{"fursuit", "fursuitfriday"},
@@ -310,7 +310,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "furry-art",
 		DisplayName: "🐾 Art",
-		Description: "Posts by furries with #furryart. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nPosts by furries with #furryart. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags:           furryArtHashtags,
@@ -322,7 +322,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "art-clean",
 		DisplayName: "🐾 Art 🧼",
-		Description: "Posts by furries with #furryart and that haven't been marked NSFW.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nPosts by furries with #furryart and that haven't been marked NSFW.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags:           furryArtHashtags,
@@ -334,7 +334,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "art-nsfw",
 		DisplayName: "🐾 Art 🌙",
-		Description: "Posts by furries with #furryart and marked NSFW.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nPosts by furries with #furryart and marked NSFW.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags:           furryArtHashtags,
@@ -346,7 +346,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "art-hot",
 		DisplayName: "🐾 Hot Art",
-		Description: "Hottest posts by furries with #furryart. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nHottest posts by furries with #furryart. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
 	}, preScoredGenerator(preScoredGeneratorOpts{
 		Alg: "classic",
 		generatorOpts: generatorOpts{
@@ -358,7 +358,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "art-hot-nsfw",
 		DisplayName: "🐾 Hot Art 🌙",
-		Description: "Hottest posts by furries with #furryart and marked NSFW.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nHottest posts by furries with #furryart and marked NSFW.\n\nJoin the furry feeds by following @furryli.st",
 	}, preScoredGenerator(preScoredGeneratorOpts{
 		Alg: "classic",
 		generatorOpts: generatorOpts{
@@ -371,7 +371,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "furry-nsfw",
 		DisplayName: "🐾 New 🌙",
-		Description: "Posts by furries that have been marked NSFW.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nPosts by furries that have been marked NSFW.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			DisallowedHashtags: defaultDisallowedHashtags,
@@ -382,7 +382,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "furry-comms",
 		DisplayName: "🐾 #CommsOpen",
-		Description: "Posts by furries that have #commsopen.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nPosts by furries that have #commsopen.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags:           []string{"commsopen"},
@@ -392,7 +392,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "con-denfur",
 		DisplayName: "🐾 DenFur 2023",
-		Description: "A feed for all things DenFur! Use #denfur or #denfur2023 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nA feed for all things DenFur! Use #denfur or #denfur2023 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags:           []string{"denfur", "denfur2023"},
@@ -402,7 +402,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "con-eurofurence",
 		DisplayName: "🐾 Eurofurence 2024",
-		Description: "A feed for all things Eurofurence! Use #eurofurence, #eurofurence2024, #eurofurence28, #ef, #ef2024, or #ef28 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nA feed for all things Eurofurence! Use #eurofurence, #eurofurence2024, #eurofurence28, #ef, #ef2024, or #ef28 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags: []string{
@@ -418,7 +418,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "con-blfc",
 		DisplayName: "🐾 BLFC 2023",
-		Description: "A feed for all things BLFC! Use #blfc, #blfc23, or #blfc2023 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nA feed for all things BLFC! Use #blfc, #blfc23, or #blfc2023 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags: []string{
@@ -430,7 +430,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "con-mff",
 		DisplayName: "🐾 MFF 2023",
-		Description: "A feed for all things MFF! Use #furfest, #mff, #mff23, or #mff2023 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nA feed for all things MFF! Use #furfest, #mff, #mff23, or #mff2023 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags: []string{
@@ -442,7 +442,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "con-fc",
 		DisplayName: "🐾 FC 2024",
-		Description: "A feed for all things FC! Use #fc, #fc24, or #fc2024 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nA feed for all things FC! Use #fc, #fc24, or #fc2024 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags: []string{
@@ -456,7 +456,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "con-nfc",
 		DisplayName: "🐾 NFC 2024",
-		Description: "A feed for all things NFC! Use #nfc, #nfc24, or #nfc2024 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nA feed for all things NFC! Use #nfc, #nfc24, or #nfc2024 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags: []string{
@@ -469,7 +469,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "con-fwa",
 		DisplayName: "🐾 FWA 2024",
-		Description: "A feed for all things FWA! Use #fwa, #fwa24, #fwa2024, or #furryweekend to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nA feed for all things FWA! Use #fwa, #fwa24, #fwa2024, or #furryweekend to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags: []string{
@@ -481,7 +481,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "con-ac",
 		DisplayName: "🐾 Anthrocon 2024",
-		Description: "A feed for all things Anthrocon! Use #anthrocon, #anthrocon2024, or #ac to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nA feed for all things Anthrocon! Use #anthrocon, #anthrocon2024, or #ac to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags: []string{
@@ -494,7 +494,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "merch",
 		DisplayName: "🐾 #FurSale",
-		Description: "Buy and sell furry merch on the FurSale feed. Use #fursale or #merch to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nBuy and sell furry merch on the FurSale feed. Use #fursale or #merch to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags:           []string{"fursale", "merch"},
@@ -504,7 +504,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "streamers",
 		DisplayName: "🐾 Streamers",
-		Description: "Find furs going live on streaming platforms. Use #goinglive or #furrylive to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nFind furs going live on streaming platforms. Use #goinglive or #furrylive to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags:           []string{"goinglive", "furrylive"},
@@ -514,7 +514,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "games",
 		DisplayName: "🐾 Games",
-		Description: "A feed for talking about and showing off furry visual novels and games. Use #FurryVN or #FurryGame to include a post in the feed. \n\nSponsored by @MinoHotel.bsky.social\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nA feed for talking about and showing off furry visual novels and games. Use #FurryVN or #FurryGame to include a post in the feed. \n\nSponsored by @MinoHotel.bsky.social\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags:           []string{"furryvn", "furrygames", "furrygame"},
@@ -524,7 +524,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "literature",
 		DisplayName: "🐾 Literature",
-		Description: "A feed for talking about and showing off furry literature. Use #FurFic, #FurLit or #FurryWriting to include a post in the feed. \n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nA feed for talking about and showing off furry literature. Use #FurFic, #FurLit or #FurryWriting to include a post in the feed. \n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags: []string{
@@ -554,7 +554,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "video-hot",
 		DisplayName: "🐾 Hot videos",
-		Description: "Hottest video posts by furries across Bluesky. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nHottest video posts by furries across Bluesky. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
 		Priority:    100,
 	}, preScoredGenerator(preScoredGeneratorOpts{
 		Alg: "classic",
@@ -566,7 +566,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "video-new",
 		DisplayName: "🐾 New videos",
-		Description: "Latest video posts by furries across Bluesky. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nLatest video posts by furries across Bluesky. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			DisallowedHashtags: defaultDisallowedHashtags,
@@ -576,7 +576,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "video-hot-nsfw",
 		DisplayName: "🐾 Hot videos 🌙",
-		Description: "Hottest NSFW video posts by furries across Bluesky. Contains only NSFW content.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nHottest NSFW video posts by furries across Bluesky. Contains only NSFW content.\n\nJoin the furry feeds by following @furryli.st",
 		Priority:    100,
 	}, preScoredGenerator(preScoredGeneratorOpts{
 		Alg: "classic",
@@ -589,7 +589,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	r.Register(Meta{
 		ID:          "video-new-nsfw",
 		DisplayName: "🐾 New videos 🌙",
-		Description: "Latest NSFW video posts by furries across Bluesky. Contains only NSFW content.\n\nJoin the furry feeds by following @furryli.st",
+		Description: "Furry\nLatest NSFW video posts by furries across Bluesky. Contains only NSFW content.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			DisallowedHashtags: defaultDisallowedHashtags,
