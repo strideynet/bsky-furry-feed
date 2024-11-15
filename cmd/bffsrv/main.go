@@ -136,11 +136,8 @@ func runE(log *zap.Logger) error {
 	var poolConnector store.PoolConnector
 	switch mode {
 	case productionMode:
-		poolConnector = &store.CloudSQLConnector{
-			Instance: "bsky-furry-feed:us-east1:main-us-east",
-			Database: "bff",
-			// TODO: Fetch this from an env var or from adc
-			Username: "849144245446-compute@developer",
+		poolConnector = &store.DirectConnector{
+			URI: os.Getenv("DB_URI"),
 		}
 	case feedDevMode:
 		poolConnector = &store.CloudSQLConnector{
