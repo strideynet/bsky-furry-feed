@@ -19,7 +19,6 @@ import (
 	"go.opentelemetry.io/contrib/detectors/gcp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/jaeger"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -67,10 +66,7 @@ func setupTracing(ctx context.Context, url string, mode mode) (func(), error) {
 	var exp tracesdk.SpanExporter
 	var err error
 	if mode == productionMode {
-		exp, err = otlptracehttp.New(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("creating http trace exporter: %w", err)
-		}
+		return nil, nil
 	} else {
 		exp, err = jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(url)))
 		if err != nil {
