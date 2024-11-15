@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/grafana/pyroscope-go"
 	"github.com/strideynet/bsky-furry-feed/scoring"
 
 	"github.com/joho/godotenv"
@@ -132,6 +133,36 @@ func runE(log *zap.Logger) error {
 		return fmt.Errorf("creating tracer providers: %w", err)
 	}
 	defer shutdownTrace()
+
+	if mode == productionMode {
+		prof, err := pyroscope.Start(pyroscope.Config{
+			ApplicationName: "bffsrv",
+
+			// replace this with the address of pyroscope server
+			ServerAddress:     "https://profiles-prod-001.grafana.net",
+			BasicAuthUser:     os.Getenv("PYROSCOPE_USER"),
+			BasicAuthPassword: os.Getenv("PYROSCOPE_PASSWORD"),
+
+			// you can disable logging by setting this to nil
+			Logger: pyroscope.StandardLogger,
+
+			// you can provide static tags via a map:
+			Tags: map[string]string{"hostname": os.Getenv("HOSTNAME")},
+
+			ProfileTypes: []pyroscope.ProfileType{
+				pyroscope.ProfileCPU,
+				pyroscope.ProfileAllocObjects,
+				pyroscope.ProfileAllocSpace,
+				pyroscope.ProfileInuseObjects,
+				pyroscope.ProfileInuseSpace,
+			},
+		})
+		if err != nil {
+			log.Error("fail to initialize pyroscope", zap.Error(err))
+		} else {
+			defer prof.Stop()
+		}
+	}
 
 	var poolConnector store.PoolConnector
 	switch mode {

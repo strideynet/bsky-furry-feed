@@ -53,13 +53,15 @@ require (
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
+	github.com/grafana/pyroscope-go v1.2.0 // indirect
+	github.com/grafana/pyroscope-go/godeltaprof v0.1.8 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru/arc/v2 v2.0.6 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/imdario/mergo v0.3.15 // indirect
-	github.com/klauspost/compress v1.17.9 // indirect
+	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/labstack/echo/v4 v4.11.3 // indirect
 	github.com/labstack/gommon v0.4.1 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.1 // indirect
