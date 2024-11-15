@@ -131,7 +131,7 @@ func (fi *FirehoseIngester) Start(ctx context.Context) (err error) {
 		initCursor = time.Now().UnixMicro()
 	}
 	// Step back a few minutes to allow recovery
-	initCursor = time.UnixMicro(initCursor).Add(-5 * time.Minute).UnixMicro()
+	initCursor = time.UnixMicro(initCursor).Add(-1 * time.Minute).UnixMicro()
 
 	eg.Go(func() error {
 		for {
