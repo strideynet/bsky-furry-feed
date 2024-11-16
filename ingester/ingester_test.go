@@ -67,6 +67,7 @@ func TestFirehoseIngester(t *testing.T) {
 	dataDir := t.TempDir()
 
 	streamConsumer, err := consumer.NewConsumer(ctx, slog.Default(), "ws://"+harness.PDS.RawHost()+"/xrpc/com.atproto.sync.subscribeRepos", dataDir, time.Hour, jetstream.Emit)
+	require.NoError(t, err)
 	jetstream.Consumer = streamConsumer
 	streamEcho := echo.New()
 	streamEcho.GET("/subscribe", jetstream.HandleSubscribe)
