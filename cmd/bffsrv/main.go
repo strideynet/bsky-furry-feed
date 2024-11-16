@@ -160,7 +160,12 @@ func runE(log *zap.Logger) error {
 		if err != nil {
 			log.Error("fail to initialize pyroscope", zap.Error(err))
 		} else {
-			defer prof.Stop()
+			defer func() {
+				err := prof.Stop()
+				if err != nil {
+					log.Info("error stopping prof", zap.Error(err))
+				}
+			}()
 		}
 	}
 
