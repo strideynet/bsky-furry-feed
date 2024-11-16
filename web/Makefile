@@ -14,7 +14,7 @@ dev-%: install-%
 	@pnpm --filter $* dev
 
 build-%: install-%
-	@SK_ADAPTER=vercel pnpm --filter $* build
+	@SK_ADAPTER=cloudflare pnpm --filter $* build
 
 test-%: install-%
 	@pnpm --filter $* test

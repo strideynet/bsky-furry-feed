@@ -1,5 +1,5 @@
 import NodeAdapter from '@sveltejs/adapter-node';
-import VercelAdapter from '@sveltejs/adapter-vercel';
+import CloudflareAdapter from '@sveltejs/adapter-cloudflare';
 import { vitePreprocess } from '@sveltejs/kit/vite';
 import Preprocess from 'svelte-preprocess';
 
@@ -20,8 +20,8 @@ const config = {
       $routes: 'src/routes'
     },
     adapter:
-      process.env.SK_ADAPTER === 'vercel'
-        ? VercelAdapter()
+      process.env.SK_ADAPTER === 'cloudflare'
+        ? CloudflareAdapter()
         : NodeAdapter({ out: './dist' }),
     files: {
       lib: 'src/lib',
