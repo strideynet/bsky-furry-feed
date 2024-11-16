@@ -3,6 +3,8 @@ package ingester_test
 import (
 	"context"
 	"log/slog"
+	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -68,6 +70,7 @@ func TestFirehoseIngester(t *testing.T) {
 
 	streamConsumer, err := consumer.NewConsumer(ctx, slog.Default(), "ws://"+harness.PDS.RawHost()+"/xrpc/com.atproto.sync.subscribeRepos", dataDir, time.Hour, jetstream.Emit)
 	require.NoError(t, err)
+	defer streamConsumer.Shutdown()
 	jetstream.Consumer = streamConsumer
 	streamEcho := echo.New()
 	streamEcho.GET("/subscribe", jetstream.HandleSubscribe)
@@ -84,10 +87,13 @@ func TestFirehoseIngester(t *testing.T) {
 
 	wsConn, _, err := websocket.DefaultDialer.Dial(streamConsumer.SocketURL, nil)
 	require.NoError(t, err)
+	t.Cleanup(func() { wsConn.Close() })
 
 	go func() {
 		err := events.HandleRepoStream(ctx, wsConn, scheduler)
-		require.NoError(t, err)
+		if err != nil && !strings.Contains(err.Error(), net.ErrClosed.Error()) {
+			require.NoError(t, err)
+		}
 	}()
 
 	fi := ingester.NewFirehoseIngester(
