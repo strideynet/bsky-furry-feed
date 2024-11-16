@@ -2,17 +2,24 @@ package ingester_test
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 	"time"
 
 	"github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/api/bsky"
+	"github.com/bluesky-social/indigo/events"
+	"github.com/bluesky-social/indigo/events/schedulers/parallel"
 	"github.com/bluesky-social/indigo/lex/util"
 	lexutil "github.com/bluesky-social/indigo/lex/util"
 	indigoTest "github.com/bluesky-social/indigo/testing"
+	"github.com/bluesky-social/jetstream/pkg/consumer"
+	jetstreamsrv "github.com/bluesky-social/jetstream/pkg/server"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/strideynet/bsky-furry-feed/ingester"
@@ -54,8 +61,36 @@ func TestFirehoseIngester(t *testing.T) {
 
 	cac := ingester.NewActorCache(harness.Log, harness.Store)
 	require.NoError(t, cac.Sync(ctx))
+
+	jetstream, err := jetstreamsrv.NewServer(1)
+	require.NoError(t, err)
+	dataDir := t.TempDir()
+
+	streamConsumer, err := consumer.NewConsumer(ctx, slog.Default(), "ws://"+harness.PDS.RawHost()+"/xrpc/com.atproto.sync.subscribeRepos", dataDir, time.Hour, jetstream.Emit)
+	jetstream.Consumer = streamConsumer
+	streamEcho := echo.New()
+	streamEcho.GET("/subscribe", jetstream.HandleSubscribe)
+
+	go func() {
+		err := streamEcho.Start(":")
+		require.NoError(t, err)
+	}()
+
+	err = streamConsumer.RunSequencer(ctx)
+	require.NoError(t, err)
+
+	scheduler := parallel.NewScheduler(1, 100, "prod-firehose", streamConsumer.HandleStreamEvent)
+
+	wsConn, _, err := websocket.DefaultDialer.Dial(streamConsumer.SocketURL, nil)
+	require.NoError(t, err)
+
+	go func() {
+		err := events.HandleRepoStream(ctx, wsConn, scheduler)
+		require.NoError(t, err)
+	}()
+
 	fi := ingester.NewFirehoseIngester(
-		harness.Log, harness.Store, cac, "ws://"+harness.PDS.RawHost(),
+		harness.Log, harness.Store, cac, "ws://"+streamEcho.Listener.Addr().String()+"/subscribe",
 	)
 	fiContext, fiCancel := context.WithCancel(ctx)
 	fiWait := make(chan struct{})
@@ -341,7 +376,8 @@ func TestFirehoseIngester(t *testing.T) {
 			}
 			tp := tp
 			t.Run(tp.name, func(t *testing.T) {
-				t.Parallel()
+				// todo: figure out why we can’t use parallel here!
+				// t.Parallel()
 				require.EventuallyWithT(t, func(t *assert.CollectT) {
 					out, err := harness.Store.GetPostByURI(ctx, tp.uri)
 					if !assert.NoError(t, err) {

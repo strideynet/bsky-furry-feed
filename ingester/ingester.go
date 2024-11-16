@@ -62,15 +62,21 @@ type FirehoseIngester struct {
 	cursorFlushInterval time.Duration
 }
 
+const DefaultJetstreamURL = "wss://jetstream1.us-east.bsky.network/subscribe"
+
 func NewFirehoseIngester(
-	log *zap.Logger, store *store.PGXStore, crc *ActorCache,
+	log *zap.Logger, store *store.PGXStore, crc *ActorCache, jetstreamURL string,
 ) *FirehoseIngester {
+	if jetstreamURL == "" {
+		jetstreamURL = DefaultJetstreamURL
+	}
+
 	return &FirehoseIngester{
 		log:        log,
 		actorCache: crc,
 		store:      store,
 
-		jetstreamURL:        "wss://jetstream1.us-east.bsky.network/subscribe",
+		jetstreamURL:        jetstreamURL,
 		workerCount:         20,
 		workItemTimeout:     time.Second * 30,
 		cursorFlushInterval: time.Second * 10,
