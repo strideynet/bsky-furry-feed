@@ -72,7 +72,7 @@ await loadProfile();
       @next="next"
       @loading="loading = true"
     />
-    <div class="flex max-md:flex-col gap-3" :class="{ loading }">
+    <div class="flex max-md:flex-col gap-3" :class="{ 'loading-flash': loading }">
       <div class="mb-3 md:w-[50%] card-list h-min flex-1">
         <user-actions :did="data.did" :status="actor?.status" @update="next" />
         <shared-card v-if="data.banner">
@@ -185,7 +185,7 @@ await loadProfile();
         </shared-card>
       </div>
       <div class="mb-3 md:w-[50%]">
-        <shared-card :class="{ loading }" no-padding>
+        <shared-card :class="{ 'loading-flash': loading }" no-padding>
           <div class="px-4 py-3 border-b border-gray-300 dark:border-gray-700">
             <h2>Recent posts</h2>
           </div>
@@ -272,39 +272,5 @@ await loadProfile();
 
 .card-list > :not(:first-of-type) {
   @apply rounded-t-none;
-}
-
-.loading {
-  background: linear-gradient(
-    120deg,
-    transparent 5%,
-    rgb(31, 41, 55) 20%,
-    transparent 30%
-  );
-  background-size: 200% 100%;
-  background-position-y: bottom;
-  animation: 1.25s loading linear infinite;
-}
-
-@media (prefers-color-scheme: light) {
-  .loading {
-    background: linear-gradient(
-      120deg,
-      transparent 5%,
-      rgb(243, 244, 246) 20%,
-      transparent 30%
-    );
-    background-size: 200% 100%;
-    background-position-y: bottom;
-  }
-}
-
-@keyframes loading {
-  from {
-    background-position-x: 50%;
-  }
-  to {
-    background-position-x: -150%;
-  }
 }
 </style>

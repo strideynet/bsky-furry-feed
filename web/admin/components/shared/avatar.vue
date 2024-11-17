@@ -7,26 +7,43 @@ const props = defineProps<{
   notRounded?: boolean;
 }>();
 
-const url = computed(() => {
-  let base = `https://bsky-cdn.codingpa.ws/avatar/${props.did}`;
+const loading = ref(true);
+const url = ref("");
 
+function updateUrl() {
+  loading.value = true;
+  const img = new Image();
+  let base = `https://bsky-cdn.codingpa.ws/avatar/${props.did}`;
   if (props.resize) {
     base += `/${props.resize}`;
   }
+  img.addEventListener("load", () => {
+    url.value = base;
+    loading.value = false;
+  });
+  img.src = base;
+}
 
-  return base;
-});
+updateUrl();
+
+watch(() => props.did, updateUrl);
 </script>
 
 <template>
   <img
-    v-if="did && hasAvatar"
+    v-if="did && hasAvatar && !loading"
+    ref="img"
     :class="{ 'rounded-full': !notRounded }"
     :src="url"
     :height="size"
     :width="size"
     alt=""
   />
+  <div
+    v-else-if="loading"
+    class="loading-flash"
+    :style="{ height: `${size}px`, width: `${size}px` }"
+  ></div>
   <svg
     v-else
     :width="size"
