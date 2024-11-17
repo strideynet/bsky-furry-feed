@@ -70,7 +70,7 @@ func NewFirehoseIngester(
 		actorCache: crc,
 		store:      store,
 
-		jetstreamURL:        "wss://jetstream2.us-east.bsky.network/subscribe",
+		jetstreamURL:        "wss://jetstream1.us-east.bsky.network/subscribe",
 		workerCount:         20,
 		workItemTimeout:     time.Second * 30,
 		cursorFlushInterval: time.Second * 10,
