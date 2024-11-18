@@ -134,6 +134,9 @@ func TestGenerator(t *testing.T) {
 		if opts.IndexedAt.IsZero() {
 			opts.IndexedAt = now
 		}
+		if opts.CreatedAt.IsZero() {
+			opts.CreatedAt = now
+		}
 		require.NoError(t, harness.Store.CreatePost(ctx, opts))
 	}
 

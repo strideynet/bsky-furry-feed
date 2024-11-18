@@ -118,6 +118,7 @@ WHERE
     -- Remove posts newer than the cursor timestamp
     AND (cp.indexed_at < $5)
     AND cp.indexed_at > NOW() - INTERVAL '7 day'
+    AND cp.created_at > NOW() - INTERVAL '7 day'
 ORDER BY
     cp.indexed_at DESC
 LIMIT $6
@@ -261,6 +262,7 @@ WHERE
         < ROW(($6)::REAL, ($7)::TEXT)
     )
     AND cp.indexed_at > NOW() - INTERVAL '7 day'
+    AND cp.created_at > NOW() - INTERVAL '7 day'
 ORDER BY
     ph.score DESC, ph.uri DESC
 LIMIT $8
