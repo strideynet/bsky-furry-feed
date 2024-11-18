@@ -15,6 +15,16 @@ const currentQueue = ref<keyof typeof queues["value"]>("All");
 
 const error = ref<string>();
 
+const actorProfilesMap = computed(() => {
+  const map = new Map<string, ProfileViewDetailed>();
+
+  for (const profile of actorProfiles.value) {
+    map.set(profile.did, profile);
+  }
+
+  return map;
+});
+
 const queues = computed(() => ({
   All: actors.value,
   "Probably furry": actors.value.filter((actor) => {
@@ -59,7 +69,7 @@ const nextActor = async () => {
 await nextActor();
 
 function didToProfile(did: string): ProfileViewDetailed | undefined {
-  return actorProfiles.value.find((p) => p.did === did);
+  return actorProfilesMap.value.get(did);
 }
 
 function selectRandomActor() {
