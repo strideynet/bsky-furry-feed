@@ -1,49 +1,26 @@
 # Operations
 
-IaC can be found in `infra/`. The state and deployment is managed by Spacelift.
+IaC can be found in the private [infra][infrarepo] repository.
+
+[infrarepo]: https://github.com/furrylist/infra
 
 ## Deploying
 
-If database migration is necessary, run this from your workstation before
-updating any components.
+For now, we’re back to manual deployments:
 
-Update the images in `infra/k8s` and `kubectl apply`.
+1. Create a release on GitHub with a new tag.
+1. Wait for docker image build to succeed.
+1. If migration is necessary, execute it manually via `psql` and bump up the version in the `schema_migrations` table, until we have better tooling.
+1. Update the version tag in the [infra repo][infrarepo].
+1. On the server, update the `furrylist-infra` repo and run `docker compose up -d`.
+1. Celebrate! 🎉
+1. If feeds were changed or added since the last deployment, reregister the feeds:
 
-### CloudSQL
-
-You can open a local proxy to the production database with:
-
-```sh
-gcloud config set project bsky-furry-feed
-gcloud auth application-default login
-# Port 15432 is used to differentiate from the local development postgres
-# instance.
-./cloud-sql-proxy --auto-iam-authn bsky-furry-feed:us-east1:main-us-east -p 15432
+```shell
+$ docker exec -it furrylist-infra-bffsrv-1 go run ./cmd/bffctl/ -e production bsky publish-feeds
 ```
 
-When authenticating provide your username/email and no password, IAM auth takes
-care of the "password" element (short lived tokens are injected).
+## Incident runbook
 
-Permissions may be a bit screwy at the moment. You'll need to manually grant
-access to tables to cloudsqliamserviceaccount and cloudsqliamuser.
-
-### Runbook
-
-1. Cut release on GitHub with tag
-2. Wait for docker image build to succeed
-3. If migration is necessary. If so, run it
-
-```sh
-$ migrate -path store/migrations -database "postgres://noah@noahstride.co.uk@localhost:15432/bff?sslmode=disable" up
-```
-
-4. If migration created tables, assign permissions to the correct groups
-5. Update k8s manifests
-6. Apply manifests
-7. Monitor deployment
-8. Celebrate
-9. Reregister feed entries
-
-```sh
-$
-```
+Sign in to <https://furrylist.grafana.net> and head to the **Overview**
+dashboard. Look at the colorful metrics and hope for improvement!
