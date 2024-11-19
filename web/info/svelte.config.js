@@ -1,6 +1,6 @@
 import NodeAdapter from '@sveltejs/adapter-node';
 import CloudflareAdapter from '@sveltejs/adapter-cloudflare';
-import { vitePreprocess } from '@sveltejs/kit/vite';
+import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import Preprocess from 'svelte-preprocess';
 
 /** @type {import('@sveltejs/kit').Config} */
@@ -8,10 +8,12 @@ const config = {
   preprocess: [
     vitePreprocess(),
     Preprocess({
-      postcss: true
+      postcss: true,
+      sass: {
+        silenceDeprecations: ['legacy-js-api'],
+      },
     })
   ],
-
   kit: {
     alias: {
       $api: '../proto/bff/v1',
@@ -28,7 +30,10 @@ const config = {
       params: 'src/params',
       routes: 'src/routes'
     }
-  }
+  },
+  compilerOptions: {
+    preserveWhitespace: true,
+  },
 };
 
 export default config;
