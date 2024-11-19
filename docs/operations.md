@@ -14,11 +14,7 @@ For now, we’re back to manual deployments:
 1. Update the version tag in the [infra repo][infrarepo].
 1. On the server, update the `furrylist-infra` repo and run `docker compose up -d`.
 1. Celebrate! 🎉
-1. If feeds were changed or added since the last deployment, reregister the feeds:
-
-```shell
-$ docker exec -it furrylist-infra-bffsrv-1 go run ./cmd/bffctl/ -e production bsky publish-feeds
-```
+1. If feeds were changed or added since the last deployment, run the **Deploy Feeds** CI job.
 
 ## Incident runbook
 
