@@ -38,39 +38,8 @@ jobs:
           file: bffsrv.Dockerfile
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-  deploy-kubernetes:
-    needs: [build-and-push-docker]
-    name: Deploy Kubernetes
-    environment: production
-    runs-on: ubuntu-latest
-    permissions:
-      contents: 'read'
-      id-token: 'write'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - uses: azure/setup-kubectl@v2.0
-      - id: 'auth'
-        uses: 'google-github-actions/auth@v1'
-        with:
-          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v1'
-      - name: 'Use gcloud CLI'
-        run: 'gcloud info'
-      - id: 'get-credentials'
-        uses: 'google-github-actions/get-gke-credentials@v1'
-        with:
-          cluster_name: 'us-east'
-          location: 'us-east1'
-      - uses: Azure/k8s-deploy@v4
-        with:
-          namespace: 'default'
-          manifests: |
-            infra/k8s
-          images: 'ghcr.io/strideynet/bsky-furry-feed/bffsrv:${{ github.ref_name }}'
   deploy-feeds:
-    needs: [deploy-kubernetes]
+    needs: [build-and-push-docker]
     name: Deploy Feeds
     environment: production
     runs-on: ubuntu-latest
