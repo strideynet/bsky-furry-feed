@@ -89,6 +89,12 @@ func (fi *FirehoseIngester) Start(ctx context.Context) (err error) {
 
 	jsCfg := jsclient.DefaultClientConfig()
 	jsCfg.WebsocketURL = fi.jetstreamURL
+	jsCfg.WantedCollections = []string{
+		"app.bsky.actor.profile",
+		"app.bsky.feed.like",
+		"app.bsky.feed.post",
+		"app.bsky.graph.follow",
+	}
 
 	var activeCursor atomic.Int64
 	sched := jsparallel.NewScheduler(
