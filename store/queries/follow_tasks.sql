@@ -13,7 +13,8 @@ WHERE
     next_try_at <= NOW()
     AND finished_at IS NULL
     AND tries < 3
-ORDER BY id ASC;
+ORDER BY id ASC
+LIMIT 1;
 
 -- name: MarkFollowTaskAsDone :exec
 UPDATE follow_tasks
