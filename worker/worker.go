@@ -47,7 +47,7 @@ func Start(
 			} else {
 				err = client.Follow(ctx, task.ActorDID)
 
-				if err != nil {
+				if err == nil {
 					record, repoRev, err := bgsClient.SyncGetRecord(ctx, "app.bsky.actor.profile", task.ActorDID, "self")
 					if err != nil {
 						if err2 := (&xrpc.Error{}); !errors.As(err, &err2) || err2.StatusCode != 404 {
@@ -89,7 +89,6 @@ func Start(
 					}); err != nil {
 						return fmt.Errorf("updating actor profile: %w", err)
 					}
-
 				}
 			}
 
