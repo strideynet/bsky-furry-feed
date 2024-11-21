@@ -285,7 +285,12 @@ func runE(log *zap.Logger) error {
 		log.Info("starting background worker")
 
 		eg.Go(func() error {
-			return worker.Start(ctx, log.Named("background_worker"), bluesky.DefaultPDSHost, bskyCredentials, pgxStore)
+			worker, err := worker.New(ctx, log.Named("background_worker"), bluesky.DefaultPDSHost, bskyCredentials, pgxStore)
+			if err != nil {
+				return fmt.Errorf("initializing worker: %w", err)
+			}
+
+			return worker.Run(ctx)
 		})
 	}
 

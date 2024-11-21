@@ -11,22 +11,39 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
+	"github.com/strideynet/bsky-furry-feed/store/gen"
 	"go.uber.org/zap"
 )
 
-func Start(
+type Worker struct {
+	log       *zap.Logger
+	pdsHost   string
+	pdsClient *bluesky.PDSClient
+	bgsClient bluesky.BGSClient
+	store     *store.PGXStore
+}
+
+func New(
 	ctx context.Context,
 	log *zap.Logger,
 	pdsHost string,
 	bskyCredentials *bluesky.Credentials,
 	pgxStore *store.PGXStore,
-) error {
+) (*Worker, error) {
 	client, err := bluesky.ClientFromCredentials(ctx, pdsHost, bskyCredentials)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	bgsClient := bluesky.BGSClient{}
 
+	return &Worker{
+		log:       log,
+		pdsHost:   pdsHost,
+		pdsClient: client,
+		store:     pgxStore,
+	}, nil
+}
+
+func (w *Worker) Run(ctx context.Context) error {
 	ticker := time.NewTicker(time.Second * 5)
 	defer ticker.Stop()
 
@@ -35,78 +52,101 @@ func Start(
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			task, err := pgxStore.GetNextFollowTask(ctx)
+			task, err := w.store.GetNextFollowTask(ctx)
 			if errors.Is(err, pgx.ErrNoRows) {
 				continue
 			}
-
-			log.Info("processing task", zap.Int64("id", task.ID))
-
-			if task.ShouldUnfollow {
-				err = client.Unfollow(ctx, task.ActorDID)
-			} else {
-				err = client.Follow(ctx, task.ActorDID)
-
-				if err == nil {
-					record, repoRev, err := bgsClient.SyncGetRecord(ctx, "app.bsky.actor.profile", task.ActorDID, "self")
-					if err != nil {
-						if err2 := (&xrpc.Error{}); !errors.As(err, &err2) || err2.StatusCode != 404 {
-							return fmt.Errorf("getting profile: %w", err)
-						}
-						record = nil
-					}
-
-					var profile *bsky.ActorProfile
-					if record != nil {
-						switch record := record.(type) {
-						case *bsky.ActorProfile:
-							profile = record
-						default:
-							return fmt.Errorf("expected *bsky.ActorProfile, got %T", record)
-						}
-					}
-
-					displayName := ""
-					description := ""
-
-					if profile != nil {
-						if profile.DisplayName != nil {
-							displayName = *profile.DisplayName
-						}
-
-						if profile.Description != nil {
-							description = *profile.Description
-						}
-					}
-
-					if err := pgxStore.CreateLatestActorProfile(ctx, store.CreateLatestActorProfileOpts{
-						ActorDID:    task.ActorDID,
-						CommitCID:   repoRev,
-						CreatedAt:   time.Now(), // NOTE: The Firehose reader uses the server time but we use the local time here. This may cause staleness if the firehose gives us an older timestamp but a newer update.
-						IndexedAt:   time.Now(),
-						DisplayName: displayName,
-						Description: description,
-					}); err != nil {
-						return fmt.Errorf("updating actor profile: %w", err)
-					}
-				}
+			if err != nil {
+				w.log.Error("loading task", zap.Error(err))
+				continue
 			}
 
+			w.log.Info("processing task", zap.Int64("id", task.ID))
+
+			err = w.runTask(ctx, task)
 			if err != nil {
-				log.Error("failed to process task", zap.Int64("id", task.ID), zap.Error(err))
-				err = pgxStore.MarkFollowTaskAsErrored(ctx, task.ID, err)
+				w.log.Error("failed to process task", zap.Int64("id", task.ID), zap.Error(err))
+				err = w.store.MarkFollowTaskAsErrored(ctx, task.ID, err)
 				if err != nil {
-					return fmt.Errorf("marking task %d as errored: %w", task.ID, err)
+					w.log.Error("failed to mark task as errored", zap.Int64("id", task.ID), zap.Error(err))
 				}
 
 				continue
 			}
 
-			log.Info("processed task", zap.Int64("id", task.ID))
-			err = pgxStore.MarkFollowTaskAsDone(ctx, task.ID)
+			w.log.Info("processed task", zap.Int64("id", task.ID))
+			err = w.store.MarkFollowTaskAsDone(ctx, task.ID)
 			if err != nil {
-				return fmt.Errorf("marking follow task as done: %w", err)
+				w.log.Error("marking task as done", zap.Int64("id", task.ID), zap.Error(err))
 			}
 		}
 	}
+}
+
+func (w *Worker) runTask(ctx context.Context, task gen.FollowTask) error {
+	if task.ShouldUnfollow {
+		return w.pdsClient.Unfollow(ctx, task.ActorDID)
+	}
+
+	return w.updateProfileAndFollow(ctx, task.ActorDID)
+}
+
+func (w *Worker) updateProfileAndFollow(ctx context.Context, actorDid string) error {
+	err := w.updateProfile(ctx, actorDid)
+	if err != nil {
+		return fmt.Errorf("updating profile: %w", err)
+	}
+
+	err = w.pdsClient.Follow(ctx, actorDid)
+	if err != nil {
+		return fmt.Errorf("following account: %w", err)
+	}
+
+	return nil
+}
+
+func (w *Worker) updateProfile(ctx context.Context, actorDid string) error {
+	record, repoRev, err := w.bgsClient.SyncGetRecord(ctx, "app.bsky.actor.profile", actorDid, "self")
+	if err != nil {
+		if err2 := (&xrpc.Error{}); !errors.As(err, &err2) || err2.StatusCode != 404 {
+			return fmt.Errorf("getting profile: %w", err)
+		}
+		record = nil
+	}
+
+	var profile *bsky.ActorProfile
+	if record != nil {
+		switch record := record.(type) {
+		case *bsky.ActorProfile:
+			profile = record
+		default:
+			return fmt.Errorf("expected *bsky.ActorProfile, got %T", record)
+		}
+	}
+
+	displayName := ""
+	description := ""
+
+	if profile != nil {
+		if profile.DisplayName != nil {
+			displayName = *profile.DisplayName
+		}
+
+		if profile.Description != nil {
+			description = *profile.Description
+		}
+	}
+
+	if err := w.store.CreateLatestActorProfile(ctx, store.CreateLatestActorProfileOpts{
+		ActorDID:    actorDid,
+		CommitCID:   repoRev,
+		CreatedAt:   time.Now(), // NOTE: The Firehose reader uses the server time but we use the local time here. This may cause staleness if the firehose gives us an older timestamp but a newer update.
+		IndexedAt:   time.Now(),
+		DisplayName: displayName,
+		Description: description,
+	}); err != nil {
+		return fmt.Errorf("updating actor profile: %w", err)
+	}
+
+	return nil
 }
