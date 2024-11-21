@@ -18,8 +18,6 @@ import (
 type ModerationServiceHandler struct {
 	store      *store.PGXStore
 	log        *zap.Logger
-	pdsClient  *bluesky.PDSClient
-	bgsClient  bluesky.BGSClient
 	authEngine *AuthEngine
 }
 

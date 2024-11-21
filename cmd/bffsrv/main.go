@@ -243,7 +243,6 @@ func runE(log *zap.Logger) error {
 			feedService,
 			pgxStore,
 			bluesky.DefaultPDSHost,
-			bskyCredentials,
 			&api.AuthEngine{
 				ActorGetter:    pgxStore,
 				TokenValidator: api.BSkyTokenValidator(bluesky.DefaultPDSHost),

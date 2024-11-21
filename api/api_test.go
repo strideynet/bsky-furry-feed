@@ -11,7 +11,6 @@ import (
 	"connectrpc.com/connect"
 	indigoTest "github.com/bluesky-social/indigo/testing"
 	"github.com/stretchr/testify/require"
-	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/feed"
 	"github.com/strideynet/bsky-furry-feed/testenv"
 )
@@ -67,10 +66,6 @@ func startAPIHarness(ctx context.Context, t *testing.T) *apiHarness {
 		},
 		harness.Store,
 		harness.PDS.HTTPHost(),
-		&bluesky.Credentials{
-			Identifier: "bff.tpds",
-			Password:   "password",
-		},
 		&AuthEngine{
 			TokenValidator: BSkyTokenValidator(harness.PDS.HTTPHost()),
 			ActorGetter:    harness.Store,
