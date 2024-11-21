@@ -2,12 +2,9 @@ package api
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
-	"github.com/bluesky-social/indigo/api/bsky"
-	"github.com/bluesky-social/indigo/xrpc"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"golang.org/x/exp/slices"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -64,8 +61,8 @@ func (m *ModerationServiceHandler) BanActor(ctx context.Context, req *connect.Re
 		return nil, fmt.Errorf("creating audit event: %w", err)
 	}
 
-	if err := m.pdsClient.Unfollow(ctx, req.Msg.ActorDid); err != nil {
-		return nil, fmt.Errorf("unfollowing actor: %w", err)
+	if err := tx.EnqueueUnfollow(ctx, req.Msg.ActorDid); err != nil {
+		return nil, fmt.Errorf("enqueuing unfollow: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -122,8 +119,8 @@ func (m *ModerationServiceHandler) UnapproveActor(ctx context.Context, req *conn
 		return nil, fmt.Errorf("creating audit event: %w", err)
 	}
 
-	if err := m.pdsClient.Unfollow(ctx, req.Msg.ActorDid); err != nil {
-		return nil, fmt.Errorf("unfollowing actor: %w", err)
+	if err := tx.EnqueueUnfollow(ctx, req.Msg.ActorDid); err != nil {
+		return nil, fmt.Errorf("enqueuing unfollow: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -474,50 +471,8 @@ func (m *ModerationServiceHandler) ForceApproveActor(ctx context.Context, req *c
 }
 
 func (m *ModerationServiceHandler) updateProfileAndFollow(ctx context.Context, actorDID string, tx *store.PGXTX) error {
-	record, repoRev, err := m.bgsClient.SyncGetRecord(ctx, "app.bsky.actor.profile", actorDID, "self")
-	if err != nil {
-		if err2 := (&xrpc.Error{}); !errors.As(err, &err2) || err2.StatusCode != 404 {
-			return fmt.Errorf("getting profile: %w", err)
-		}
-		record = nil
-	}
-
-	var profile *bsky.ActorProfile
-	if record != nil {
-		switch record := record.(type) {
-		case *bsky.ActorProfile:
-			profile = record
-		default:
-			return fmt.Errorf("expected *bsky.ActorProfile, got %T", record)
-		}
-	}
-
-	displayName := ""
-	description := ""
-
-	if profile != nil {
-		if profile.DisplayName != nil {
-			displayName = *profile.DisplayName
-		}
-
-		if profile.Description != nil {
-			description = *profile.Description
-		}
-	}
-
-	if err := tx.CreateLatestActorProfile(ctx, store.CreateLatestActorProfileOpts{
-		ActorDID:    actorDID,
-		CommitCID:   repoRev,
-		CreatedAt:   time.Now(), // NOTE: The Firehose reader uses the server time but we use the local time here. This may cause staleness if the firehose gives us an older timestamp but a newer update.
-		IndexedAt:   time.Now(),
-		DisplayName: displayName,
-		Description: description,
-	}); err != nil {
-		return fmt.Errorf("updating actor profile: %w", err)
-	}
-
-	if err := m.pdsClient.Follow(ctx, actorDID); err != nil {
-		return fmt.Errorf("following approved actor: %w", err)
+	if err := tx.EnqueueFollow(ctx, actorDID); err != nil {
+		return fmt.Errorf("enqueing follow: %w", err)
 	}
 
 	return nil

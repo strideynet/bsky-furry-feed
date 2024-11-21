@@ -827,3 +827,37 @@ func (s *PGXStore) HoldBackPendingActor(ctx context.Context, did string, duratio
 		HeldUntil: pgtype.Timestamptz{Time: duration, Valid: true},
 	})
 }
+
+func (s *PGXStore) EnqueueFollow(ctx context.Context, did string) error {
+	return s.queries.EnqueueFollowTask(ctx, gen.EnqueueFollowTaskParams{
+		ActorDID:       did,
+		NextTryAt:      pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		CreatedAt:      pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		ShouldUnfollow: false,
+	})
+}
+
+func (s *PGXStore) EnqueueUnfollow(ctx context.Context, did string) error {
+	return s.queries.EnqueueFollowTask(ctx, gen.EnqueueFollowTaskParams{
+		ActorDID:       did,
+		NextTryAt:      pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		CreatedAt:      pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		ShouldUnfollow: true,
+	})
+}
+
+func (s *PGXStore) GetNextFollowTask(ctx context.Context) (gen.FollowTask, error) {
+	return s.queries.GetNextFollowTask(ctx)
+}
+
+func (s *PGXStore) MarkFollowTaskAsErrored(ctx context.Context, id int64, err error) error {
+	return s.queries.MarkFollowTaskAsErrored(ctx, gen.MarkFollowTaskAsErroredParams{
+		ID:        id,
+		LastError: pgtype.Text{String: err.Error(), Valid: true},
+		NextTryAt: pgtype.Timestamptz{Time: time.Now().Add(time.Minute * 15), Valid: true},
+	})
+}
+
+func (s *PGXStore) MarkFollowTaskAsDone(ctx context.Context, id int64) error {
+	return s.queries.MarkFollowTaskAsDone(ctx, id)
+}
