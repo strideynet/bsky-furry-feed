@@ -10,6 +10,7 @@ import (
 
 	"github.com/grafana/pyroscope-go"
 	"github.com/strideynet/bsky-furry-feed/scoring"
+	"github.com/strideynet/bsky-furry-feed/worker"
 
 	"github.com/joho/godotenv"
 	"github.com/strideynet/bsky-furry-feed/api"
@@ -117,6 +118,7 @@ func runE(log *zap.Logger) error {
 	ingesterEnabled := os.Getenv("BFF_INGESTER_ENABLED") == "1"
 	apiEnabled := os.Getenv("BFF_API_ENABLED") == "1"
 	scoreMaterializerEnabled := os.Getenv("BFF_SCORE_MATERIALIZER_ENABLED") == "1"
+	backgroundWorkerEnabled := os.Getenv("BFF_BACKGROUND_WORKER_ENABLED") == "1"
 
 	log.Info("starting", zap.String("mode", string(mode)))
 
@@ -241,7 +243,6 @@ func runE(log *zap.Logger) error {
 			feedService,
 			pgxStore,
 			bluesky.DefaultPDSHost,
-			bskyCredentials,
 			&api.AuthEngine{
 				ActorGetter:    pgxStore,
 				TokenValidator: api.BSkyTokenValidator(bluesky.DefaultPDSHost),
@@ -277,6 +278,19 @@ func runE(log *zap.Logger) error {
 		eg.Go(func() error {
 			log.Info("scoring materializer started")
 			return hm.Run(ctx)
+		})
+	}
+
+	if backgroundWorkerEnabled {
+		log.Info("starting background worker")
+
+		eg.Go(func() error {
+			worker, err := worker.New(ctx, log.Named("background_worker"), bluesky.DefaultPDSHost, bskyCredentials, pgxStore)
+			if err != nil {
+				return fmt.Errorf("initializing worker: %w", err)
+			}
+
+			return worker.Run(ctx)
 		})
 	}
 

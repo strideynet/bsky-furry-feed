@@ -122,6 +122,17 @@ type FirehoseCommitCursor struct {
 	Cursor int64
 }
 
+type FollowTask struct {
+	ID             int64
+	ActorDID       string
+	NextTryAt      pgtype.Timestamptz
+	CreatedAt      pgtype.Timestamptz
+	Tries          int32
+	ShouldUnfollow bool
+	FinishedAt     pgtype.Timestamptz
+	LastError      pgtype.Text
+}
+
 type JetstreamCursor struct {
 	Cursor int64
 }

@@ -9,7 +9,6 @@ import (
 	"connectrpc.com/connect"
 	"connectrpc.com/otelconnect"
 	"github.com/rs/cors"
-	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/feed"
 	"github.com/strideynet/bsky-furry-feed/proto/bff/v1/bffv1pbconnect"
 	"github.com/strideynet/bsky-furry-feed/store"
@@ -49,7 +48,6 @@ func New(
 	feedService feedService,
 	pgxStore *store.PGXStore,
 	pdsHost string,
-	bskyCredentials *bluesky.Credentials,
 	authEngine *AuthEngine,
 ) (*http.Server, error) {
 	mux := &http.ServeMux{}
@@ -77,16 +75,10 @@ func New(
 	mux.Handle(getFeedSkeletonHandler(log, feedService))
 	mux.Handle(describeFeedGeneratorHandler(log, hostname, feedService))
 
-	client, err := bluesky.ClientFromCredentials(ctx, pdsHost, bskyCredentials)
-	if err != nil {
-		return nil, fmt.Errorf("creating bluesky client: %w", err)
-	}
-
 	// Mount Buf Connect services
 	modSvcHandler := &ModerationServiceHandler{
 		store:      pgxStore,
 		log:        log,
-		pdsClient:  client,
 		authEngine: authEngine,
 	}
 	interceptors := connect.WithInterceptors(
