@@ -45,6 +45,7 @@ WHERE
     AND finished_at IS NULL
     AND tries < 3
 ORDER BY id ASC
+LIMIT 1
 `
 
 func (q *Queries) GetNextFollowTask(ctx context.Context) (FollowTask, error) {
