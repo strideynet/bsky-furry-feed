@@ -135,7 +135,7 @@ func run() error {
 			res.Close()
 		}
 		stop := time.Now()
-		slog.Info("Speed test", "name", name, "duration", stop.Sub(start))
+		slog.Info("Ran the query 100x", "name", name, "duration", stop.Sub(start))
 	}
 
 	return nil
