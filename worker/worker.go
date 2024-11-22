@@ -12,14 +12,24 @@ import (
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"github.com/strideynet/bsky-furry-feed/store/gen"
+	typegen "github.com/whyrusleeping/cbor-gen"
 	"go.uber.org/zap"
 )
+
+type pdsClient interface {
+	Unfollow(ctx context.Context, subjectDID string) error
+	Follow(ctx context.Context, subjectDID string) error
+}
+
+type bgsClient interface {
+	SyncGetRecord(ctx context.Context, collection string, actorDID string, rkey string) (record typegen.CBORMarshaler, repoRev string, err error)
+}
 
 type Worker struct {
 	log       *zap.Logger
 	pdsHost   string
-	pdsClient *bluesky.PDSClient
-	bgsClient bluesky.BGSClient
+	pdsClient pdsClient
+	bgsClient bgsClient
 	store     *store.PGXStore
 }
 
@@ -34,12 +44,14 @@ func New(
 	if err != nil {
 		return nil, err
 	}
+	bgs := &bluesky.BGSClient{}
 
 	return &Worker{
 		log:       log,
 		pdsHost:   pdsHost,
 		pdsClient: client,
 		store:     pgxStore,
+		bgsClient: bgs,
 	}, nil
 }
 
