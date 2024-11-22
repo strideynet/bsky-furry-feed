@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createCandidatePost = `-- name: CreateCandidatePost :exec
+const CreateCandidatePost = `-- name: CreateCandidatePost :exec
 INSERT INTO
 candidate_posts (
     uri,
@@ -42,7 +42,7 @@ type CreateCandidatePostParams struct {
 }
 
 func (q *Queries) CreateCandidatePost(ctx context.Context, arg CreateCandidatePostParams) error {
-	_, err := q.db.Exec(ctx, createCandidatePost,
+	_, err := q.db.Exec(ctx, CreateCandidatePost,
 		arg.URI,
 		arg.ActorDID,
 		arg.CreatedAt,
@@ -56,7 +56,7 @@ func (q *Queries) CreateCandidatePost(ctx context.Context, arg CreateCandidatePo
 	return err
 }
 
-const getFurryNewFeed = `-- name: GetFurryNewFeed :many
+const GetFurryNewFeed = `-- name: GetFurryNewFeed :many
 WITH args AS (
     SELECT $7::TEXT [] AS allowed_embeds
 )
@@ -135,7 +135,7 @@ type GetFurryNewFeedParams struct {
 }
 
 func (q *Queries) GetFurryNewFeed(ctx context.Context, arg GetFurryNewFeedParams) ([]CandidatePost, error) {
-	rows, err := q.db.Query(ctx, getFurryNewFeed,
+	rows, err := q.db.Query(ctx, GetFurryNewFeed,
 		arg.Hashtags,
 		arg.DisallowedHashtags,
 		arg.IsNSFW,
@@ -174,7 +174,7 @@ func (q *Queries) GetFurryNewFeed(ctx context.Context, arg GetFurryNewFeedParams
 	return items, nil
 }
 
-const getPostByURI = `-- name: GetPostByURI :one
+const GetPostByURI = `-- name: GetPostByURI :one
 SELECT uri, actor_did, created_at, indexed_at, is_hidden, deleted_at, raw, hashtags, has_media, self_labels, has_video
 FROM
     candidate_posts AS cp
@@ -184,7 +184,7 @@ LIMIT 1
 `
 
 func (q *Queries) GetPostByURI(ctx context.Context, uri string) (CandidatePost, error) {
-	row := q.db.QueryRow(ctx, getPostByURI, uri)
+	row := q.db.QueryRow(ctx, GetPostByURI, uri)
 	var i CandidatePost
 	err := row.Scan(
 		&i.URI,
@@ -202,7 +202,7 @@ func (q *Queries) GetPostByURI(ctx context.Context, uri string) (CandidatePost, 
 	return i, err
 }
 
-const listScoredPosts = `-- name: ListScoredPosts :many
+const ListScoredPosts = `-- name: ListScoredPosts :many
 WITH args AS (
     SELECT $9::TEXT [] AS allowed_embeds
 )
@@ -296,7 +296,7 @@ type ListScoredPostsRow struct {
 }
 
 func (q *Queries) ListScoredPosts(ctx context.Context, arg ListScoredPostsParams) ([]ListScoredPostsRow, error) {
-	rows, err := q.db.Query(ctx, listScoredPosts,
+	rows, err := q.db.Query(ctx, ListScoredPosts,
 		arg.Alg,
 		arg.GenerationSeq,
 		arg.Hashtags,
@@ -338,7 +338,7 @@ func (q *Queries) ListScoredPosts(ctx context.Context, arg ListScoredPostsParams
 	return items, nil
 }
 
-const softDeleteCandidatePost = `-- name: SoftDeleteCandidatePost :exec
+const SoftDeleteCandidatePost = `-- name: SoftDeleteCandidatePost :exec
 UPDATE
 candidate_posts
 SET
@@ -348,6 +348,6 @@ WHERE
 `
 
 func (q *Queries) SoftDeleteCandidatePost(ctx context.Context, uri string) error {
-	_, err := q.db.Exec(ctx, softDeleteCandidatePost, uri)
+	_, err := q.db.Exec(ctx, SoftDeleteCandidatePost, uri)
 	return err
 }

@@ -70,6 +70,12 @@ func ConnectPGXStore(ctx context.Context, log *zap.Logger, connector PoolConnect
 	}, nil
 }
 
+// RawPool returns the underlying [pgxpool.Pool] used by the store. This should
+// be avoided in production.
+func (s *PGXStore) RawPool() *pgxpool.Pool {
+	return s.pool
+}
+
 func actorStatusFromProto(s v1.ActorStatus) (gen.ActorStatus, error) {
 	switch s {
 	case v1.ActorStatus_ACTOR_STATUS_PENDING:
