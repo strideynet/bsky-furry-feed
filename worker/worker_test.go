@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 	"testing"
 	"time"
@@ -15,7 +16,6 @@ import (
 	"github.com/strideynet/bsky-furry-feed/store"
 	"github.com/strideynet/bsky-furry-feed/testenv"
 	typegen "github.com/whyrusleeping/cbor-gen"
-	"go.uber.org/zap/zaptest"
 )
 
 type mockPDS struct {
@@ -78,7 +78,6 @@ func strPtr(s string) *string {
 
 func TestWorker(t *testing.T) {
 	t.Parallel()
-	log := zaptest.NewLogger(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
@@ -86,7 +85,7 @@ func TestWorker(t *testing.T) {
 	dbURL := testenv.StartDatabase(ctx, t)
 	pgxStore, err := store.ConnectPGXStore(
 		ctx,
-		log.Named("store"),
+		slog.Default(),
 		&store.DirectConnector{URI: dbURL},
 	)
 	require.NoError(t, err)
@@ -126,7 +125,7 @@ func TestWorker(t *testing.T) {
 	})
 
 	w := Worker{
-		log:       log,
+		log:       slog.Default(),
 		store:     pgxStore,
 		pdsClient: pds,
 		bgsClient: bgs,

@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -14,10 +15,9 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/strideynet/bsky-furry-feed/store/gen"
 	"github.com/urfave/cli/v2"
-	"go.uber.org/zap"
 )
 
-func dbCmd(log *zap.Logger, env *environment) *cli.Command {
+func dbCmd(log *slog.Logger, env *environment) *cli.Command {
 	return &cli.Command{
 		Name:  "db",
 		Usage: "Manage the database directly",
@@ -36,7 +36,7 @@ func dbCmd(log *zap.Logger, env *environment) *cli.Command {
 	}
 }
 
-func dbCandidateActorsList(log *zap.Logger, env *environment) *cli.Command {
+func dbCandidateActorsList(log *slog.Logger, env *environment) *cli.Command {
 	return &cli.Command{
 		Name:  "ls",
 		Usage: "List candidate actors",
@@ -53,14 +53,14 @@ func dbCandidateActorsList(log *zap.Logger, env *environment) *cli.Command {
 				return err
 			}
 			for _, r := range repos {
-				log.Info("repo", zap.Any("data", r))
+				log.Info("repo", slog.Any("data", r))
 			}
 			return nil
 		},
 	}
 }
 
-func dbCandidateActorsAddCmd(log *zap.Logger, env *environment) *cli.Command {
+func dbCandidateActorsAddCmd(log *slog.Logger, env *environment) *cli.Command {
 	handle := ""
 	isArtist := false
 	shouldFollow := false
@@ -99,7 +99,7 @@ func dbCandidateActorsAddCmd(log *zap.Logger, env *environment) *cli.Command {
 			if err != nil {
 				return fmt.Errorf("resolving handle: %w", err)
 			}
-			log.Info("found did", zap.String("did", did.Did))
+			log.Info("found did", slog.String("did", did.Did))
 
 			db := gen.New(conn)
 
@@ -115,7 +115,7 @@ func dbCandidateActorsAddCmd(log *zap.Logger, env *environment) *cli.Command {
 				Status:   gen.ActorStatusApproved,
 			}
 			log.Info("adding candidate actor",
-				zap.Any("data", params),
+				slog.Any("data", params),
 			)
 			_, err = db.CreateCandidateActor(
 				cctx.Context,
@@ -125,7 +125,7 @@ func dbCandidateActorsAddCmd(log *zap.Logger, env *environment) *cli.Command {
 				if strings.Contains(err.Error(), "duplicate key") {
 					log.Warn(
 						"already exists, no action taken",
-						zap.String("did", did.Did),
+						slog.String("did", did.Did),
 					)
 				} else {
 					return err
@@ -143,7 +143,7 @@ func dbCandidateActorsAddCmd(log *zap.Logger, env *environment) *cli.Command {
 	}
 }
 
-func dbCandidateActorsBackfillProfiles(log *zap.Logger, env *environment) *cli.Command {
+func dbCandidateActorsBackfillProfiles(log *slog.Logger, env *environment) *cli.Command {
 	return &cli.Command{
 		Name:  "backfill-profiles",
 		Usage: "Backfill profiles for all actors missing profiles",
@@ -217,7 +217,7 @@ func dbCandidateActorsBackfillProfiles(log *zap.Logger, env *environment) *cli.C
 					SelfLabels: nil,
 				}
 				log.Info("backfilling candidate actor profile",
-					zap.Any("data", params),
+					slog.Any("data", params),
 				)
 				if err := db.CreateLatestActorProfile(cctx.Context, params); err != nil {
 					return err

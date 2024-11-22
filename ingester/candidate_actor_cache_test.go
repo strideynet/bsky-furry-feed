@@ -2,15 +2,16 @@ package ingester
 
 import (
 	"context"
+	"log/slog"
+	"testing"
+	"time"
+
 	"github.com/jonboulle/clockwork"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	bffv1pb "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"github.com/strideynet/bsky-furry-feed/testenv"
-	"go.uber.org/zap/zaptest"
-	"testing"
-	"time"
 )
 
 func TestCandidateActorCache(t *testing.T) {
@@ -19,13 +20,12 @@ func TestCandidateActorCache(t *testing.T) {
 	}
 	t.Parallel()
 
-	log := zaptest.NewLogger(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	dbURI := testenv.StartDatabase(ctx, t)
 	pgxStore, err := store.ConnectPGXStore(
 		ctx,
-		log.Named("store"),
+		slog.Default(),
 		&store.DirectConnector{URI: dbURI},
 	)
 	require.NoError(t, err)
@@ -39,7 +39,7 @@ func TestCandidateActorCache(t *testing.T) {
 	require.NoError(t, err)
 
 	clock := clockwork.NewFakeClock()
-	cac := NewActorCache(log, pgxStore)
+	cac := NewActorCache(slog.Default(), pgxStore)
 	cac.clock = clock
 	require.NoError(t, cac.Sync(ctx))
 

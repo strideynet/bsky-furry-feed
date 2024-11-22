@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func bskyCmd(log *zap.Logger, env *environment) *cli.Command {
+func bskyCmd(log *slog.Logger, env *environment) *cli.Command {
 	return &cli.Command{
 		Name: "bsky",
 		Subcommands: []*cli.Command{

@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/bluesky-social/indigo/xrpc"
 	"github.com/jackc/pgx/v5"
+	"github.com/strideynet/bsky-furry-feed/bfflog"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"github.com/strideynet/bsky-furry-feed/store/gen"
@@ -26,7 +28,7 @@ type bgsClient interface {
 }
 
 type Worker struct {
-	log       *zap.Logger
+	log       *slog.Logger
 	pdsHost   string
 	pdsClient pdsClient
 	bgsClient bgsClient
@@ -35,7 +37,7 @@ type Worker struct {
 
 func New(
 	ctx context.Context,
-	log *zap.Logger,
+	log *slog.Logger,
 	pdsHost string,
 	bskyCredentials *bluesky.Credentials,
 	pgxStore *store.PGXStore,
@@ -69,27 +71,30 @@ func (w *Worker) Run(ctx context.Context) error {
 				continue
 			}
 			if err != nil {
-				w.log.Error("loading task", zap.Error(err))
+				w.log.Error("loading task", bfflog.Err(err))
 				continue
 			}
-
-			w.log.Info("processing task", zap.Int64("id", task.ID))
+			log := w.log.With(
+				slog.Int64("task_id", task.ID),
+				bfflog.ActorDID(task.ActorDID),
+			)
+			log.Info("processing task")
 
 			err = w.runTask(ctx, task)
 			if err != nil {
-				w.log.Error("failed to process task", zap.Int64("id", task.ID), zap.Error(err))
+				log.Error("failed to process task", bfflog.Err(err))
 				err = w.store.MarkFollowTaskAsErrored(ctx, task.ID, err)
 				if err != nil {
-					w.log.Error("failed to mark task as errored", zap.Int64("id", task.ID), zap.Error(err))
+					log.Error("failed to mark task as errored", bfflog.Err(err)))
 				}
 
 				continue
 			}
 
-			w.log.Info("processed task", zap.Int64("id", task.ID))
+			log.Info("processed task")
 			err = w.store.MarkFollowTaskAsDone(ctx, task.ID)
 			if err != nil {
-				w.log.Error("marking task as done", zap.Int64("id", task.ID), zap.Error(err))
+				log.Error("marking task as done", bfflog.Err(err))
 			}
 		}
 	}

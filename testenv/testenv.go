@@ -3,6 +3,7 @@ package testenv
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"testing"
 	"unsafe"
@@ -13,8 +14,6 @@ import (
 	"github.com/bluesky-social/indigo/xrpc"
 	"github.com/stretchr/testify/require"
 	"github.com/strideynet/bsky-furry-feed/store"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zaptest"
 
 	indigoTest "github.com/bluesky-social/indigo/testing"
 	"github.com/golang-migrate/migrate/v4"
@@ -85,13 +84,10 @@ func StartDatabase(ctx context.Context, t *testing.T) (url string) {
 type Harness struct {
 	PDS   *indigoTest.TestPDS
 	Relay *indigoTest.TestRelay
-	Log   *zap.Logger
 	Store *store.PGXStore
 }
 
 func StartHarness(ctx context.Context, t *testing.T) *Harness {
-	log := zaptest.NewLogger(t)
-
 	dbURL := StartDatabase(ctx, t)
 
 	didr := indigoTest.TestPLC(t)
@@ -106,7 +102,7 @@ func StartHarness(ctx context.Context, t *testing.T) *Harness {
 
 	pgxStore, err := store.ConnectPGXStore(
 		ctx,
-		log.Named("store"),
+		slog.Default(),
 		&store.DirectConnector{URI: dbURL},
 	)
 	require.NoError(t, err)
@@ -115,7 +111,6 @@ func StartHarness(ctx context.Context, t *testing.T) *Harness {
 	return &Harness{
 		Relay: relay,
 		PDS:   pds,
-		Log:   log,
 		Store: pgxStore,
 	}
 }

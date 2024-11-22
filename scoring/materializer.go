@@ -3,14 +3,15 @@ package scoring
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
+	"github.com/strideynet/bsky-furry-feed/bfflog"
 	"github.com/strideynet/bsky-furry-feed/store"
-	"go.uber.org/zap"
 )
 
 type Materializer struct {
-	log   *zap.Logger
+	log   *slog.Logger
 	store *store.PGXStore
 	opts  Opts
 }
@@ -22,7 +23,7 @@ type Opts struct {
 }
 
 func NewMaterializer(
-	log *zap.Logger, store *store.PGXStore, opts Opts,
+	log *slog.Logger, store *store.PGXStore, opts Opts,
 ) *Materializer {
 	return &Materializer{
 		log:   log,
@@ -39,8 +40,8 @@ func (m *Materializer) materialize(ctx context.Context) error {
 	}
 	m.log.Info(
 		"materialized generation",
-		zap.Int64("seq", seq),
-		zap.Duration("duration", time.Since(now)),
+		slog.Int64("seq", seq),
+		slog.Duration("duration", time.Since(now)),
 	)
 	return nil
 }
@@ -51,7 +52,7 @@ func (m *Materializer) cleanup(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	m.log.Info("cleaned up old rows", zap.Int64("n", n))
+	m.log.Info("cleaned up old rows", slog.Int64("n", n))
 	return nil
 }
 
@@ -77,7 +78,7 @@ func (m *Materializer) Run(ctx context.Context) error {
 		}
 
 		if err := m.step(ctx); err != nil {
-			m.log.Error("failed to execute step", zap.Error(err))
+			m.log.Error("failed to execute step", bfflog.Err(err))
 		}
 	}
 }
