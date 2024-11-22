@@ -40,7 +40,7 @@ watch(() => props.did, updateUrl);
     alt=""
   />
   <div
-    v-else-if="loading"
+    v-else-if="loading && did && hasAvatar"
     class="loading-flash"
     :style="{ height: `${size}px`, width: `${size}px` }"
   ></div>
