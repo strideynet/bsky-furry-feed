@@ -3,13 +3,15 @@ package ingester
 import (
 	"context"
 	"fmt"
-	"github.com/jonboulle/clockwork"
+	"log/slog"
 	"sync"
 	"time"
 
+	"github.com/jonboulle/clockwork"
+
+	"github.com/strideynet/bsky-furry-feed/bfflog"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store"
-	"go.uber.org/zap"
 )
 
 // ActorCache holds a view of the candidate actors from
@@ -22,7 +24,7 @@ import (
 //
 // TODO: Move this to the store as a wrapper around *store.PGXStore ?
 type ActorCache struct {
-	log   *zap.Logger
+	log   *slog.Logger
 	store *store.PGXStore
 
 	clock clockwork.Clock
@@ -45,7 +47,7 @@ type ActorCache struct {
 }
 
 func NewActorCache(
-	log *zap.Logger,
+	log *slog.Logger,
 	store *store.PGXStore,
 ) *ActorCache {
 	return &ActorCache{
@@ -84,7 +86,7 @@ func (crc *ActorCache) Sync(ctx context.Context) error {
 	crc.mu.Lock()
 	defer crc.mu.Unlock()
 	crc.cached = mapped
-	crc.log.Info("finished cache sync", zap.Int("count", len(mapped)))
+	crc.log.Info("finished cache sync", slog.Int("count", len(mapped)))
 	return nil
 }
 
@@ -100,7 +102,7 @@ func (crc *ActorCache) Start(ctx context.Context) error {
 			// a process restart to potentially rectify the situation.
 			ctx, cancel := context.WithTimeout(ctx, crc.refreshTimeout)
 			if err := crc.Sync(ctx); err != nil {
-				crc.log.Error("failed to fill cache", zap.Error(err))
+				crc.log.Error("failed to fill cache", bfflog.Err(err))
 			}
 			cancel()
 		}
@@ -121,7 +123,7 @@ func (crc *ActorCache) CreatePendingCandidateActor(ctx context.Context, did stri
 	if err != nil {
 		return fmt.Errorf("creating actor: %w", err)
 	}
-	crc.log.Info("added new pending actor")
+	crc.log.Info("added new pending actor", bfflog.ActorDID(did))
 
 	crc.mu.Lock()
 	defer crc.mu.Unlock()

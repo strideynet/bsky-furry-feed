@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"time"
 
 	"github.com/grafana/pyroscope-go"
+	"github.com/strideynet/bsky-furry-feed/bfflog"
 	"github.com/strideynet/bsky-furry-feed/scoring"
 	"github.com/strideynet/bsky-furry-feed/worker"
 
@@ -25,7 +27,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
-	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sys/unix"
 )
@@ -54,14 +55,25 @@ func getMode() (mode, error) {
 }
 
 func main() {
-	log, _ := zap.NewProduction()
+	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}))
+	slog.SetDefault(log)
 
 	if err := godotenv.Load(); err != nil && !errors.Is(err, os.ErrNotExist) {
-		log.Fatal("could not load existing .env file", zap.Error(err))
+		log.Error(
+			"could not load existing .env file",
+			bfflog.Err(err),
+		)
+		os.Exit(1)
 	}
 
 	if err := runE(log); err != nil {
-		log.Fatal("exited with error", zap.Error(err))
+		log.Error(
+			"exited with error",
+			bfflog.Err(err),
+		)
+		os.Exit(1)
 	}
 }
 
@@ -105,7 +117,7 @@ func setupTracing(ctx context.Context, url string, mode mode) (func(), error) {
 	}, nil
 }
 
-func runE(log *zap.Logger) error {
+func runE(log *slog.Logger) error {
 	mode, err := getMode()
 	if err != nil {
 		return err
@@ -120,7 +132,7 @@ func runE(log *zap.Logger) error {
 	scoreMaterializerEnabled := os.Getenv("BFF_SCORE_MATERIALIZER_ENABLED") == "1"
 	backgroundWorkerEnabled := os.Getenv("BFF_BACKGROUND_WORKER_ENABLED") == "1"
 
-	log.Info("starting", zap.String("mode", string(mode)))
+	log.Info("starting bffsrv", slog.String("mode", string(mode)))
 
 	ctx, cancel := signal.NotifyContext(context.Background(), unix.SIGINT)
 	defer cancel()
@@ -146,7 +158,9 @@ func runE(log *zap.Logger) error {
 			BasicAuthPassword: os.Getenv("PYROSCOPE_PASSWORD"),
 
 			// you can disable logging by setting this to nil
-			Logger: pyroscope.StandardLogger,
+			Logger: &bfflog.PyroscopeSlogAdapter{
+				Slog: bfflog.ChildLogger(log, "pyroscope"),
+			},
 
 			// you can provide static tags via a map:
 			Tags: map[string]string{"hostname": os.Getenv("HOSTNAME")},
@@ -160,12 +174,12 @@ func runE(log *zap.Logger) error {
 			},
 		})
 		if err != nil {
-			log.Error("fail to initialize pyroscope", zap.Error(err))
+			log.Error("fail to initialize pyroscope", bfflog.Err(err))
 		} else {
 			defer func() {
 				err := prof.Stop()
 				if err != nil {
-					log.Info("error stopping prof", zap.Error(err))
+					log.Info("error stopping prof", bfflog.Err(err))
 				}
 			}()
 		}
@@ -191,7 +205,9 @@ func runE(log *zap.Logger) error {
 	default:
 		return fmt.Errorf("unhandled mode: %s", mode)
 	}
-	pgxStore, err := store.ConnectPGXStore(ctx, log.Named("store"), poolConnector)
+	pgxStore, err := store.ConnectPGXStore(
+		ctx, bfflog.ChildLogger(log, "store"), poolConnector,
+	)
 	if err != nil {
 		return fmt.Errorf("connecting to store: %w", err)
 	}
@@ -204,7 +220,7 @@ func runE(log *zap.Logger) error {
 	if ingesterEnabled {
 		log.Info("setting up ingester")
 		actorCache := ingester.NewActorCache(
-			log.Named("actor_cache"),
+			bfflog.ChildLogger(log, "actor_cache"),
 			pgxStore,
 		)
 		// Prefill the actor cache before we proceed to ensure all actors
@@ -218,7 +234,7 @@ func runE(log *zap.Logger) error {
 		})
 
 		fi := ingester.NewFirehoseIngester(
-			log.Named("firehose_ingester"), pgxStore, actorCache, "",
+			bfflog.ChildLogger(log, "ingester"), pgxStore, actorCache, "",
 		)
 		eg.Go(func() error {
 			return fi.Start(ctx)
@@ -237,7 +253,7 @@ func runE(log *zap.Logger) error {
 		listenAddr := ":1337"
 		srv, err := api.New(
 			ctx,
-			log.Named("api"),
+			bfflog.ChildLogger(log, "api"),
 			hostname,
 			listenAddr,
 			feedService,
@@ -246,7 +262,7 @@ func runE(log *zap.Logger) error {
 			&api.AuthEngine{
 				ActorGetter:    pgxStore,
 				TokenValidator: api.BSkyTokenValidator(bluesky.DefaultPDSHost),
-				Log:            log.Named("auth_engine"),
+				Log:            bfflog.ChildLogger(log, "auth_engine"),
 			},
 		)
 		if err != nil {
@@ -254,11 +270,11 @@ func runE(log *zap.Logger) error {
 		}
 
 		eg.Go(func() error {
-			log.Info("feed server listening", zap.String("addr", srv.Addr))
+			log.Info("feed server listening", slog.String("addr", srv.Addr))
 			go func() {
 				<-ctx.Done()
 				if err := srv.Close(); err != nil {
-					log.Error("failed to close feed server", zap.Error(err))
+					log.Error("failed to close feed server", bfflog.Err(err))
 				}
 			}()
 			return srv.ListenAndServe()
@@ -266,8 +282,9 @@ func runE(log *zap.Logger) error {
 	}
 
 	if scoreMaterializerEnabled {
+		log.Info("starting scoring materializer")
 		hm := scoring.NewMaterializer(
-			log.Named("scoring"),
+			bfflog.ChildLogger(log, "scoring_materializer"),
 			pgxStore,
 			scoring.Opts{
 				MaterializationInterval: 1 * time.Minute,
@@ -276,7 +293,6 @@ func runE(log *zap.Logger) error {
 			},
 		)
 		eg.Go(func() error {
-			log.Info("scoring materializer started")
 			return hm.Run(ctx)
 		})
 	}
@@ -285,7 +301,13 @@ func runE(log *zap.Logger) error {
 		log.Info("starting background worker")
 
 		eg.Go(func() error {
-			worker, err := worker.New(ctx, log.Named("background_worker"), bluesky.DefaultPDSHost, bskyCredentials, pgxStore)
+			worker, err := worker.New(
+				ctx,
+				bfflog.ChildLogger(log, "background_worker"),
+				bluesky.DefaultPDSHost,
+				bskyCredentials,
+				pgxStore,
+			)
 			if err != nil {
 				return fmt.Errorf("initializing worker: %w", err)
 			}
@@ -297,11 +319,11 @@ func runE(log *zap.Logger) error {
 	// Setup private diagnostics/metrics server
 	debugSrv := debugServer()
 	eg.Go(func() error {
-		log.Info("debug server listening", zap.String("addr", debugSrv.Addr))
+		log.Info("debug server listening", slog.String("addr", debugSrv.Addr))
 		go func() {
 			<-ctx.Done()
 			if err := debugSrv.Close(); err != nil {
-				log.Error("failed to close debug server", zap.Error(err))
+				log.Error("failed to close debug server", bfflog.Err(err))
 			}
 		}()
 		return debugSrv.ListenAndServe()

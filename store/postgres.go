@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/bluesky-social/indigo/api/bsky"
@@ -11,13 +12,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/xid"
+	"github.com/strideynet/bsky-furry-feed/bfflog"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store/gen"
 	"github.com/strideynet/bsky-furry-feed/tristate"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -27,7 +28,7 @@ import (
 var tracer = otel.Tracer("github.com/strideynet/bsky-furry-feed/store")
 
 type PGXStore struct {
-	log     *zap.Logger
+	log     *slog.Logger
 	pool    *pgxpool.Pool
 	queries *gen.Queries
 }
@@ -52,7 +53,7 @@ type PoolConnector interface {
 	poolConfig(ctx context.Context) (*pgxpool.Config, error)
 }
 
-func ConnectPGXStore(ctx context.Context, log *zap.Logger, connector PoolConnector) (*PGXStore, error) {
+func ConnectPGXStore(ctx context.Context, log *slog.Logger, connector PoolConnector) (*PGXStore, error) {
 	poolCfg, err := connector.poolConfig(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("generating pool config: %w", err)
@@ -139,7 +140,7 @@ func (s *PGXTX) Rollback() {
 	err := s.tx.Rollback(ctx)
 	if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
 		s.PGXStore.log.Error(
-			"failed to rollback transaction", zap.Error(err),
+			"failed to rollback transaction", bfflog.Err(err),
 		)
 	}
 }
@@ -347,7 +348,7 @@ func (s *PGXStore) CreateLatestActorProfile(ctx context.Context, opts CreateLate
 	}
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			s.log.Warn("failed to roll back transaction", zap.Error(err))
+			s.log.Warn("failed to roll back transaction", bfflog.Err(err))
 		}
 	}()
 

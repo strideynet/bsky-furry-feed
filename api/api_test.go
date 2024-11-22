@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"testing"
@@ -52,7 +53,7 @@ func startAPIHarness(ctx context.Context, t *testing.T) *apiHarness {
 	_ = harness.PDS.MustNewUser(t, "bff.tpds")
 	srv, err := New(
 		context.Background(),
-		harness.Log,
+		slog.Default(),
 		"feed.test.furryli.st",
 		"",
 		&fakeFeedService{

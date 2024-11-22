@@ -61,7 +61,7 @@ func TestFirehoseIngester(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	cac := ingester.NewActorCache(harness.Log, harness.Store)
+	cac := ingester.NewActorCache(slog.Default(), harness.Store)
 	require.NoError(t, cac.Sync(ctx))
 
 	jetstream, err := jetstreamsrv.NewServer(1)
@@ -97,7 +97,7 @@ func TestFirehoseIngester(t *testing.T) {
 	}()
 
 	fi := ingester.NewFirehoseIngester(
-		harness.Log, harness.Store, cac, "ws://"+streamEcho.Listener.Addr().String()+"/subscribe",
+		slog.Default(), harness.Store, cac, "ws://"+streamEcho.Listener.Addr().String()+"/subscribe",
 	)
 	fiContext, fiCancel := context.WithCancel(ctx)
 	fiWait := make(chan struct{})

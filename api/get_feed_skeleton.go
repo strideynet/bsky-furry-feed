@@ -2,12 +2,13 @@ package api
 
 import (
 	"fmt"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.uber.org/zap"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 type getFeedSkeletonParams struct {
@@ -63,7 +64,7 @@ type getFeedSkeletonResponse struct {
 }
 
 func getFeedSkeletonHandler(
-	log *zap.Logger, feedService feedService,
+	log *slog.Logger, feedService feedService,
 ) (string, http.Handler) {
 	h := jsonHandler(log, func(r *http.Request) (any, error) {
 		ctx := r.Context()
@@ -74,9 +75,9 @@ func getFeedSkeletonHandler(
 		}
 		log.Debug(
 			"get feed skeleton request",
-			zap.String("feed", params.feed),
-			zap.String("cursor", params.cursor),
-			zap.Int("limit", params.limit),
+			slog.String("feed", params.feed),
+			slog.String("cursor", params.cursor),
+			slog.Int("limit", params.limit),
 		)
 
 		posts, err := feedService.GetFeedPosts(ctx, params.feed, params.cursor, params.limit)

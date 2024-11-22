@@ -18,6 +18,7 @@ import (
 	jsparallel "github.com/bluesky-social/jetstream/pkg/client/schedulers/parallel"
 	"github.com/bluesky-social/jetstream/pkg/models"
 
+	"github.com/strideynet/bsky-furry-feed/bfflog"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
@@ -26,7 +27,6 @@ import (
 	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/strideynet/bsky-furry-feed/store"
 	"go.opentelemetry.io/otel/attribute"
-	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -51,7 +51,7 @@ type actorCacher interface {
 
 type FirehoseIngester struct {
 	// dependencies
-	log        *zap.Logger
+	log        *slog.Logger
 	actorCache actorCacher
 	store      *store.PGXStore
 
@@ -65,7 +65,7 @@ type FirehoseIngester struct {
 const DefaultJetstreamURL = "wss://jetstream1.us-east.bsky.network/subscribe"
 
 func NewFirehoseIngester(
-	log *zap.Logger, store *store.PGXStore, crc *ActorCache, jetstreamURL string,
+	log *slog.Logger, store *store.PGXStore, crc *ActorCache, jetstreamURL string,
 ) *FirehoseIngester {
 	if jetstreamURL == "" {
 		jetstreamURL = DefaultJetstreamURL
@@ -85,7 +85,6 @@ func NewFirehoseIngester(
 
 func (fi *FirehoseIngester) Start(ctx context.Context) (err error) {
 	eg, ctx := errgroup.WithContext(ctx)
-	slogLog := slog.Default() // TODO: Switch from Zap to Slog
 
 	jsCfg := jsclient.DefaultClientConfig()
 	jsCfg.WebsocketURL = fi.jetstreamURL
@@ -100,7 +99,7 @@ func (fi *FirehoseIngester) Start(ctx context.Context) (err error) {
 	sched := jsparallel.NewScheduler(
 		fi.workerCount,
 		"jetstream",
-		slogLog,
+		bfflog.ChildLogger(fi.log, "jetstream_scheduler"),
 		func(ctx context.Context, e *models.Event) error {
 			start := time.Now()
 			ctx, cancel := context.WithTimeout(ctx, fi.workItemTimeout)
@@ -114,8 +113,8 @@ func (fi *FirehoseIngester) Start(ctx context.Context) (err error) {
 			if err := fi.handleCommit(ctx, e); err != nil {
 				fi.log.Error(
 					"failed to handle commit",
-					zap.Error(err),
-					zap.Any("evt", e),
+					bfflog.Err(err),
+					slog.Any("evt", e),
 				)
 				return fmt.Errorf("handling commit: %w", err)
 			}
@@ -129,7 +128,7 @@ func (fi *FirehoseIngester) Start(ctx context.Context) (err error) {
 	)
 
 	jsClient, err := jsclient.NewClient(
-		jsCfg, slogLog, sched,
+		jsCfg, bfflog.ChildLogger(fi.log, "jetstream_client"), sched,
 	)
 	if err != nil {
 		return fmt.Errorf("creating jetstream client: %w", err)
@@ -154,14 +153,14 @@ func (fi *FirehoseIngester) Start(ctx context.Context) (err error) {
 
 			fi.log.Info(
 				"starting ingestion",
-				zap.Int64("cursor", cursor),
-				zap.String("cursor_time", time.UnixMicro(cursor).String()),
+				slog.Int64("cursor", cursor),
+				slog.String("cursor_time", time.UnixMicro(cursor).String()),
 			)
 			if err := jsClient.ConnectAndRead(ctx, &cursor); err != nil {
 				if errors.Is(err, context.Canceled) {
 					return nil
 				}
-				fi.log.Error("jetstream client encountered an error, restarting", zap.Error(err))
+				fi.log.Error("jetstream client encountered an error, restarting", bfflog.Err(err))
 			}
 		}
 	})
@@ -179,14 +178,14 @@ func (fi *FirehoseIngester) Start(ctx context.Context) (err error) {
 			return
 		}
 		if err := fi.store.SetJetstreamCursor(ctx, cursor); err != nil {
-			fi.log.Warn("failed to flush cursor", zap.Error(err))
+			fi.log.Warn("failed to flush cursor", bfflog.Err(err))
 			return
 		}
 
 		fi.log.Info(
 			"successfully flushed cursor",
-			zap.Int64("cursor", cursor),
-			zap.String("cursor_time", time.UnixMicro(cursor).String()),
+			slog.Int64("cursor", cursor),
+			slog.String("cursor_time", time.UnixMicro(cursor).String()),
 		)
 		flushedWorkerCursor.Set(float64(cursor))
 	}
@@ -263,7 +262,7 @@ func (fi *FirehoseIngester) handleCommit(
 			return fmt.Errorf("handling record delete: %w", err)
 		}
 	default:
-		fi.log.Warn("unknown commit operation", zap.String("kind", evt.Kind))
+		fi.log.Warn("unknown commit operation", slog.String("kind", evt.Kind))
 	}
 
 	return nil
@@ -310,7 +309,7 @@ func (fi *FirehoseIngester) handleRecordCreate(
 		}
 		fi.log.Info(
 			"unknown actor interacted, adding to db as pending",
-			zap.String("did", repoDID),
+			bfflog.ActorDID(repoDID),
 		)
 		if err := fi.actorCache.CreatePendingCandidateActor(ctx, repoDID); err != nil {
 			return fmt.Errorf("creating pending candidate actor: %w", err)

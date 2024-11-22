@@ -2,9 +2,11 @@ package ingester
 
 import (
 	"context"
-	"github.com/bluesky-social/indigo/repo"
+	"log/slog"
 	"testing"
 	"time"
+
+	"github.com/bluesky-social/indigo/repo"
 
 	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/stretchr/testify/assert"
@@ -31,10 +33,10 @@ func TestFirehoseIngester_ActorProfiles(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	cac := NewActorCache(harness.Log, harness.Store)
+	cac := NewActorCache(slog.Default(), harness.Store)
 	require.NoError(t, cac.Sync(ctx))
 	fi := NewFirehoseIngester(
-		harness.Log, harness.Store, cac, "ws://"+harness.PDS.RawHost(),
+		slog.Default(), harness.Store, cac, "ws://"+harness.PDS.RawHost(),
 	)
 
 	{

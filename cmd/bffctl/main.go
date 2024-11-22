@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 
 	"golang.org/x/exp/slices"
 
 	"github.com/joho/godotenv"
+	"github.com/strideynet/bsky-furry-feed/bfflog"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/urfave/cli/v2"
-	"go.uber.org/zap"
 )
 
 type environment struct {
@@ -47,10 +48,13 @@ func getBlueskyClient(ctx context.Context, e *environment) (*bluesky.PDSClient, 
 }
 
 func main() {
-	log, _ := zap.NewDevelopment()
+	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}))
+	slog.SetDefault(log)
 
 	if err := godotenv.Load(); err != nil && !errors.Is(err, os.ErrNotExist) {
-		log.Info("could not load .env file", zap.Error(err))
+		log.Info("could not load .env file", bfflog.Err(err))
 	}
 
 	var env = &environment{}
@@ -69,7 +73,7 @@ func main() {
 					if !ok {
 						return fmt.Errorf("unrecognized environment: %s", s)
 					}
-					log.Info("configured environment", zap.String("env", s))
+					log.Info("configured environment", slog.String("env", s))
 					*env = v
 					return nil
 				},

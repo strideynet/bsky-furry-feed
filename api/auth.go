@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/bluesky-social/indigo/xrpc"
+	"github.com/strideynet/bsky-furry-feed/bfflog"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store"
-	"go.uber.org/zap"
 )
 
 type actorGetter interface {
@@ -96,7 +97,7 @@ type AuthEngine struct {
 	// TokenValidator validates a given token and returns the DID associated
 	// with that token.
 	TokenValidator func(ctx context.Context, token string) (did string, err error)
-	Log            *zap.Logger
+	Log            *slog.Logger
 }
 
 type authContext struct {
@@ -157,8 +158,8 @@ func (a *AuthEngine) auth(ctx context.Context, req connect.AnyRequest) (*authCon
 			// Gracefully handle an unrecognized role
 			a.Log.Warn(
 				"unrecognized role",
-				zap.String("role", role),
-				zap.String("actor_did", did),
+				slog.String("role", role),
+				bfflog.ActorDID(did),
 			)
 			continue
 		}

@@ -3,8 +3,10 @@ package api
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
+	"github.com/strideynet/bsky-furry-feed/bfflog"
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"golang.org/x/exp/slices"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -12,12 +14,11 @@ import (
 	"connectrpc.com/connect"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store"
-	"go.uber.org/zap"
 )
 
 type ModerationServiceHandler struct {
 	store      *store.PGXStore
-	log        *zap.Logger
+	log        *slog.Logger
 	authEngine *AuthEngine
 }
 
@@ -253,7 +254,7 @@ func (m *ModerationServiceHandler) Ping(ctx context.Context, req *connect.Reques
 		return nil, fmt.Errorf("authenticating: %w", err)
 	}
 	// Temporary log message - useful for debugging.
-	m.log.Info("received authenticated ping!", zap.String("did", authCtx.DID))
+	m.log.Info("received authenticated ping!", bfflog.ActorDID(authCtx.DID))
 
 	return connect.NewResponse(&v1.PingResponse{}), nil
 }

@@ -4,24 +4,25 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"connectrpc.com/connect"
 	"connectrpc.com/otelconnect"
 	"github.com/rs/cors"
+	"github.com/strideynet/bsky-furry-feed/bfflog"
 	"github.com/strideynet/bsky-furry-feed/feed"
 	"github.com/strideynet/bsky-furry-feed/proto/bff/v1/bffv1pbconnect"
 	"github.com/strideynet/bsky-furry-feed/store"
-	"go.uber.org/zap"
 )
 
-func handleErr(w http.ResponseWriter, log *zap.Logger, err error) {
-	log.Error("failed to handle request", zap.Error(err))
+func handleErr(w http.ResponseWriter, log *slog.Logger, err error) {
+	log.Error("failed to handle request", bfflog.Err(err))
 	w.WriteHeader(500)
 	_, _ = w.Write([]byte(fmt.Sprintf("failed to handle request: %s", err)))
 }
 
-func jsonHandler(log *zap.Logger, h func(r *http.Request) (any, error)) http.HandlerFunc {
+func jsonHandler(log *slog.Logger, h func(r *http.Request) (any, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		respBody, err := h(r)
 		if err != nil {
@@ -42,7 +43,7 @@ type feedService interface {
 
 func New(
 	ctx context.Context,
-	log *zap.Logger,
+	log *slog.Logger,
 	hostname string,
 	listenAddr string,
 	feedService feedService,
@@ -116,20 +117,20 @@ func New(
 	}, nil
 }
 
-func unaryLoggingInterceptor(log *zap.Logger) connect.UnaryInterceptorFunc {
+func unaryLoggingInterceptor(log *slog.Logger) connect.UnaryInterceptorFunc {
 	interceptor := func(next connect.UnaryFunc) connect.UnaryFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 			res, err := next(ctx, req)
 			if err != nil {
 				log.Error(
 					"gRPC request failed",
-					zap.String("procedure", req.Spec().Procedure),
-					zap.Error(err),
+					slog.String("procedure", req.Spec().Procedure),
+					bfflog.Err(err),
 				)
 			} else {
 				log.Info(
 					"gRPC request handled",
-					zap.String("procedure", req.Spec().Procedure),
+					slog.String("procedure", req.Spec().Procedure),
 				)
 			}
 			return res, err
