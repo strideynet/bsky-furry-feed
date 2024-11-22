@@ -10,7 +10,6 @@ import (
 	"github.com/strideynet/bsky-furry-feed/bluesky"
 	"github.com/strideynet/bsky-furry-feed/feed"
 	"github.com/urfave/cli/v2"
-	"go.uber.org/zap"
 )
 
 func bskyCmd(log *slog.Logger, env *environment) *cli.Command {
@@ -55,7 +54,7 @@ func bskyCmd(log *slog.Logger, env *environment) *cli.Command {
 					for _, meta := range feeds.Metas() {
 						meta := meta
 
-						log.Info("upserting feed", zap.String("rkey", meta.ID))
+						log.Info("upserting feed", slog.String("rkey", meta.ID))
 						err = client.PutRecord(cctx.Context, "app.bsky.feed.generator", meta.ID, &bsky.FeedGenerator{
 							Avatar:      blob,
 							Did:         fmt.Sprintf("did:web:%s", hostname),
@@ -66,10 +65,10 @@ func bskyCmd(log *slog.Logger, env *environment) *cli.Command {
 						if err != nil {
 							return fmt.Errorf("putting feed record: %w", err)
 						}
-						log.Info("upserted feed", zap.String("rkey", meta.ID))
+						log.Info("upserted feed", slog.String("rkey", meta.ID))
 					}
 
-					log.Info("blob", zap.String("ref", blob.Ref.String()))
+					log.Info("blob", slog.String("ref", blob.Ref.String()))
 					return nil
 				},
 			},
@@ -84,7 +83,7 @@ func bskyCmd(log *slog.Logger, env *environment) *cli.Command {
 					if err != nil {
 						return err
 					}
-					log.Info("found did", zap.String("did", did.Did))
+					log.Info("found did", slog.String("did", did.Did))
 					return nil
 				},
 			},

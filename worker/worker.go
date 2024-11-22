@@ -15,7 +15,6 @@ import (
 	"github.com/strideynet/bsky-furry-feed/store"
 	"github.com/strideynet/bsky-furry-feed/store/gen"
 	typegen "github.com/whyrusleeping/cbor-gen"
-	"go.uber.org/zap"
 )
 
 type pdsClient interface {
@@ -85,7 +84,7 @@ func (w *Worker) Run(ctx context.Context) error {
 				log.Error("failed to process task", bfflog.Err(err))
 				err = w.store.MarkFollowTaskAsErrored(ctx, task.ID, err)
 				if err != nil {
-					log.Error("failed to mark task as errored", bfflog.Err(err)))
+					log.Error("failed to mark task as errored", bfflog.Err(err))
 				}
 
 				continue

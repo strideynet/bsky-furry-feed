@@ -2,7 +2,7 @@ package api
 
 import (
 	"fmt"
-	"go.uber.org/zap"
+	"log/slog"
 	"net/http"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -24,7 +24,7 @@ type WebDID struct {
 	Service []WebDIDService `json:"service"`
 }
 
-func didHandler(log *zap.Logger, hostname string) (string, http.Handler, error) {
+func didHandler(log *slog.Logger, hostname string) (string, http.Handler, error) {
 	h := jsonHandler(log, func(r *http.Request) (any, error) {
 		return WebDID{
 			Context: []string{"https://www.w3.org/ns/did/v1"},

@@ -1,18 +1,19 @@
 package api
 
 import (
-	"connectrpc.com/connect"
 	"context"
+	"log/slog"
+	"reflect"
+	"testing"
+	"unsafe"
+
+	"connectrpc.com/connect"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 	v1 "github.com/strideynet/bsky-furry-feed/proto/bff/v1"
 	"github.com/strideynet/bsky-furry-feed/store"
-	"go.uber.org/zap/zaptest"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/testing/protocmp"
-	"reflect"
-	"testing"
-	"unsafe"
 )
 
 type memoryActorGetter map[string]*v1.Actor
@@ -106,7 +107,7 @@ func TestAuthEngine(t *testing.T) {
 				TokenValidator: func(ctx context.Context, token string) (did string, err error) {
 					return token, nil
 				},
-				Log: zaptest.NewLogger(t),
+				Log: slog.Default(),
 			}
 
 			req := connect.NewRequest(&v1.PingRequest{})

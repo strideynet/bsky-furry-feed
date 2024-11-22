@@ -2,9 +2,10 @@ package api
 
 import (
 	"fmt"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.uber.org/zap"
+	"log/slog"
 	"net/http"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 type describeFeedGeneratorResponseFeed struct {
@@ -17,7 +18,7 @@ type describeFeedGeneratorResponse struct {
 }
 
 func describeFeedGeneratorHandler(
-	log *zap.Logger,
+	log *slog.Logger,
 	hostname string,
 	feedService feedService,
 ) (string, http.Handler) {
