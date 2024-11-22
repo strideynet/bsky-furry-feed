@@ -2,9 +2,11 @@ package ingester
 
 import (
 	"context"
-	"github.com/bluesky-social/indigo/repo"
+	"log/slog"
 	"testing"
 	"time"
+
+	"github.com/bluesky-social/indigo/repo"
 
 	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/stretchr/testify/assert"
