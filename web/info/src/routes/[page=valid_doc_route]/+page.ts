@@ -20,7 +20,7 @@ export const load = (async ({ parent, params, url }) => {
 
   const { feeds, featuredFeeds } = await parent();
 
-  const content = getPageDocument(pageName, preview, token);
+  const content = await getPageDocument(pageName, preview, token);
 
   return { content, feeds: { feeds, featured: featuredFeeds } };
 }) satisfies PageLoad;
