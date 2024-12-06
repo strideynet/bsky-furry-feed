@@ -1,0 +1,4 @@
+*.sql.go linguist-generated=true
+*.pb.go linguist-generated=true
+web/proto/bff/* linguist-generated=true
+
