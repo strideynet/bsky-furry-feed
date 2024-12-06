@@ -391,11 +391,11 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	}))
 	r.Register(Meta{
 		ID:          "con-denfur",
-		DisplayName: "🐾 DenFur 2023",
-		Description: "Furry\nA feed for all things DenFur! Use #denfur or #denfur2023 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
+		DisplayName: "🐾 DenFur 2024",
+		Description: "Furry\nA feed for all things DenFur! Use #denfur or #denfur2024 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
-			Hashtags:           []string{"denfur", "denfur2023"},
+			Hashtags:           []string{"denfur", "denfur2024"},
 			DisallowedHashtags: defaultDisallowedHashtags,
 		},
 	}))
@@ -417,51 +417,51 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	}))
 	r.Register(Meta{
 		ID:          "con-blfc",
-		DisplayName: "🐾 BLFC 2023",
-		Description: "Furry\nA feed for all things BLFC! Use #blfc, #blfc23, or #blfc2023 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
+		DisplayName: "🐾 BLFC 2024",
+		Description: "Furry\nA feed for all things BLFC! Use #blfc, #blfc24, or #blfc2024 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags: []string{
-				"blfc", "blfc23", "blfc2023",
+				"blfc", "blfc24", "blfc2024",
 			},
 			DisallowedHashtags: defaultDisallowedHashtags,
 		},
 	}))
 	r.Register(Meta{
 		ID:          "con-mff",
-		DisplayName: "🐾 MFF 2023",
-		Description: "Furry\nA feed for all things MFF! Use #furfest, #mff, #mff23, or #mff2023 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
+		DisplayName: "🐾 MFF 2024",
+		Description: "Furry\nA feed for all things MFF! Use #furfest, #mff, #mff24, or #mff2024 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags: []string{
-				"furfest", "furfest23", "furfest2023", "mff", "mff23", "mff2023",
+				"furfest", "furfest24", "furfest2024", "mff", "mff24", "mff2024",
 			},
 			DisallowedHashtags: defaultDisallowedHashtags,
 		},
 	}))
 	r.Register(Meta{
 		ID:          "con-fc",
-		DisplayName: "🐾 FC 2024",
-		Description: "Furry\nA feed for all things FC! Use #fc, #fc24, or #fc2024 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
+		DisplayName: "🐾 FC 2025",
+		Description: "Furry\nA feed for all things FC! Use #fc, #fc25, or #fc2025 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags: []string{
-				"fc", "fc24", "fc2024",
-				"furcon", "furcon24", "furcon2024",
-				"furtherconfusion", "furtherconfusion24", "furtherconfusion2024",
+				"fc", "fc25", "fc2025",
+				"furcon", "furcon25", "furcon2025",
+				"furtherconfusion", "furtherconfusion25", "furtherconfusion2025",
 			},
 			DisallowedHashtags: defaultDisallowedHashtags,
 		},
 	}))
 	r.Register(Meta{
 		ID:          "con-nfc",
-		DisplayName: "🐾 NFC 2024",
-		Description: "Furry\nA feed for all things NFC! Use #nfc, #nfc24, or #nfc2024 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
+		DisplayName: "🐾 NFC 2025",
+		Description: "Furry\nA feed for all things NFC! Use #nfc, #nfc25, or #nfc2025 to include a post in the feed.\n\nJoin the furry feeds by following @furryli.st",
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags: []string{
-				"nfc", "nfc24", "nfc2024",
-				"nordicfuzzcon", "nordicfuzzcon24", "nordicfuzzcon2024",
+				"nfc", "nfc25", "nfc2025",
+				"nordicfuzzcon", "nordicfuzzcon25", "nordicfuzzcon2025",
 			},
 			DisallowedHashtags: defaultDisallowedHashtags,
 		},
