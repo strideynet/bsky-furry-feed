@@ -691,6 +691,7 @@ func auditEventToProto(in gen.AuditEvent) (*v1.AuditEvent, error) {
 type ListAuditEventsOpts struct {
 	FilterSubjectDID    string
 	FilterCreatedBefore *time.Time
+	FilterTypes         []v1.AuditEventType
 
 	// Limit defaults to 100.
 	Limit int32
@@ -716,6 +717,9 @@ func (s *PGXStore) ListAuditEvents(ctx context.Context, opts ListAuditEventsOpts
 			Time:  *opts.FilterCreatedBefore,
 			Valid: true,
 		}
+	}
+	for _, typ := range opts.FilterTypes {
+		queryParams.Types = append(queryParams.Types, typ.String())
 	}
 
 	data, err := s.queries.ListAuditEvents(ctx, queryParams)

@@ -232,6 +232,7 @@ func (m *ModerationServiceHandler) ListAuditEvents(ctx context.Context, req *con
 	out, err := m.store.ListAuditEvents(ctx, store.ListAuditEventsOpts{
 		FilterSubjectDID:    req.Msg.FilterSubjectDid,
 		FilterCreatedBefore: filterCreatedBefore,
+		FilterTypes:         req.Msg.FilterTypes,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("listing audit events: %w", err)

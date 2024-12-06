@@ -28,6 +28,56 @@ export declare enum ApprovalQueueAction {
 }
 
 /**
+ * @generated from enum bff.v1.AuditEventType
+ */
+export declare enum AuditEventType {
+  /**
+   * @generated from enum value: COMMENT = 0;
+   */
+  COMMENT = 0,
+
+  /**
+   * @generated from enum value: APPROVED = 1;
+   */
+  APPROVED = 1,
+
+  /**
+   * @generated from enum value: REJECTED = 2;
+   */
+  REJECTED = 2,
+
+  /**
+   * @generated from enum value: HELD_BACK = 3;
+   */
+  HELD_BACK = 3,
+
+  /**
+   * @generated from enum value: FORCE_APPROVED = 4;
+   */
+  FORCE_APPROVED = 4,
+
+  /**
+   * @generated from enum value: UNAPPROVED = 5;
+   */
+  UNAPPROVED = 5,
+
+  /**
+   * @generated from enum value: TRACKED = 6;
+   */
+  TRACKED = 6,
+
+  /**
+   * @generated from enum value: BANNED = 7;
+   */
+  BANNED = 7,
+
+  /**
+   * @generated from enum value: ASSIGNED_ROLES = 8;
+   */
+  ASSIGNED_ROLES = 8,
+}
+
+/**
  * @generated from message bff.v1.Post
  */
 export declare class Post extends Message<Post> {
@@ -393,6 +443,11 @@ export declare class ListAuditEventsRequest extends Message<ListAuditEventsReque
    * @generated from field: string filter_subject_record_uri = 3;
    */
   filterSubjectRecordUri: string;
+
+  /**
+   * @generated from field: repeated bff.v1.AuditEventType filter_types = 6;
+   */
+  filterTypes: AuditEventType[];
 
   /**
    * limit specifies how many audit events to return. If unspecific, this
