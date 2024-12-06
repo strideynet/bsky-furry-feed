@@ -51,8 +51,9 @@ watch(types, () => fetchAuditEvents());
             track-by="key"
             :options="Object.entries(AuditEventType).filter(t => isNaN(t[0] as any)).map(([label, key]) => ({key, label}))"
             :custom-label="
-            (option: any) => option.label.toLowerCase().replace(/^\w/, (a:string) => a.toUpperCase()).replace(/_/g, ' ')
-          "
+              (option: any) => option.label.toLowerCase().replace(/^\w/, (a:string) => a.toUpperCase()).replace(/_/g, ' ')
+            "
+            placeholder="Select type"
           />
         </div>
       </div>
