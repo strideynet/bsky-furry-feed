@@ -64,6 +64,13 @@ export function isProbablyFurry(profile?: ProfileViewMinimal): boolean {
     /\b(fur)?sona\b/,
     "cartoon animal",
     "lynx",
+    "⨺⃝", // ugly variant of therian theta-delta
+    "福瑞", // mandarin for furry
+    "babyfur",
+    "avali",
+    "fennec fox",
+    "floofer",
+    "dingo",
   ];
 
   const description = [
