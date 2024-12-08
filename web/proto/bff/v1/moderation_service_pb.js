@@ -19,6 +19,24 @@ export const ApprovalQueueAction = proto3.makeEnum(
 );
 
 /**
+ * @generated from enum bff.v1.AuditEventType
+ */
+export const AuditEventType = proto3.makeEnum(
+  "bff.v1.AuditEventType",
+  [
+    {no: 0, name: "COMMENT"},
+    {no: 1, name: "APPROVED"},
+    {no: 2, name: "REJECTED"},
+    {no: 3, name: "HELD_BACK"},
+    {no: 4, name: "FORCE_APPROVED"},
+    {no: 5, name: "UNAPPROVED"},
+    {no: 6, name: "TRACKED"},
+    {no: 7, name: "BANNED"},
+    {no: 8, name: "ASSIGNED_ROLES"},
+  ],
+);
+
+/**
  * @generated from message bff.v1.Post
  */
 export const Post = proto3.makeMessageType(
@@ -162,6 +180,7 @@ export const ListAuditEventsRequest = proto3.makeMessageType(
     { no: 1, name: "filter_actor_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "filter_subject_did", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "filter_subject_record_uri", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "filter_types", kind: "enum", T: proto3.getEnumType(AuditEventType), repeated: true },
     { no: 4, name: "limit", kind: "scalar", T: 13 /* ScalarType.UINT32 */ },
     { no: 5, name: "cursor", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ],

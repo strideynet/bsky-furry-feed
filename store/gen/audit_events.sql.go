@@ -70,9 +70,50 @@ WHERE
         OR ae.subject_record_uri = $3
     )
     AND ($4::timestamptz IS NULL OR ae.created_at < $4)
+    AND (
+        coalesce(cardinality($5::text []), 0) = 0
+        OR (
+            'COMMENT' = any($5)
+            AND payload ->> '@type' = 'type.googleapis.com/bff.v1.CommentAuditPayload'
+        )
+        OR (
+            'APPROVED' = any($5)
+            AND payload ->> '@type' = 'type.googleapis.com/bff.v1.ProcessApprovalQueueAuditPayload'
+            AND payload ->> 'action' = 'APPROVAL_QUEUE_ACTION_APPROVE'
+        )
+        OR (
+            'REJECTED' = any($5)
+            AND payload ->> '@type' = 'type.googleapis.com/bff.v1.ProcessApprovalQueueAuditPayload'
+            AND payload ->> 'action' = 'APPROVAL_QUEUE_ACTION_REJECT'
+        )
+        OR (
+            'HELD_BACK' = any($5)
+            AND payload ->> '@type' = 'type.googleapis.com/bff.v1.HoldBackPendingActorAuditPayload'
+        )
+        OR (
+            'FORCE_APPROVED' = any($5)
+            AND payload ->> '@type' = 'type.googleapis.com/bff.v1.ForceApproveActorAuditPayload'
+        )
+        OR (
+            'UNAPPROVED' = any($5)
+            AND payload ->> '@type' = 'type.googleapis.com/bff.v1.UnapproveActorAuditPayload'
+        )
+        OR (
+            'TRACKED' = any($5)
+            AND payload ->> '@type' = 'type.googleapis.com/bff.v1.CreateActorAuditPayload'
+        )
+        OR (
+            'BANNED' = any($5)
+            AND payload ->> '@type' = 'type.googleapis.com/bff.v1.BanActorAuditPayload'
+        )
+        OR (
+            'ASSIGNED_ROLES' = any($5)
+            AND payload ->> '@type' = 'type.googleapis.com/bff.v1.AssignRolesAuditPayload'
+        )
+    )
 ORDER BY
     ae.created_at DESC
-LIMIT $5
+LIMIT $6
 `
 
 type ListAuditEventsParams struct {
@@ -80,6 +121,7 @@ type ListAuditEventsParams struct {
 	ActorDID         string
 	SubjectRecordUri string
 	CreatedBefore    pgtype.Timestamptz
+	Types            []string
 	Limit            int32
 }
 
@@ -89,6 +131,7 @@ func (q *Queries) ListAuditEvents(ctx context.Context, arg ListAuditEventsParams
 		arg.ActorDID,
 		arg.SubjectRecordUri,
 		arg.CreatedBefore,
+		arg.Types,
 		arg.Limit,
 	)
 	if err != nil {

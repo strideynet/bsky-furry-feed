@@ -99,10 +99,23 @@ message HoldBackPendingActorAuditPayload {
   google.protobuf.Timestamp held_until = 1;
 }
 
+enum AuditEventType {
+  COMMENT = 0;
+  APPROVED = 1;
+  REJECTED = 2;
+  HELD_BACK = 3;
+  FORCE_APPROVED = 4;
+  UNAPPROVED = 5;
+  TRACKED = 6;
+  BANNED = 7;
+  ASSIGNED_ROLES = 8;
+}
+
 message ListAuditEventsRequest {
   string filter_actor_did = 1;
   string filter_subject_did = 2;
   string filter_subject_record_uri = 3;
+  repeated AuditEventType filter_types = 6;
 
   // limit specifies how many audit events to return. If unspecific, this
   // defaults to 100.
