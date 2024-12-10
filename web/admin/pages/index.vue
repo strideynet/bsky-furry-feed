@@ -25,32 +25,18 @@ const actorProfilesMap = computed(() => {
   return map;
 });
 
-const avatarStockMap = ref(new Map<string, boolean>());
-
-watch(actorProfiles, async () => {
-  for (const profile of actorProfiles.value) {
-    const { isStockAvatar } = await fetch(
-      `https://bsky-cdn.codingpa.ws/avatar/${profile.did}/info.json`
-    ).then((r) => r.json());
-    avatarStockMap.value.set(profile.did, isStockAvatar);
-  }
-});
-
 const queues = computed(() => ({
   All: actors.value,
   "Probably furry": actors.value.filter((actor) => {
     const profile = didToProfile(actor.did);
 
-    return isProbablyFurry(profile) && !avatarStockMap.value.get(actor.did);
+    return isProbablyFurry(profile);
   }),
   "Empty profiles": actors.value.filter((actor) => {
     const profile = didToProfile(actor.did);
     if (!profile) return false;
 
-    return (
-      (!profile.displayName && !profile.description && !profile.postsCount) ||
-      avatarStockMap.value.get(actor.did)
-    );
+    return !profile.displayName && !profile.description && !profile.postsCount;
   }),
   "Held back": heldBack.value,
 }));
