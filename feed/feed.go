@@ -446,8 +446,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			Hashtags: []string{
-				"fc", "fc25", "fc2025",
-				"furcon", "furcon25", "furcon2025",
+				"fc", "fc25", "fc2025", "furcon25", "furcon2025",
 				"furtherconfusion", "furtherconfusion25", "furtherconfusion2025",
 			},
 			DisallowedHashtags: defaultDisallowedHashtags,
