@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/cloudsqlconn v1.5.2
 	connectrpc.com/connect v1.11.0
 	connectrpc.com/otelconnect v0.5.0
-	github.com/bluesky-social/indigo v0.0.0-20240908200721-58e6cb486877
+	github.com/bluesky-social/indigo v0.0.0-20250119185343-e1d4639a0604
 	github.com/bluesky-social/jetstream v0.0.0-20241031234625-0ab10bd041fe
 	github.com/docker/go-connections v0.4.0
 	github.com/golang-migrate/migrate/v4 v4.16.2
@@ -23,7 +23,7 @@ require (
 	github.com/testcontainers/testcontainers-go v0.21.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.21.0
 	github.com/urfave/cli/v2 v2.26.0
-	github.com/whyrusleeping/cbor-gen v0.1.3-0.20240904181319-8dc02b38228c
+	github.com/whyrusleeping/cbor-gen v0.2.1-0.20241030202151-b7a6831be65e
 	go.opentelemetry.io/contrib/detectors/gcp v1.21.1
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/otel v1.21.0
@@ -42,6 +42,7 @@ require (
 	github.com/DataDog/zstd v1.5.5 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/RussellLuo/slidingwindow v0.0.0-20200528002341-535bb99d338b // indirect
+	github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874 // indirect
 	github.com/carlmjohnson/versioninfo v0.22.5 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cockroachdb/errors v1.11.3 // indirect

@@ -249,7 +249,7 @@ func (c *PDSClient) DeleteRecord(
 		return fmt.Errorf("get xrpc client: %w", err)
 	}
 
-	if err := atproto.RepoDeleteRecord(ctx, xc, &atproto.RepoDeleteRecord_Input{
+	if _, err := atproto.RepoDeleteRecord(ctx, xc, &atproto.RepoDeleteRecord_Input{
 		Collection: uri.Collection,
 		Repo:       uri.Did,
 		Rkey:       uri.Rkey,

@@ -96,7 +96,7 @@ func StartHarness(ctx context.Context, t *testing.T) *Harness {
 	pds.Run(t)
 	t.Cleanup(pds.Cleanup)
 
-	relay := indigoTest.MustSetupRelay(t, didr)
+	relay := indigoTest.MustSetupRelay(t, didr, true)
 	relay.Run(t)
 	setTrialHostOnRelay(relay, pds.RawHost())
 

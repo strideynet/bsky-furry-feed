@@ -90,7 +90,7 @@ func TestFirehoseIngester(t *testing.T) {
 	t.Cleanup(func() { wsConn.Close() })
 
 	go func() {
-		err := events.HandleRepoStream(ctx, wsConn, scheduler)
+		err := events.HandleRepoStream(ctx, wsConn, scheduler, slog.Default())
 		if err != nil && !strings.Contains(err.Error(), net.ErrClosed.Error()) {
 			require.NoError(t, err)
 		}
