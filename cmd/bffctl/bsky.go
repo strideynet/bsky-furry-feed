@@ -55,13 +55,20 @@ func bskyCmd(log *slog.Logger, env *environment) *cli.Command {
 						meta := meta
 
 						log.Info("upserting feed", slog.String("rkey", meta.ID))
-						err = client.PutRecord(cctx.Context, "app.bsky.feed.generator", meta.ID, &bsky.FeedGenerator{
+						gen := &bsky.FeedGenerator{
 							Avatar:      blob,
 							Did:         fmt.Sprintf("did:web:%s", hostname),
 							CreatedAt:   bluesky.FormatTime(time.Now().UTC()),
 							Description: &meta.Description,
 							DisplayName: meta.DisplayName,
-						})
+						}
+
+						if meta.VideoOnly {
+							var contentModeVideo = "app.bsky.feed.defs#contentModeVideo"
+							gen.ContentMode = &contentModeVideo
+						}
+
+						err = client.PutRecord(cctx.Context, "app.bsky.feed.generator", meta.ID, gen)
 						if err != nil {
 							return fmt.Errorf("putting feed record: %w", err)
 						}
