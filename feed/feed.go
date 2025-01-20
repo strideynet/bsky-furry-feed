@@ -33,6 +33,8 @@ type Meta struct {
 	Priority int32
 	// TODO: Categories
 	// TODO: "Parents"
+
+	VideoOnly bool
 }
 
 type feed struct {
@@ -555,6 +557,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		DisplayName: "🐾 Hot videos",
 		Description: "Furry\nHottest video posts by furries across Bluesky. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
 		Priority:    100,
+		VideoOnly:   true,
 	}, preScoredGenerator(preScoredGeneratorOpts{
 		Alg: "classic",
 		generatorOpts: generatorOpts{
@@ -566,6 +569,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		ID:          "video-new",
 		DisplayName: "🐾 New videos",
 		Description: "Furry\nLatest video posts by furries across Bluesky. Contains a mix of SFW and NSFW content.\n\nJoin the furry feeds by following @furryli.st",
+		VideoOnly:   true,
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			DisallowedHashtags: defaultDisallowedHashtags,
@@ -577,6 +581,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		DisplayName: "🐾 Hot videos 🌙",
 		Description: "Furry\nHottest NSFW video posts by furries across Bluesky. Contains only NSFW content.\n\nJoin the furry feeds by following @furryli.st",
 		Priority:    100,
+		VideoOnly:   true,
 	}, preScoredGenerator(preScoredGeneratorOpts{
 		Alg: "classic",
 		generatorOpts: generatorOpts{
@@ -589,6 +594,7 @@ func ServiceWithDefaultFeeds(pgxStore *store.PGXStore) *Service {
 		ID:          "video-new-nsfw",
 		DisplayName: "🐾 New videos 🌙",
 		Description: "Furry\nLatest NSFW video posts by furries across Bluesky. Contains only NSFW content.\n\nJoin the furry feeds by following @furryli.st",
+		VideoOnly:   true,
 	}, chronologicalGenerator(chronologicalGeneratorOpts{
 		generatorOpts: generatorOpts{
 			DisallowedHashtags: defaultDisallowedHashtags,
