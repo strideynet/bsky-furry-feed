@@ -34,7 +34,7 @@ const queues = computed(() => ({
   }),
   "Empty profiles": actors.value.filter((actor) => {
     const profile = didToProfile(actor.did);
-    if (!profile) return false;
+    if (!profile) return true;
 
     return !profile.displayName && !profile.description && !profile.postsCount;
   }),
