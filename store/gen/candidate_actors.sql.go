@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createCandidateActor = `-- name: CreateCandidateActor :one
+const CreateCandidateActor = `-- name: CreateCandidateActor :one
 INSERT INTO
 candidate_actors (did, created_at, is_artist, comment, status, roles)
 VALUES
@@ -29,7 +29,7 @@ type CreateCandidateActorParams struct {
 }
 
 func (q *Queries) CreateCandidateActor(ctx context.Context, arg CreateCandidateActorParams) (CandidateActor, error) {
-	row := q.db.QueryRow(ctx, createCandidateActor,
+	row := q.db.QueryRow(ctx, CreateCandidateActor,
 		arg.DID,
 		arg.CreatedAt,
 		arg.IsArtist,
@@ -51,7 +51,7 @@ func (q *Queries) CreateCandidateActor(ctx context.Context, arg CreateCandidateA
 	return i, err
 }
 
-const createLatestActorProfile = `-- name: CreateLatestActorProfile :exec
+const CreateLatestActorProfile = `-- name: CreateLatestActorProfile :exec
 WITH
 ap AS (
     INSERT INTO actor_profiles
@@ -94,7 +94,7 @@ type CreateLatestActorProfileParams struct {
 }
 
 func (q *Queries) CreateLatestActorProfile(ctx context.Context, arg CreateLatestActorProfileParams) error {
-	_, err := q.db.Exec(ctx, createLatestActorProfile,
+	_, err := q.db.Exec(ctx, CreateLatestActorProfile,
 		arg.ActorDID,
 		arg.CommitCID,
 		arg.CreatedAt,
@@ -106,7 +106,7 @@ func (q *Queries) CreateLatestActorProfile(ctx context.Context, arg CreateLatest
 	return err
 }
 
-const getActorProfileHistory = `-- name: GetActorProfileHistory :many
+const GetActorProfileHistory = `-- name: GetActorProfileHistory :many
 SELECT ap.actor_did, ap.commit_cid, ap.created_at, ap.indexed_at, ap.display_name, ap.description, ap.self_labels
 FROM
     actor_profiles AS ap
@@ -117,7 +117,7 @@ ORDER BY
 `
 
 func (q *Queries) GetActorProfileHistory(ctx context.Context, actorDid string) ([]ActorProfile, error) {
-	rows, err := q.db.Query(ctx, getActorProfileHistory, actorDid)
+	rows, err := q.db.Query(ctx, GetActorProfileHistory, actorDid)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +144,7 @@ func (q *Queries) GetActorProfileHistory(ctx context.Context, actorDid string) (
 	return items, nil
 }
 
-const getCandidateActorByDID = `-- name: GetCandidateActorByDID :one
+const GetCandidateActorByDID = `-- name: GetCandidateActorByDID :one
 SELECT did, created_at, is_artist, comment, status, roles, current_profile_commit_cid, held_until
 FROM
     candidate_actors
@@ -153,7 +153,7 @@ WHERE
 `
 
 func (q *Queries) GetCandidateActorByDID(ctx context.Context, did string) (CandidateActor, error) {
-	row := q.db.QueryRow(ctx, getCandidateActorByDID, did)
+	row := q.db.QueryRow(ctx, GetCandidateActorByDID, did)
 	var i CandidateActor
 	err := row.Scan(
 		&i.DID,
@@ -168,7 +168,7 @@ func (q *Queries) GetCandidateActorByDID(ctx context.Context, did string) (Candi
 	return i, err
 }
 
-const getLatestActorProfile = `-- name: GetLatestActorProfile :one
+const GetLatestActorProfile = `-- name: GetLatestActorProfile :one
 SELECT ap.actor_did, ap.commit_cid, ap.created_at, ap.indexed_at, ap.display_name, ap.description, ap.self_labels
 FROM
     candidate_actors AS ca
@@ -182,7 +182,7 @@ WHERE
 `
 
 func (q *Queries) GetLatestActorProfile(ctx context.Context, did string) (ActorProfile, error) {
-	row := q.db.QueryRow(ctx, getLatestActorProfile, did)
+	row := q.db.QueryRow(ctx, GetLatestActorProfile, did)
 	var i ActorProfile
 	err := row.Scan(
 		&i.ActorDID,
@@ -196,7 +196,7 @@ func (q *Queries) GetLatestActorProfile(ctx context.Context, did string) (ActorP
 	return i, err
 }
 
-const holdBackPendingActor = `-- name: HoldBackPendingActor :exec
+const HoldBackPendingActor = `-- name: HoldBackPendingActor :exec
 UPDATE candidate_actors ca
 SET
     held_until = $1
@@ -211,11 +211,11 @@ type HoldBackPendingActorParams struct {
 }
 
 func (q *Queries) HoldBackPendingActor(ctx context.Context, arg HoldBackPendingActorParams) error {
-	_, err := q.db.Exec(ctx, holdBackPendingActor, arg.HeldUntil, arg.DID)
+	_, err := q.db.Exec(ctx, HoldBackPendingActor, arg.HeldUntil, arg.DID)
 	return err
 }
 
-const listCandidateActors = `-- name: ListCandidateActors :many
+const ListCandidateActors = `-- name: ListCandidateActors :many
 SELECT did, created_at, is_artist, comment, status, roles, current_profile_commit_cid, held_until
 FROM
     candidate_actors AS ca
@@ -229,7 +229,7 @@ ORDER BY
 `
 
 func (q *Queries) ListCandidateActors(ctx context.Context, status NullActorStatus) ([]CandidateActor, error) {
-	rows, err := q.db.Query(ctx, listCandidateActors, status)
+	rows, err := q.db.Query(ctx, ListCandidateActors, status)
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +257,7 @@ func (q *Queries) ListCandidateActors(ctx context.Context, status NullActorStatu
 	return items, nil
 }
 
-const listCandidateActorsRequiringProfileBackfill = `-- name: ListCandidateActorsRequiringProfileBackfill :many
+const ListCandidateActorsRequiringProfileBackfill = `-- name: ListCandidateActorsRequiringProfileBackfill :many
 SELECT did, created_at, is_artist, comment, status, roles, current_profile_commit_cid, held_until
 FROM
     candidate_actors AS ca
@@ -269,7 +269,7 @@ ORDER BY
 `
 
 func (q *Queries) ListCandidateActorsRequiringProfileBackfill(ctx context.Context) ([]CandidateActor, error) {
-	rows, err := q.db.Query(ctx, listCandidateActorsRequiringProfileBackfill)
+	rows, err := q.db.Query(ctx, ListCandidateActorsRequiringProfileBackfill)
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +297,7 @@ func (q *Queries) ListCandidateActorsRequiringProfileBackfill(ctx context.Contex
 	return items, nil
 }
 
-const updateCandidateActor = `-- name: UpdateCandidateActor :one
+const UpdateCandidateActor = `-- name: UpdateCandidateActor :one
 UPDATE candidate_actors ca
 SET
     status = COALESCE($1, ca.status),
@@ -318,7 +318,7 @@ type UpdateCandidateActorParams struct {
 }
 
 func (q *Queries) UpdateCandidateActor(ctx context.Context, arg UpdateCandidateActorParams) (CandidateActor, error) {
-	row := q.db.QueryRow(ctx, updateCandidateActor,
+	row := q.db.QueryRow(ctx, UpdateCandidateActor,
 		arg.Status,
 		arg.IsArtist,
 		arg.Comment,
