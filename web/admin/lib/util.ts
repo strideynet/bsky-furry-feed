@@ -1,3 +1,10 @@
+import { ProfileViewDetailed } from "@atproto/api/dist/client/types/app/bsky/actor/defs";
+
+export type ProfileViewMinimal = Pick<ProfileViewDetailed, "displayName"> &
+  Pick<ProfileViewDetailed, "description"> &
+  Pick<ProfileViewDetailed, "handle"> &
+  Pick<ProfileViewDetailed, "followsCount">;
+
 export function addSISuffix(number?: number) {
   number = number || 0;
 
@@ -9,4 +16,19 @@ export function addSISuffix(number?: number) {
   }
 
   return `${Math.round(number * 100) / 100}${suffixes[order] || ""}`;
+}
+
+export function matchTerms(
+  terms: (string | RegExp)[],
+  haystack: string
+): boolean {
+  for (const term of terms) {
+    if (
+      typeof term === "object" ? haystack.match(term) : haystack.includes(term)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
 }
