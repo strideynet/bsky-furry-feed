@@ -3,6 +3,7 @@ import { getProfile } from "~/lib/cached-bsky";
 import { isProbablyFurry } from "~/lib/furry-detector";
 import { Actor, ActorStatus } from "../../proto/bff/v1/types_pb";
 import { ProfileViewDetailed } from "@atproto/api/dist/client/types/app/bsky/actor/defs";
+import { isProbablySpam } from "~/lib/spam-detector";
 
 const api = await useAPI();
 
@@ -27,12 +28,17 @@ const actorProfilesMap = computed(() => {
 
 const queues = computed(() => ({
   All: actors.value,
-  "Probably furry": actors.value.filter((actor) => {
+  "Likely furry": actors.value.filter((actor) => {
     const profile = didToProfile(actor.did);
 
     return isProbablyFurry(profile);
   }),
-  "Empty profiles": actors.value.filter((actor) => {
+  "Likely spam": actors.value.filter((actor) => {
+    const profile = didToProfile(actor.did);
+
+    return isProbablySpam(profile);
+  }),
+  Empty: actors.value.filter((actor) => {
     const profile = didToProfile(actor.did);
     if (!profile) return true;
 

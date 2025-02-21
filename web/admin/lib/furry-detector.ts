@@ -1,4 +1,5 @@
 import { ProfileViewDetailed } from "@atproto/api/dist/client/types/app/bsky/actor/defs";
+import { matchTerms } from "./util";
 
 type ProfileViewMinimal = Pick<ProfileViewDetailed, "displayName"> &
   Pick<ProfileViewDetailed, "description"> &
@@ -81,15 +82,5 @@ export function isProbablyFurry(profile?: ProfileViewMinimal): boolean {
     .map((s) => s.toLowerCase())
     .join(" ");
 
-  for (const term of terms) {
-    if (
-      typeof term === "object"
-        ? description.match(term)
-        : description.includes(term)
-    ) {
-      return true;
-    }
-  }
-
-  return false;
+  return matchTerms(terms, description);
 }
