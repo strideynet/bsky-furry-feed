@@ -72,7 +72,10 @@ await loadProfile();
       @next="next"
       @loading="loading = true"
     />
-    <div class="flex max-md:flex-col gap-3" :class="{ 'loading-flash': loading }">
+    <div
+      class="flex max-md:flex-col gap-3"
+      :class="{ 'loading-flash': loading }"
+    >
       <div class="mb-3 md:w-[50%] card-list h-min flex-1">
         <user-actions :did="data.did" :status="actor?.status" @update="next" />
         <shared-card v-if="data.banner">
@@ -210,7 +213,9 @@ await loadProfile();
                   </span>
                 </div>
                 <div class="flex">
-                  <span class="flex-1">{{ (post.record as any)?.text }}</span>
+                  <shared-bsky-description
+                    :description="(post.record as any)?.text"
+                  />
                   <span
                     v-if="post.embed && 'images' in post.embed"
                     class="w-[25%] h-100"

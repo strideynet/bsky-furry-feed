@@ -1,6 +1,11 @@
 <script lang="ts" setup>
 import { RichTextSegment } from "@atproto/api";
 
+const tooltipAnchor = ref<HTMLDivElement>();
+const tooltipAnchorRect = computed(() =>
+  tooltipAnchor.value?.getBoundingClientRect()
+);
+
 defineProps<{ segment: RichTextSegment }>();
 
 const hovering = ref(false);
@@ -35,11 +40,22 @@ function leave() {
     </nuxt-link>
 
     <div
-      v-if="hovering && segment.mention?.did"
+      ref="tooltipAnchor"
       class="absolute flex left-0 top-0 right-0 w-full"
-    >
-      <shared-user-tooltip :did="segment.mention.did" />
-    </div>
+    ></div>
+    <teleport to="body">
+      <div
+        v-if="hovering && segment.mention?.did"
+        class="absolute flex left-0 top-0 right-0 w-full z-10"
+        :style="{
+          top: `${tooltipAnchorRect?.top}px`,
+          left: `${tooltipAnchorRect?.left}px`,
+          width: `${tooltipAnchorRect?.width}px`,
+        }"
+      >
+        <shared-user-tooltip :did="segment.mention.did" />
+      </div>
+    </teleport>
   </span>
   <span v-else class="whitespace-pre-line">{{ segment.text }}</span>
 </template>
