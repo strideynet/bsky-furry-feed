@@ -7,12 +7,12 @@ export function isProbablySpam(profile?: ProfileViewMinimal): boolean {
     return false;
   }
 
-  if (!profile.description) {
-    return false;
-  }
-
   if ((profile.followsCount || 0) > FOLLOWS_THRESHOLD) {
     return true;
+  }
+
+  if (!profile.description) {
+    return false;
   }
 
   const terms = [
