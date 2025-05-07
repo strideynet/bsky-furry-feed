@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createAuditEvent = `-- name: CreateAuditEvent :one
+const CreateAuditEvent = `-- name: CreateAuditEvent :one
 INSERT INTO
 audit_events (
     id, created_at, actor_did, subject_did, subject_record_uri,
@@ -32,7 +32,7 @@ type CreateAuditEventParams struct {
 }
 
 func (q *Queries) CreateAuditEvent(ctx context.Context, arg CreateAuditEventParams) (AuditEvent, error) {
-	row := q.db.QueryRow(ctx, createAuditEvent,
+	row := q.db.QueryRow(ctx, CreateAuditEvent,
 		arg.ID,
 		arg.CreatedAt,
 		arg.ActorDID,
@@ -52,7 +52,7 @@ func (q *Queries) CreateAuditEvent(ctx context.Context, arg CreateAuditEventPara
 	return i, err
 }
 
-const listAuditEvents = `-- name: ListAuditEvents :many
+const ListAuditEvents = `-- name: ListAuditEvents :many
 SELECT id, actor_did, subject_did, subject_record_uri, created_at, payload
 FROM
     audit_events AS ae
@@ -126,7 +126,7 @@ type ListAuditEventsParams struct {
 }
 
 func (q *Queries) ListAuditEvents(ctx context.Context, arg ListAuditEventsParams) ([]AuditEvent, error) {
-	rows, err := q.db.Query(ctx, listAuditEvents,
+	rows, err := q.db.Query(ctx, ListAuditEvents,
 		arg.SubjectDid,
 		arg.ActorDID,
 		arg.SubjectRecordUri,
