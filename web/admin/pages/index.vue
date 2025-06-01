@@ -1,14 +1,12 @@
 <script lang="ts" setup>
 import { getProfile } from "~/lib/cached-bsky";
-import { isProbablyFurry } from "~/lib/furry-detector";
 import { Actor, ActorStatus } from "../../proto/bff/v1/types_pb";
 import { ProfileViewDetailed } from "@atproto/api/dist/client/types/app/bsky/actor/defs";
-import { isProbablySpam } from "~/lib/spam-detector";
+import { categorizeProfiles } from "~/lib/queues";
 
 const api = await useAPI();
 
 const actors = ref<Actor[]>([]);
-const heldBack = ref<Actor[]>([]);
 
 const actorProfiles = ref<ProfileViewDetailed[]>([]);
 const randomActor = ref<Actor>();
@@ -26,26 +24,9 @@ const actorProfilesMap = computed(() => {
   return map;
 });
 
-const queues = computed(() => ({
-  All: actors.value,
-  "Likely furry": actors.value.filter((actor) => {
-    const profile = didToProfile(actor.did);
-
-    return isProbablyFurry(profile);
-  }),
-  "Likely spam": actors.value.filter((actor) => {
-    const profile = didToProfile(actor.did);
-
-    return isProbablySpam(profile);
-  }),
-  Empty: actors.value.filter((actor) => {
-    const profile = didToProfile(actor.did);
-    if (!profile) return true;
-
-    return !profile.displayName && !profile.description && !profile.postsCount;
-  }),
-  "Held back": heldBack.value,
-}));
+const queues = computed(() =>
+  categorizeProfiles(actors.value, actorProfilesMap.value)
+);
 
 const nextActor = async () => {
   error.value = "";
@@ -60,12 +41,7 @@ const nextActor = async () => {
       };
     });
 
-  function isHeldBack(a: Actor) {
-    return a.heldUntil && a.heldUntil.toDate() > new Date();
-  }
-
-  actors.value = queue.actors.filter((a) => !isHeldBack(a));
-  heldBack.value = queue.actors.filter(isHeldBack);
+  actors.value = queue.actors;
   actorProfiles.value = await Promise.all(
     actors.value.map((a) => a.did).map(getProfile)
   ).then((p) => p.filter(Boolean));
@@ -111,7 +87,7 @@ function selectRandomActor() {
     <held-back-list
       v-if="currentQueue === 'Held back'"
       :users="
-        heldBack.map((actor) => ({ ...actor, ...didToProfile(actor.did) } as Actor & ProfileViewDetailed))
+        queues['Held back'].map((actor) => ({ ...actor, ...didToProfile(actor.did) } as Actor & ProfileViewDetailed))
       "
     />
     <div v-else>
