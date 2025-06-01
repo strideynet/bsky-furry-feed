@@ -199,6 +199,7 @@ await loadProfile();
                 :has-avatar="Boolean(label.labeler.avatar)"
                 :size="20"
                 resize="20x20"
+                class="mr-1"
               />
               <div>
                 <span class="text-muted text-xs"
