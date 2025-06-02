@@ -6,6 +6,7 @@ import { newAgent } from "~/lib/auth";
 import { addSISuffix } from "~/lib/util";
 import { ViewImage } from "@atproto/api/dist/client/types/app/bsky/embed/images";
 import { PostView } from "@atproto/api/dist/client/types/app/bsky/feed/defs";
+import { BlueskyLabel } from "~/composables/useBlueskyLabels";
 
 const props = defineProps<{
   did: string;
@@ -21,7 +22,9 @@ const loading = ref(false);
 const showRolesModal = ref(false);
 const actor = ref<Actor>();
 const data = ref<ProfileViewDetailed>();
+const labels = ref<Array<BlueskyLabel>>([]);
 const loadProfile = async () => {
+  const labelsQuery = useBlueskyLabels(props.did);
   data.value = await getProfile(props.did);
   const response = await api
     .getActor({ did: data.value?.did || props.did })
@@ -35,6 +38,7 @@ const loadProfile = async () => {
         .filter((p) => !p.reply && p.post.author.did === props.did)
         .map((p) => p.post)
     );
+  labels.value = await labelsQuery;
 };
 
 async function next() {
@@ -182,6 +186,28 @@ await loadProfile();
             <icon-square-bubble class="text-muted" :size="18" />
             {{ addSISuffix(data?.postsCount) }}
           </span>
+        </shared-card>
+        <shared-card v-if="labels.length > 0">
+          <ul class="text-sm">
+            <li
+              v-for="label in labels"
+              :key="`${label.src}:${label.val}`"
+              class="flex items-center py-0.5 px-1 border border-gray-300 dark:border-gray-700 rounded-lg w-max"
+            >
+              <shared-avatar
+                :did="label.src"
+                :has-avatar="Boolean(label.labeler.avatar)"
+                :size="20"
+                resize="20x20"
+                class="mr-1"
+              />
+              <div>
+                <span class="text-muted text-xs"
+                  >{{ label.labeler.handle }}/</span
+                >{{ label.val }}
+              </div>
+            </li>
+          </ul>
         </shared-card>
         <shared-card v-if="data.description">
           <shared-bsky-description :description="data.description" />
