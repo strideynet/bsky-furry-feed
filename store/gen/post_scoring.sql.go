@@ -11,20 +11,20 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const deleteOldPostScores = `-- name: DeleteOldPostScores :execrows
+const DeleteOldPostScores = `-- name: DeleteOldPostScores :execrows
 DELETE FROM post_scores
 WHERE generated_at < $1::TIMESTAMPTZ
 `
 
 func (q *Queries) DeleteOldPostScores(ctx context.Context, before pgtype.Timestamptz) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteOldPostScores, before)
+	result, err := q.db.Exec(ctx, DeleteOldPostScores, before)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected(), nil
 }
 
-const getLatestScoreGeneration = `-- name: GetLatestScoreGeneration :one
+const GetLatestScoreGeneration = `-- name: GetLatestScoreGeneration :one
 SELECT ph.generation_seq
 FROM post_scores AS ph
 WHERE ph.alg = $1
@@ -33,13 +33,13 @@ LIMIT 1
 `
 
 func (q *Queries) GetLatestScoreGeneration(ctx context.Context, alg string) (int64, error) {
-	row := q.db.QueryRow(ctx, getLatestScoreGeneration, alg)
+	row := q.db.QueryRow(ctx, GetLatestScoreGeneration, alg)
 	var generation_seq int64
 	err := row.Scan(&generation_seq)
 	return generation_seq, err
 }
 
-const materializePostScores = `-- name: MaterializePostScores :one
+const MaterializePostScores = `-- name: MaterializePostScores :one
 WITH seq AS (SELECT NEXTVAL('post_scores_generation_seq') AS seq)
 
 INSERT INTO post_scores (uri, alg, score, generation_seq)
@@ -62,7 +62,7 @@ RETURNING (SELECT seq FROM seq)
 `
 
 func (q *Queries) MaterializePostScores(ctx context.Context, after pgtype.Timestamptz) (int64, error) {
-	row := q.db.QueryRow(ctx, materializePostScores, after)
+	row := q.db.QueryRow(ctx, MaterializePostScores, after)
 	var seq int64
 	err := row.Scan(&seq)
 	return seq, err

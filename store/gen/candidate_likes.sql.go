@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createCandidateLike = `-- name: CreateCandidateLike :exec
+const CreateCandidateLike = `-- name: CreateCandidateLike :exec
 INSERT INTO
 candidate_likes (
     uri, actor_did, subject_uri, created_at,
@@ -30,7 +30,7 @@ type CreateCandidateLikeParams struct {
 }
 
 func (q *Queries) CreateCandidateLike(ctx context.Context, arg CreateCandidateLikeParams) error {
-	_, err := q.db.Exec(ctx, createCandidateLike,
+	_, err := q.db.Exec(ctx, CreateCandidateLike,
 		arg.URI,
 		arg.ActorDID,
 		arg.SubjectURI,
@@ -40,7 +40,7 @@ func (q *Queries) CreateCandidateLike(ctx context.Context, arg CreateCandidateLi
 	return err
 }
 
-const softDeleteCandidateLike = `-- name: SoftDeleteCandidateLike :exec
+const SoftDeleteCandidateLike = `-- name: SoftDeleteCandidateLike :exec
 UPDATE
 candidate_likes
 SET
@@ -50,6 +50,6 @@ WHERE
 `
 
 func (q *Queries) SoftDeleteCandidateLike(ctx context.Context, uri string) error {
-	_, err := q.db.Exec(ctx, softDeleteCandidateLike, uri)
+	_, err := q.db.Exec(ctx, SoftDeleteCandidateLike, uri)
 	return err
 }
